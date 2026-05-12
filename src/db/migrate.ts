@@ -3,7 +3,7 @@ import { Client } from 'pg';
 import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { config } from '../config.js';
+import { config } from '../config';
 
 const MIGRATIONS_DIR = path.resolve('drizzle');
 

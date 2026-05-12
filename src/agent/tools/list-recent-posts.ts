@@ -1,8 +1,8 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { desc, eq } from 'drizzle-orm';
-import { db } from '../../db/client.js';
-import { posts } from '../../db/schema.js';
+import { db } from '../../db/client';
+import { posts } from '../../db/schema';
 
 export const listRecentPostsTool = createTool({
   id: 'list-recent-posts',

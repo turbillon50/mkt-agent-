@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-import { runOnce } from './runner.js';
-import { buildPlan, latestPlan } from './planner.js';
-import { start } from './scheduler.js';
-import { recall, remember } from './memory/index.js';
-import { db } from './db/client.js';
-import { knowledge } from './db/schema.js';
+import { runOnce } from './runner';
+import { buildPlan, latestPlan } from './planner';
+import { start } from './scheduler';
+import { recall, remember } from './memory/index';
+import { db } from './db/client';
+import { knowledge } from './db/schema';
 import { readFile } from 'node:fs/promises';
-import { ask } from './agent/index.js';
+import { ask } from './agent/index';
 
 const USAGE = `Usage:
   npm run dev -- run [--dry]            Generate and publish one round of posts

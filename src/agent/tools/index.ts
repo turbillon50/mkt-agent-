@@ -1,16 +1,16 @@
-export { generatePostTool } from './generate-post.js';
-export { publishPostTool } from './publish-post.js';
-export { recallTool } from './recall.js';
-export { saveKnowledgeTool } from './save-knowledge.js';
-export { planWeekTool } from './plan-week.js';
-export { listRecentPostsTool } from './list-recent-posts.js';
+export { generatePostTool } from './generate-post';
+export { publishPostTool } from './publish-post';
+export { recallTool } from './recall';
+export { saveKnowledgeTool } from './save-knowledge';
+export { planWeekTool } from './plan-week';
+export { listRecentPostsTool } from './list-recent-posts';
 
-import { generatePostTool } from './generate-post.js';
-import { publishPostTool } from './publish-post.js';
-import { recallTool } from './recall.js';
-import { saveKnowledgeTool } from './save-knowledge.js';
-import { planWeekTool } from './plan-week.js';
-import { listRecentPostsTool } from './list-recent-posts.js';
+import { generatePostTool } from './generate-post';
+import { publishPostTool } from './publish-post';
+import { recallTool } from './recall';
+import { saveKnowledgeTool } from './save-knowledge';
+import { planWeekTool } from './plan-week';
+import { listRecentPostsTool } from './list-recent-posts';
 
 export const agentTools = {
   generatePost: generatePostTool,

@@ -1,10 +1,10 @@
 import { and, eq, asc } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
-import { db } from './db/client.js';
-import { planItems, type PlanItem } from './db/schema.js';
-import { generateWeeklyPlan } from './generator.js';
-import { enabledPosters } from './posters/index.js';
-import type { Platform } from './config.js';
+import { db } from './db/client';
+import { planItems, type PlanItem } from './db/schema';
+import { generateWeeklyPlan } from './generator';
+import { enabledPosters } from './posters/index';
+import type { Platform } from './config';
 
 export async function buildPlan(): Promise<{ planId: string; items: PlanItem[] }> {
   const platforms = enabledPosters().map((p) => p.platform);

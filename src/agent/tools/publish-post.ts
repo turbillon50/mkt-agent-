@@ -1,9 +1,9 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { getPoster } from '../../posters/index.js';
-import { db } from '../../db/client.js';
-import { posts } from '../../db/schema.js';
-import { remember } from '../../memory/index.js';
+import { getPoster } from '../../posters/index';
+import { db } from '../../db/client';
+import { posts } from '../../db/schema';
+import { remember } from '../../memory/index';
 
 export const publishPostTool = createTool({
   id: 'publish-post',

@@ -1,6 +1,6 @@
-import { config, type Platform } from '../config.js';
-import * as twitter from './twitter.js';
-import * as linkedin from './linkedin.js';
+import { config, type Platform } from '../config';
+import * as twitter from './twitter';
+import * as linkedin from './linkedin';
 
 export interface Poster {
   platform: Platform;

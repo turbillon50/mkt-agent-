@@ -1,8 +1,8 @@
 import { sql } from 'drizzle-orm';
-import { db } from '../db/client.js';
-import { embeddings } from '../db/schema.js';
-import { embed } from './embed.js';
-import { config } from '../config.js';
+import { db } from '../db/client';
+import { embeddings } from '../db/schema';
+import { embed } from './embed';
+import { config } from '../config';
 
 export type MemoryRefType = 'post' | 'knowledge' | 'mention' | 'reply';
 

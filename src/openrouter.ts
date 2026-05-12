@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { config } from './config.js';
+import { config } from './config';
 
 let client: OpenAI | null = null;
 

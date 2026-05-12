@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { config } from '../config.js';
+import { config } from '../config';
 
 const API = 'https://api.linkedin.com/v2';
 

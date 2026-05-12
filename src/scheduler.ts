@@ -1,7 +1,7 @@
 import cron from 'node-cron';
-import { config } from './config.js';
-import { runOnce, ensurePlan } from './runner.js';
-import { buildPlan } from './planner.js';
+import { config } from './config';
+import { runOnce, ensurePlan } from './runner';
+import { buildPlan } from './planner';
 
 export function start(): void {
   const { postCron, planCron, timezone } = config.schedule;

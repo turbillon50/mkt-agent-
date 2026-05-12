@@ -1,10 +1,10 @@
-import { db } from './db/client.js';
-import { posts } from './db/schema.js';
-import { generatePost } from './generator.js';
-import { enabledPosters } from './posters/index.js';
-import { buildPlan, nextUnusedItem, markUsed } from './planner.js';
-import { remember } from './memory/index.js';
-import { config, type Platform } from './config.js';
+import { db } from './db/client';
+import { posts } from './db/schema';
+import { generatePost } from './generator';
+import { enabledPosters } from './posters/index';
+import { buildPlan, nextUnusedItem, markUsed } from './planner';
+import { remember } from './memory/index';
+import { config, type Platform } from './config';
 
 function pickFallbackTopic(): string {
   const t = config.brand.topics;

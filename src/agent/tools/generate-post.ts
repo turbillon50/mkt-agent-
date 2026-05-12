@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { generatePost } from '../../generator.js';
+import { generatePost } from '../../generator';
 
 export const generatePostTool = createTool({
   id: 'generate-post',

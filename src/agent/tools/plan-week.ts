@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { buildPlan } from '../../planner.js';
+import { buildPlan } from '../../planner';
 
 export const planWeekTool = createTool({
   id: 'plan-week',

@@ -1,7 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { config } from '../config.js';
-import { agentTools } from './tools/index.js';
+import { config } from '../config';
+import { agentTools } from './tools/index';
 
 function buildModel() {
   if (!config.openrouter.apiKey) {

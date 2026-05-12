@@ -1,6 +1,6 @@
-import { chat, chatJSON } from './openrouter.js';
-import { config, type Platform } from './config.js';
-import { recall } from './memory/index.js';
+import { chat, chatJSON } from './openrouter';
+import { config, type Platform } from './config';
+import { recall } from './memory/index';
 
 const PLATFORM_LIMITS = {
   twitter: { maxChars: 270, hashtags: 2, style: 'punchy, conversational, one idea per post' },

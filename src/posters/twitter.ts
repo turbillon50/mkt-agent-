@@ -1,5 +1,5 @@
 import { TwitterApi, TwitterApiv2 } from 'twitter-api-v2';
-import { config } from '../config.js';
+import { config } from '../config';
 
 let client: TwitterApi | null = null;
 

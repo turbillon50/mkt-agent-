@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { recall } from '../../memory/index.js';
+import { recall } from '../../memory/index';
 
 export const recallTool = createTool({
   id: 'recall-memory',

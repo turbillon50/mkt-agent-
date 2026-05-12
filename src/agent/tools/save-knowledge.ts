@@ -1,8 +1,8 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { db } from '../../db/client.js';
-import { knowledge } from '../../db/schema.js';
-import { remember } from '../../memory/index.js';
+import { db } from '../../db/client';
+import { knowledge } from '../../db/schema';
+import { remember } from '../../memory/index';
 
 export const saveKnowledgeTool = createTool({
   id: 'save-knowledge',
