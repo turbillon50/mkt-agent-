@@ -1,0 +1,21 @@
+{
+  "name": "social-media-agent",
+  "version": "0.1.0",
+  "description": "Autonomous social media agent powered by OpenRouter LLMs.",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js start",
+    "test": "node test/connections.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3",
+    "openai": "^4.67.3",
+    "twitter-api-v2": "^1.18.2"
+  }
+}
