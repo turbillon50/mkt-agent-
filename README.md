@@ -1,58 +1,96 @@
 # social-media-agent
 
-Autonomous social media agent. Uses an OpenRouter LLM to plan a weekly content
-calendar and publish posts on a cron schedule to Twitter/X and LinkedIn.
+Autonomous social media agent with **persistent semantic memory**.
+
+- LLM via **OpenRouter** for generation and planning
+- **Neon Postgres + pgvector** for storage and vector recall
+- **Drizzle** ORM and migrations
+- **Twitter/X** and **LinkedIn** posters
+- **node-cron** scheduler for 24/7 operation
+- TypeScript, Docker-ready
+
+> Roadmap: Phase 1 (this build) lays the foundation — TypeScript, Neon, embeddings, recall, persistence. Phase 2 wraps tools in a Mastra agent. Phase 3 adds image generation and upload. Phase 4 adds mention reading, automatic replies, and an engagement learning loop.
 
 ## Quick start
 
 ```bash
-# Install dependencies
+# 1. Install dependencies
 npm install
 
-# Copy and configure variables
+# 2. Configure
 cp .env.example .env
-# Edit .env with your OpenRouter + network keys
+# Edit .env: OPENROUTER_API_KEY, OPENAI_API_KEY (embeddings),
+#            DATABASE_URL (Neon), TWITTER_* and/or LINKEDIN_*
 
-# Probe connections
+# 3. Apply the database schema (creates pgvector extension + tables)
+npm run db:migrate
+
+# 4. Probe connections (OpenRouter, embeddings, DB, enabled networks)
 npm test
 
-# Make a test post (skips the cron). Use --dry to generate without publishing.
-node src/index.js run
-node src/index.js run --dry
+# 5. Generate without publishing
+npm run dev -- run --dry
 
-# Generate / view the weekly plan
-node src/index.js plan
-node src/index.js show-plan
+# 6. Build a weekly plan (persisted in Neon)
+npm run dev -- plan
 
-# Start the 24/7 scheduler
-npm start
-# or via Docker:
-docker-compose up -d
+# 7. Publish one round and persist to Neon + memory
+npm run dev -- run
+
+# 8. Start the 24/7 scheduler
+npm run dev -- start          # development
+npm run build && npm start    # production
+# or:
+docker-compose up -d --build
 ```
 
-## Configuration
+## Memory and recall
 
-All settings live in `.env` (see `.env.example`):
+Every post is saved to `posts` and embedded into `embeddings` (pgvector, 1536 dims,
+HNSW cosine). Before generating, the agent recalls the K most similar prior posts and
+includes them in the prompt so it avoids repetition and reinforces brand voice.
 
-- `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` — LLM provider.
-- `BRAND_NAME`, `BRAND_VOICE`, `BRAND_TOPICS`, `BRAND_LANGUAGE` — brand persona.
-- `POST_CRON`, `PLAN_CRON`, `TIMEZONE` — scheduling.
-- `TWITTER_ENABLED` + 4 OAuth1 credentials.
-- `LINKEDIN_ENABLED` + access token and author URN (e.g. `urn:li:person:XXXX`).
+```bash
+npm run dev -- recall "ai automation for small business"
+npm run dev -- ingest ./brand-book.md   # seed the knowledge base
+```
+
+## CLI
+
+| Command | What it does |
+|---|---|
+| `run [--dry]` | Generate + (optionally) publish one round of posts for each enabled platform |
+| `plan` | Build a new 7-day plan and store it in `plan_items` |
+| `show-plan` | Print stored plan items |
+| `recall <query>` | Semantic search over all stored memories |
+| `ingest <file>` | Chunk a text/markdown file into `knowledge` + embeddings |
+| `start` | Start the cron scheduler (plan + run) |
+
+## Schema (Drizzle / pgvector)
+
+```
+posts        published posts + external ids
+plan_items   weekly content calendar
+mentions     incoming mentions/comments (Phase 4)
+replies      our replies to mentions   (Phase 4)
+metrics      engagement collected per post (Phase 4)
+knowledge    long-form context (brand book, FAQs, products)
+embeddings   1536-dim vectors keyed by (ref_type, ref_id)
+```
 
 ## Layout
 
 ```
 src/
-  config.js        Env loading
-  openrouter.js    LLM client (OpenAI-compatible)
-  generator.js     Post + weekly plan generation
-  planner.js       Build / persist weekly plan
-  runner.js        One round: pick item -> generate -> publish
-  scheduler.js     node-cron 24/7 loop
-  posters/
-    twitter.js
-    linkedin.js
-data/              Plan + post history (created at runtime)
-test/connections.test.js
+  config.ts           env loading
+  openrouter.ts       chat client
+  generator.ts        post + weekly-plan generation, with semantic recall
+  planner.ts          DB-backed plan persistence
+  runner.ts           one round: pick item -> generate -> publish -> remember
+  scheduler.ts        node-cron loop
+  posters/            twitter, linkedin
+  memory/             embed + recall over pgvector
+  db/                 drizzle client, schema, migrate runner
+test/                 connection smoke tests
+drizzle/              SQL migrations
 ```

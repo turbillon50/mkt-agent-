@@ -1,14 +1,15 @@
-FROM node:20-alpine
-
+FROM node:20-alpine AS build
 WORKDIR /app
+COPY package.json tsconfig.json ./
+RUN npm install
+COPY src ./src
+RUN npm run build
 
+FROM node:20-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
 COPY package.json ./
 RUN npm install --omit=dev
-
-COPY src ./src
-COPY test ./test
-
-ENV NODE_ENV=production
-VOLUME ["/app/data"]
-
-CMD ["node", "src/index.js", "start"]
+COPY --from=build /app/dist ./dist
+COPY drizzle ./drizzle
+CMD ["node", "dist/index.js", "start"]

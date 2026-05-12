@@ -1,21 +1,40 @@
 {
   "name": "social-media-agent",
-  "version": "0.1.0",
-  "description": "Autonomous social media agent powered by OpenRouter LLMs.",
+  "version": "0.2.0",
+  "description": "Autonomous social media agent. OpenRouter LLM + Neon/pgvector semantic memory.",
   "private": true,
-  "main": "src/index.js",
+  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node src/index.js start",
-    "test": "node test/connections.test.js"
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js start",
+    "dev": "tsx src/index.ts",
+    "test": "tsx test/connections.test.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:studio": "drizzle-kit studio"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.36.4",
     "node-cron": "^3.0.3",
     "openai": "^4.67.3",
-    "twitter-api-v2": "^1.18.2"
+    "pg": "^8.13.1",
+    "twitter-api-v2": "^1.18.2",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.11.10",
+    "@types/ws": "^8.5.13",
+    "drizzle-kit": "^0.28.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   }
 }

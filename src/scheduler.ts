@@ -1,9 +1,9 @@
-const cron = require('node-cron');
-const config = require('./config');
-const { runOnce } = require('./runner');
-const { buildPlan } = require('./planner');
+import cron from 'node-cron';
+import { config } from './config.js';
+import { runOnce, ensurePlan } from './runner.js';
+import { buildPlan } from './planner.js';
 
-function start() {
+export function start(): void {
   const { postCron, planCron, timezone } = config.schedule;
 
   console.log(`[scheduler] post cron "${postCron}" (${timezone})`);
@@ -11,10 +11,11 @@ function start() {
 
   cron.schedule(postCron, async () => {
     try {
+      await ensurePlan();
       const results = await runOnce();
       console.log(`[scheduler] posted ${results.length} item(s) at ${new Date().toISOString()}`);
-    } catch (err) {
-      console.error('[scheduler] post run failed:', err.message);
+    } catch (err: any) {
+      console.error('[scheduler] post run failed:', err.message ?? err);
     }
   }, { timezone });
 
@@ -22,13 +23,12 @@ function start() {
     try {
       const plan = await buildPlan();
       console.log(`[scheduler] new weekly plan: ${plan.items.length} items`);
-    } catch (err) {
-      console.error('[scheduler] plan run failed:', err.message);
+    } catch (err: any) {
+      console.error('[scheduler] plan run failed:', err.message ?? err);
     }
   }, { timezone });
 
-  process.on('SIGINT', () => { console.log('\n[scheduler] stopping'); process.exit(0); });
-  process.on('SIGTERM', () => { console.log('\n[scheduler] stopping'); process.exit(0); });
+  const stop = () => { console.log('\n[scheduler] stopping'); process.exit(0); };
+  process.on('SIGINT', stop);
+  process.on('SIGTERM', stop);
 }
-
-module.exports = { start };
