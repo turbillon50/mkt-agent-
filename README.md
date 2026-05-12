@@ -9,7 +9,7 @@ Autonomous social media agent with **persistent semantic memory**.
 - **node-cron** scheduler for 24/7 operation
 - TypeScript, Docker-ready
 
-> Roadmap: Phase 1 (this build) lays the foundation — TypeScript, Neon, embeddings, recall, persistence. Phase 2 wraps tools in a Mastra agent. Phase 3 adds image generation and upload. Phase 4 adds mention reading, automatic replies, and an engagement learning loop.
+> Roadmap: Phase 1 lays the foundation (TypeScript, Neon, embeddings, recall, persistence). **Phase 2 (current) wraps every capability as Mastra tools and exposes a conversational agent.** Phase 3 adds image generation and upload. Phase 4 adds mention reading, automatic replies, and an engagement learning loop. Phase 5 ships a Next.js + Clerk dashboard on Vercel.
 
 ## Quick start
 
@@ -64,7 +64,19 @@ npm run dev -- ingest ./brand-book.md   # seed the knowledge base
 | `show-plan` | Print stored plan items |
 | `recall <query>` | Semantic search over all stored memories |
 | `ingest <file>` | Chunk a text/markdown file into `knowledge` + embeddings |
+| `ask "<prompt>"` | Talk to the Mastra agent with tool calling (generate / publish / recall / plan / save-knowledge / list-recent-posts) |
 | `start` | Start the cron scheduler (plan + run) |
+
+### Mastra agent
+
+The agent (`src/agent/index.ts`) runs on the same OpenRouter model and is wired to six tools that map directly to the persistence and posting primitives. Examples:
+
+```bash
+npm run dev -- ask "what have we posted on linkedin this week?"
+npm run dev -- ask "draft a twitter post about ai automation, hook on time-to-value"
+npm run dev -- ask "remember: our pricing is \$29/mo for solo, \$99/mo for teams"
+npm run dev -- ask "build next week's plan and tell me which day covers automation"
+```
 
 ## Schema (Drizzle / pgvector)
 

@@ -6,6 +6,7 @@ import { recall, remember } from './memory/index.js';
 import { db } from './db/client.js';
 import { knowledge } from './db/schema.js';
 import { readFile } from 'node:fs/promises';
+import { ask } from './agent/index.js';
 
 const USAGE = `Usage:
   npm run dev -- run [--dry]            Generate and publish one round of posts
@@ -14,6 +15,7 @@ const USAGE = `Usage:
   npm run dev -- start                  Start the 24/7 scheduler
   npm run dev -- recall "<query>"       Test semantic recall
   npm run dev -- ingest <file>          Ingest a text/markdown file into knowledge
+  npm run dev -- ask "<instruction>"    Talk to the Mastra agent (tool calling)
 `;
 
 async function ingest(filePath: string): Promise<void> {
@@ -60,6 +62,13 @@ async function main(): Promise<void> {
       const path = rest[0];
       if (!path) { console.error('Provide a file path'); process.exit(1); }
       await ingest(path);
+      break;
+    }
+    case 'ask': {
+      const prompt = rest.join(' ').trim();
+      if (!prompt) { console.error('Provide a prompt'); process.exit(1); }
+      const reply = await ask(prompt);
+      console.log(reply);
       break;
     }
     case 'start':
