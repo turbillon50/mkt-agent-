@@ -1,0 +1,38 @@
+{
+  "name": "Goossip",
+  "short_name": "Goossip",
+  "description": "Tu agente social autónomo. Planea, redacta, publica y aprende en tus redes 24/7.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07060d",
+  "theme_color": "#0c0a18",
+  "lang": "es",
+  "categories": ["productivity", "social", "business"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Chat", "url": "/chat", "description": "Habla con Goossip" },
+    { "name": "WhatsApp", "url": "/whatsapp", "description": "Estado y conversaciones" },
+    { "name": "Plan", "url": "/plan", "description": "Plan de contenidos" }
+  ]
+}

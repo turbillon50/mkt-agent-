@@ -37,11 +37,11 @@ export default async function DashboardPage() {
   const stats = await safeStats();
 
   return (
-    <div className="flex gap-8">
-      <main className="flex min-w-0 flex-1 flex-col gap-8">
+    <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
+      <main className="flex min-w-0 flex-1 flex-col gap-6 lg:gap-8">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">
+            <h1 className="text-lg font-semibold lg:text-xl">
               Goossip AI <span className="ml-1 inline-block h-2 w-2 rounded-full bg-fuchsia-400 align-middle" />
             </h1>
             <p className="text-xs text-[var(--color-muted-foreground)]">Online</p>
@@ -56,9 +56,9 @@ export default async function DashboardPage() {
           </div>
         </header>
 
-        <section className="mt-4 text-center">
-          <h2 className="text-3xl font-semibold">¡Buenas, {firstName}! 👋</h2>
-          <p className="mt-1 text-3xl font-semibold brand-gradient">¿Qué vamos a crear hoy?</p>
+        <section className="mt-2 text-center lg:mt-4">
+          <h2 className="text-2xl font-semibold lg:text-3xl">¡Buenas, {firstName}! 👋</h2>
+          <p className="mt-1 text-2xl font-semibold brand-gradient lg:text-3xl">¿Qué vamos a crear hoy?</p>
         </section>
 
         <Card className="card-glow border border-[var(--color-border)]">

@@ -3,10 +3,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
-
-const clerkPK = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
-const isClerkConfiguredClient =
-  /^pk_(test|live)_[A-Za-z0-9_-]{10,}$/.test(clerkPK) && !clerkPK.includes('REPLACE_ME');
 import {
   Plus,
   Home,
@@ -22,6 +18,10 @@ import {
   Phone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const clerkPK = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
+const isClerkConfiguredClient =
+  /^pk_(test|live)_[A-Za-z0-9_-]{10,}$/.test(clerkPK) && !clerkPK.includes('REPLACE_ME');
 
 type Item = {
   href: string;
@@ -53,10 +53,10 @@ const networks = [
   { name: 'TikTok', dot: '#f472b6', enabled: false },
 ];
 
-export function Sidebar() {
+export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <aside className="flex w-64 shrink-0 flex-col gap-4 border-r border-[var(--color-border)] bg-[var(--color-card)]/60 p-4 backdrop-blur">
+    <div className="flex h-full w-full flex-col gap-4 bg-[var(--color-card)]/95 p-4 backdrop-blur lg:bg-[var(--color-card)]/60">
       <div className="flex items-center gap-2 px-2 pt-2">
         <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-pink-500 text-sm font-bold">
           oo
@@ -66,6 +66,7 @@ export function Sidebar() {
 
       <Link
         href="/chat"
+        onClick={onNavigate}
         className="btn-brand flex items-center justify-between gap-2 rounded-xl px-4 py-2.5 text-sm font-medium shadow-lg shadow-fuchsia-500/20 hover:opacity-95"
       >
         <span className="flex items-center gap-2">
@@ -76,13 +77,14 @@ export function Sidebar() {
         </span>
       </Link>
 
-      <nav className="flex flex-1 flex-col gap-0.5">
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
         {items.map(({ href, label, Icon, soon }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
           return (
             <Link
               key={href}
               href={href}
+              onClick={onNavigate}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
                 active
@@ -140,6 +142,6 @@ export function Sidebar() {
           Pro
         </span>
       </div>
-    </aside>
+    </div>
   );
 }
