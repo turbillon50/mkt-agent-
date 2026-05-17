@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { isClerkConfigured } from '@/lib/clerk-config';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  if (isClerkConfigured()) {
+    const { auth } = await import('@clerk/nextjs/server');
+    const { userId } = await auth();
+    if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const prompt = typeof body?.prompt === 'string' ? body.prompt.trim() : '';

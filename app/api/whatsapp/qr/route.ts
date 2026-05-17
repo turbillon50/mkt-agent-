@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { isClerkConfigured } from '@/lib/clerk-config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  if (isClerkConfigured()) {
+    const { auth } = await import('@clerk/nextjs/server');
+    const { userId } = await auth();
+    if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
 
   try {
     const { getBridgeQR } = await import('@/src/whatsapp/bridge');

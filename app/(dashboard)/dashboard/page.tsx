@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { auth, currentUser } from '@clerk/nextjs/server';
 import { Bell, Edit3 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { CommandCenter } from '@/components/dashboard/command-center';
 import { ProjectsRow } from '@/components/dashboard/projects-row';
 import { getDashboardStats } from '@/lib/data';
 import { formatDate } from '@/lib/utils';
+import { isClerkConfigured } from '@/lib/clerk-config';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -19,10 +19,21 @@ async function safeStats() {
   }
 }
 
+async function safeUserFirstName(): Promise<string> {
+  if (!isClerkConfigured()) return 'humano';
+  try {
+    const { auth, currentUser } = await import('@clerk/nextjs/server');
+    const { userId } = await auth();
+    if (!userId) return 'humano';
+    const user = await currentUser();
+    return user?.firstName ?? user?.username ?? 'humano';
+  } catch {
+    return 'humano';
+  }
+}
+
 export default async function DashboardPage() {
-  const { userId } = await auth();
-  const user = userId ? await currentUser() : null;
-  const firstName = user?.firstName ?? user?.username ?? 'humano';
+  const firstName = await safeUserFirstName();
   const stats = await safeStats();
 
   return (

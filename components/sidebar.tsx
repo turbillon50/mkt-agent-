@@ -3,6 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { UserButton } from '@clerk/nextjs';
+
+const clerkPK = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
+const isClerkConfiguredClient =
+  /^pk_(test|live)_[A-Za-z0-9_-]{10,}$/.test(clerkPK) && !clerkPK.includes('REPLACE_ME');
 import {
   Plus,
   Home,
@@ -125,7 +129,13 @@ export function Sidebar() {
       </div>
 
       <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-3">
-        <UserButton />
+        {isClerkConfiguredClient ? (
+          <UserButton />
+        ) : (
+          <div className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-fuchsia-500/30 to-violet-500/30 text-xs font-semibold">
+            G
+          </div>
+        )}
         <span className="rounded-md bg-gradient-to-r from-fuchsia-500/20 to-pink-500/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-fuchsia-300">
           Pro
         </span>
