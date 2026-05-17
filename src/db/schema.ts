@@ -95,9 +95,28 @@ export const embeddings = pgTable('embeddings', {
   vecIdx: index('embeddings_vec_idx').using('hnsw', sql`${t.embedding} vector_cosine_ops`),
 }));
 
+export const whatsappMessages = pgTable('whatsapp_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  externalId: text('external_id'),
+  fromNumber: text('from_number').notNull(),
+  toNumber: text('to_number'),
+  body: text('body').notNull(),
+  direction: text('direction').notNull(),
+  respondedBy: text('responded_by'),
+  messageTimestamp: timestamp('message_timestamp', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+}, (t) => ({
+  uniqExt: index('whatsapp_messages_ext_uniq').on(t.externalId),
+  fromIdx: index('whatsapp_messages_from_idx').on(t.fromNumber),
+  timeIdx: index('whatsapp_messages_time_idx').on(t.messageTimestamp),
+}));
+
 export type Post = typeof posts.$inferSelect;
 export type NewPost = typeof posts.$inferInsert;
 export type Mention = typeof mentions.$inferSelect;
 export type Reply = typeof replies.$inferSelect;
 export type PlanItem = typeof planItems.$inferSelect;
 export type Knowledge = typeof knowledge.$inferSelect;
+export type WhatsappMessage = typeof whatsappMessages.$inferSelect;
+export type NewWhatsappMessage = typeof whatsappMessages.$inferInsert;

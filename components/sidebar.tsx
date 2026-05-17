@@ -15,6 +15,7 @@ import {
   Users,
   Zap,
   Plug,
+  Phone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +29,7 @@ type Item = {
 const items: Item[] = [
   { href: '/dashboard', label: 'Inicio', Icon: Home },
   { href: '/chat', label: 'Chats', Icon: MessageSquare },
+  { href: '/whatsapp', label: 'WhatsApp', Icon: Phone },
   { href: '/knowledge', label: 'Memoria', Icon: Brain },
   { href: '/projects', label: 'Proyectos', Icon: FolderKanban, soon: true },
   { href: '/posts', label: 'Contenido', Icon: FileText },
@@ -39,6 +41,7 @@ const items: Item[] = [
 ];
 
 const networks = [
+  { name: 'WhatsApp', dot: '#34d399', enabled: true },
   { name: 'Instagram', dot: '#e879f9', enabled: false },
   { name: 'X (Twitter)', dot: '#a3a3a3', enabled: true },
   { name: 'LinkedIn', dot: '#60a5fa', enabled: true },

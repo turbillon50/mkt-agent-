@@ -27,6 +27,8 @@ function buildInstructions(): string {
     `- Use plan-week to build a weekly schedule on request.`,
     `- Use generate-post to draft, then publish-post ONLY after explicit user approval`,
     `  unless the user clearly told you to auto-publish.`,
+    `- Use send-whatsapp when the operator asks you to DM a contact or follow up via WhatsApp.`,
+    `  Numbers come in E.164 digits without "+" (e.g. 5215512345678). Keep messages under 4 sentences.`,
     `- Always cite the tool you intend to use in your response if helpful.`,
   ].join('\n');
 }

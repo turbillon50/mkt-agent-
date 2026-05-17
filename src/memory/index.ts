@@ -4,7 +4,7 @@ import { embeddings } from '../db/schema';
 import { embed } from './embed';
 import { config } from '../config';
 
-export type MemoryRefType = 'post' | 'knowledge' | 'mention' | 'reply';
+export type MemoryRefType = 'post' | 'knowledge' | 'mention' | 'reply' | 'whatsapp';
 
 export interface RecallHit {
   id: string;

@@ -4,6 +4,7 @@ export { recallTool } from './recall';
 export { saveKnowledgeTool } from './save-knowledge';
 export { planWeekTool } from './plan-week';
 export { listRecentPostsTool } from './list-recent-posts';
+export { sendWhatsappTool } from './send-whatsapp';
 
 import { generatePostTool } from './generate-post';
 import { publishPostTool } from './publish-post';
@@ -11,6 +12,7 @@ import { recallTool } from './recall';
 import { saveKnowledgeTool } from './save-knowledge';
 import { planWeekTool } from './plan-week';
 import { listRecentPostsTool } from './list-recent-posts';
+import { sendWhatsappTool } from './send-whatsapp';
 
 export const agentTools = {
   generatePost: generatePostTool,
@@ -19,4 +21,5 @@ export const agentTools = {
   saveKnowledge: saveKnowledgeTool,
   planWeek: planWeekTool,
   listRecentPosts: listRecentPostsTool,
+  sendWhatsapp: sendWhatsappTool,
 };

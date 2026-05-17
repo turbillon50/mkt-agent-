@@ -45,6 +45,13 @@ export const config = {
     recallK: Number(process.env.MEMORY_RECALL_K ?? 5),
     minSimilarity: Number(process.env.MEMORY_MIN_SIMILARITY ?? 0.78),
   },
+  whatsapp: {
+    enabled: truthy(process.env.WHATSAPP_ENABLED),
+    autoReply: truthy(process.env.WHATSAPP_AUTO_REPLY),
+    bridgeUrl: process.env.WHATSAPP_BRIDGE_URL ?? '',
+    bridgeSecret: process.env.WHATSAPP_BRIDGE_SECRET ?? '',
+    appUrl: process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || '',
+  },
 } as const;
 
 export type Platform = 'twitter' | 'linkedin';
