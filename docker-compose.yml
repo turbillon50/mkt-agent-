@@ -1,0 +1,9 @@
+services:
+  agent:
+    build: .
+    image: social-media-agent:latest
+    container_name: social-media-agent
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
