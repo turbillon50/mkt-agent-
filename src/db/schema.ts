@@ -95,6 +95,40 @@ export const embeddings = pgTable('embeddings', {
   vecIdx: index('embeddings_vec_idx').using('hnsw', sql`${t.embedding} vector_cosine_ops`),
 }));
 
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  clerkId: text('clerk_id').notNull().unique(),
+  email: text('email').notNull(),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  username: text('username'),
+  imageUrl: text('image_url'),
+  isAdmin: boolean('is_admin').default(false).notNull(),
+  brandName: text('brand_name'),
+  brandVoice: text('brand_voice'),
+  brandTopics: text('brand_topics'),
+  brandLanguage: text('brand_language'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  clerkIdx: index('users_clerk_idx').on(t.clerkId),
+  emailIdx: index('users_email_idx').on(t.email),
+}));
+
+export const socialAccounts = pgTable('social_accounts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  platform: text('platform').notNull(),
+  status: text('status').notNull().default('disconnected'),
+  externalHandle: text('external_handle'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userPlatformIdx: index('social_accounts_user_platform_idx').on(t.userId, t.platform),
+}));
+
 export const whatsappMessages = pgTable('whatsapp_messages', {
   id: uuid('id').primaryKey().defaultRandom(),
   externalId: text('external_id'),
@@ -120,3 +154,6 @@ export type PlanItem = typeof planItems.$inferSelect;
 export type Knowledge = typeof knowledge.$inferSelect;
 export type WhatsappMessage = typeof whatsappMessages.$inferSelect;
 export type NewWhatsappMessage = typeof whatsappMessages.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type SocialAccount = typeof socialAccounts.$inferSelect;

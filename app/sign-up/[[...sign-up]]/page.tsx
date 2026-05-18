@@ -85,13 +85,31 @@ async function renderForm() {
   }
   const { SignUp } = await import('@clerk/nextjs');
   return (
-    <SignUp
-      appearance={{
-        elements: {
-          rootBox: 'mx-auto',
-          card: 'shadow-2xl shadow-fuchsia-500/10',
-        },
-      }}
-    />
+    <div className="space-y-4">
+      <div className="min-h-[420px]">
+        <SignUp
+          forceRedirectUrl="/onboarding"
+          fallbackRedirectUrl="/onboarding"
+          signInUrl="/sign-in"
+          appearance={{
+            elements: {
+              rootBox: 'mx-auto',
+              card: 'shadow-2xl shadow-fuchsia-500/10',
+            },
+          }}
+        />
+      </div>
+      <p className="text-center text-xs text-[var(--color-muted-foreground)]">
+        ¿No carga el formulario?{' '}
+        <a
+          href="https://accounts.vliving.life/sign-up"
+          className="underline hover:text-[var(--color-foreground)]"
+          rel="noreferrer"
+        >
+          Usa la página directa de Clerk
+        </a>
+        .
+      </p>
+    </div>
   );
 }

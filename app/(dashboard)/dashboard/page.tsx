@@ -22,11 +22,9 @@ async function safeStats() {
 async function safeUserFirstName(): Promise<string> {
   if (!isClerkConfigured()) return 'humano';
   try {
-    const { auth, currentUser } = await import('@clerk/nextjs/server');
-    const { userId } = await auth();
-    if (!userId) return 'humano';
-    const user = await currentUser();
-    return user?.firstName ?? user?.username ?? 'humano';
+    const { currentUserOrNull } = await import('@/lib/users');
+    const user = await currentUserOrNull();
+    return user?.firstName ?? user?.username ?? user?.email?.split('@')[0] ?? 'humano';
   } catch {
     return 'humano';
   }

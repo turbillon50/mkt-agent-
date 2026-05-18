@@ -8,6 +8,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/cron/(.*)',
   '/api/admin/(.*)',
+  '/api/webhooks/(.*)',
   '/api/whatsapp/inbound',
 ]);
 
