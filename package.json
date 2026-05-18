@@ -23,6 +23,8 @@
   "dependencies": {
     "@clerk/nextjs": "^7.3.3",
     "@mastra/core": "^1.32.1",
+    "@mastra/memory": "^1.18.2",
+    "@mastra/pg": "^1.11.0",
     "@neondatabase/serverless": "^0.10.4",
     "@openrouter/ai-sdk-provider": "^2.9.0",
     "@radix-ui/react-label": "^2.1.8",

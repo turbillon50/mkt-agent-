@@ -9,6 +9,8 @@ const nextConfig = {
     'drizzle-orm',
     'twitter-api-v2',
     '@mastra/core',
+    '@mastra/memory',
+    '@mastra/pg',
     'openai',
   ],
   typescript: { ignoreBuildErrors: false },
