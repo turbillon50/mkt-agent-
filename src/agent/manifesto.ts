@@ -160,10 +160,22 @@ export function buildOperatorManifesto(brand: {
   voice: string;
   topics: string[];
   language: string;
-}): string {
+}, campaignManifesto?: string | null): string {
   const custom = (process.env.GOOSSIP_MANIFESTO_OPERATOR ?? process.env.GOOSSIP_MANIFESTO)?.trim();
   const core = custom && custom.length > 50 ? custom : OPERATOR_DEFAULT;
-  return [core, ``, `---`, ``, brandContext(brand)].join('\n');
+  const campaignBlock = campaignManifesto && campaignManifesto.trim().length > 20
+    ? [
+        ``,
+        `---`,
+        ``,
+        `## Manifiesto de la campaña activa`,
+        ``,
+        `Lo que sigue es la brújula específica de esta campaña. Cuando entren en conflicto las reglas generales y las de la campaña, manda la campaña.`,
+        ``,
+        campaignManifesto.trim(),
+      ].join('\n')
+    : '';
+  return [core, ``, `---`, ``, brandContext(brand), campaignBlock].join('\n');
 }
 
 export function buildClientManifesto(brand: {
@@ -171,10 +183,13 @@ export function buildClientManifesto(brand: {
   voice: string;
   topics: string[];
   language: string;
-}): string {
+}, campaignManifesto?: string | null): string {
   const custom = process.env.GOOSSIP_MANIFESTO_CLIENT?.trim();
   const core = custom && custom.length > 50 ? custom : CLIENT_DEFAULT;
-  return [core, ``, `---`, ``, brandContext(brand)].join('\n');
+  const campaignBlock = campaignManifesto && campaignManifesto.trim().length > 20
+    ? `\n\n---\n\n## Manifiesto de la campaña activa\n\n${campaignManifesto.trim()}`
+    : '';
+  return [core, ``, `---`, ``, brandContext(brand), campaignBlock].join('\n');
 }
 
 export function buildBrandManifesto(brand: {

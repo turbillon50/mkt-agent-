@@ -18,6 +18,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ActiveCampaignChip } from './active-campaign-chip';
 
 const clerkPK = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
 const isClerkConfiguredClient =
@@ -35,7 +36,7 @@ const items: Item[] = [
   { href: '/chat', label: 'Chats', Icon: MessageSquare },
   { href: '/whatsapp', label: 'WhatsApp', Icon: Phone },
   { href: '/knowledge', label: 'Memoria', Icon: Brain },
-  { href: '/projects', label: 'Proyectos', Icon: FolderKanban, soon: true },
+  { href: '/campaigns', label: 'Campañas', Icon: FolderKanban },
   { href: '/posts', label: 'Contenido', Icon: FileText },
   { href: '/plan', label: 'Calendario', Icon: CalendarDays },
   { href: '/analytics', label: 'Analítica', Icon: BarChart3, soon: true },
@@ -76,6 +77,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <Plus className="h-3 w-3" />
         </span>
       </Link>
+
+      <ActiveCampaignChip onNavigate={onNavigate} />
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
         {items.map(({ href, label, Icon, soon }) => {

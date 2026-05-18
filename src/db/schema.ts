@@ -108,12 +108,34 @@ export const users = pgTable('users', {
   brandVoice: text('brand_voice'),
   brandTopics: text('brand_topics'),
   brandLanguage: text('brand_language'),
+  activeCampaignId: uuid('active_campaign_id'),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => ({
   clerkIdx: index('users_clerk_idx').on(t.clerkId),
   emailIdx: index('users_email_idx').on(t.email),
+}));
+
+export const campaigns = pgTable('campaigns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  slug: text('slug').notNull(),
+  description: text('description'),
+  brandName: text('brand_name'),
+  brandVoice: text('brand_voice'),
+  brandTopics: text('brand_topics'),
+  brandLanguage: text('brand_language').default('es'),
+  audience: text('audience'),
+  manifesto: text('manifesto'),
+  status: text('status').notNull().default('active'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('campaigns_user_idx').on(t.userId),
+  userSlugUniq: index('campaigns_user_slug_uniq').on(t.userId, t.slug),
 }));
 
 export const socialAccounts = pgTable('social_accounts', {
@@ -170,3 +192,5 @@ export type NewUser = typeof users.$inferInsert;
 export type SocialAccount = typeof socialAccounts.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type NewChatMessage = typeof chatMessages.$inferInsert;
+export type Campaign = typeof campaigns.$inferSelect;
+export type NewCampaign = typeof campaigns.$inferInsert;
