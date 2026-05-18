@@ -39,24 +39,29 @@ export async function POST(req: NextRequest) {
   }
 
   // Insert conversation as chat_messages with sequential timestamps.
-  // Start time defaults to ~1 hour ago to feel "natural" and not collide with now.
+  // No transaction (Neon HTTP doesn't support multi-statement tx).
+  // Idempotent: skip if awakening already seeded for this user.
   const startMs = body.startedAt ? new Date(body.startedAt).getTime() : Date.now() - 60 * 60 * 1000;
-  const inserted: number = await db.transaction(async (tx) => {
-    let count = 0;
+  const { sql } = await import('drizzle-orm');
+  const exRes = await db.execute<{ c: number }>(
+    sql`SELECT count(*)::int as c FROM chat_messages WHERE user_id = ${user.id} AND metadata->>'origin' = 'awakening'`,
+  );
+  const existingCount = ((exRes as any).rows ?? [])[0]?.c ?? 0;
+  let inserted = 0;
+  if (existingCount === 0) {
     for (let i = 0; i < body.conversation.length; i++) {
       const turn = body.conversation[i]!;
-      const ts = new Date(startMs + i * 45_000); // 45s entre turnos
-      await tx.insert(chatMessages).values({
+      const ts = new Date(startMs + i * 45_000);
+      await db.insert(chatMessages).values({
         userId: user.id,
         role: turn.role,
         content: turn.content,
         metadata: { origin: 'awakening', sealed: true, turn: i },
         createdAt: ts,
       });
-      count++;
+      inserted++;
     }
-    return count;
-  });
+  }
 
   // Seed identity (upsert).
   const existing = await db.select().from(agentIdentity).where(eq(agentIdentity.userId, user.id)).limit(1);
