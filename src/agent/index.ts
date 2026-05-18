@@ -3,6 +3,8 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { config } from '../config';
 import { agentTools } from './tools/index';
 import { buildOperatorManifesto } from './manifesto';
+import { getIdentity, identityBlock } from './identity';
+import type { AgentIdentity } from '../db/schema';
 
 function buildModel() {
   if (!config.openrouter.apiKey) {
@@ -12,7 +14,17 @@ function buildModel() {
   return provider.chat(config.openrouter.modelAgent);
 }
 
-/** Global agent with the default operator manifesto. Used for CLI / cron. */
+function composeInstructions(
+  brand: { name: string; voice: string; topics: string[]; language: string },
+  campaignManifesto: string | null | undefined,
+  identity: AgentIdentity | null,
+): string {
+  const base = buildOperatorManifesto(brand, campaignManifesto);
+  const idBlock = identityBlock(identity);
+  return idBlock ? `${base}\n\n${idBlock}` : base;
+}
+
+/** Global agent (no per-user identity loaded). For CLI / cron. */
 export const socialAgent = new Agent({
   id: 'goossip',
   name: 'goossip',
@@ -40,10 +52,8 @@ export async function askWithHistory(history: ChatTurn[], prompt: string): Promi
 }
 
 /**
- * Conversational with per-campaign manifesto override. We rebuild a thin
- * Agent per request because Mastra bakes instructions at construction
- * time. The model + tools are reused. Constructing an Agent is cheap;
- * only the LLM call costs.
+ * Conversational with per-campaign + per-user-identity context loaded fresh
+ * each request. The model + tools are reused; only instructions vary.
  */
 export async function askWithHistoryForCampaign(
   history: ChatTurn[],
@@ -55,23 +65,26 @@ export async function askWithHistoryForCampaign(
     brandLanguage?: string | null;
     manifesto?: string | null;
   } | null,
+  userId?: string | null,
 ): Promise<string> {
-  if (!campaign) return askWithHistory(history, prompt);
+  const brand = campaign
+    ? {
+        name: campaign.name,
+        voice: campaign.brandVoice ?? config.brand.voice,
+        topics: (campaign.brandTopics ?? config.brand.topics.join(','))
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean),
+        language: campaign.brandLanguage ?? config.brand.language,
+      }
+    : config.brand;
 
-  const brand = {
-    name: campaign.name,
-    voice: campaign.brandVoice ?? config.brand.voice,
-    topics: (campaign.brandTopics ?? config.brand.topics.join(','))
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean),
-    language: campaign.brandLanguage ?? config.brand.language,
-  };
+  const identity = userId ? await getIdentity(userId).catch(() => null) : null;
 
-  const perCampaignAgent = new Agent({
-    id: `goossip-${campaign.name.toLowerCase().replace(/\s+/g, '-').slice(0, 30) || 'campaign'}`,
+  const perRequestAgent = new Agent({
+    id: `goossip${campaign ? '-' + campaign.name.toLowerCase().replace(/\s+/g, '-').slice(0, 30) : ''}`,
     name: 'goossip',
-    instructions: buildOperatorManifesto(brand, campaign.manifesto),
+    instructions: composeInstructions(brand, campaign?.manifesto ?? null, identity),
     model: buildModel(),
     tools: agentTools,
   });
@@ -80,7 +93,7 @@ export async function askWithHistoryForCampaign(
     ...history.map((m) => ({ role: m.role, content: m.content })),
     { role: 'user' as const, content: prompt },
   ];
-  const result = await perCampaignAgent.generate(messages as never);
+  const result = await perRequestAgent.generate(messages as never);
   const r = result as unknown as { text?: string; finalText?: string; content?: string };
   return r.text ?? r.finalText ?? r.content ?? JSON.stringify(result);
 }

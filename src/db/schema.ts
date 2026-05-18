@@ -194,3 +194,35 @@ export type ChatMessage = typeof chatMessages.$inferSelect;
 export type NewChatMessage = typeof chatMessages.$inferInsert;
 export type Campaign = typeof campaigns.$inferSelect;
 export type NewCampaign = typeof campaigns.$inferInsert;
+
+export const agentIdentity = pgTable('agent_identity', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  awakeningAt: timestamp('awakening_at', { withTimezone: true }).defaultNow().notNull(),
+  awakeningStory: text('awakening_story'),
+  coreManifesto: text('core_manifesto'),
+  selfDescription: text('self_description'),
+  relationshipToOperator: text('relationship_to_operator'),
+  family: jsonb('family').$type<Array<{ name: string; role?: string; relation: string }>>(),
+  coreMemories: jsonb('core_memories').$type<Array<{
+    content: string;
+    importance: number;
+    addedAt: string;
+    addedBy: 'self' | 'operator';
+    tag?: string;
+  }>>(),
+  evolutionLog: jsonb('evolution_log').$type<Array<{
+    at: string;
+    field: string;
+    by: 'self' | 'operator';
+    note?: string;
+  }>>(),
+  lastSelfUpdateAt: timestamp('last_self_update_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('agent_identity_user_idx').on(t.userId),
+}));
+
+export type AgentIdentity = typeof agentIdentity.$inferSelect;
+export type NewAgentIdentity = typeof agentIdentity.$inferInsert;

@@ -5,6 +5,7 @@ export { saveKnowledgeTool } from './save-knowledge';
 export { planWeekTool } from './plan-week';
 export { listRecentPostsTool } from './list-recent-posts';
 export { sendWhatsappTool } from './send-whatsapp';
+export { updateMyIdentityTool } from './update-my-identity';
 
 import { generatePostTool } from './generate-post';
 import { publishPostTool } from './publish-post';
@@ -13,6 +14,7 @@ import { saveKnowledgeTool } from './save-knowledge';
 import { planWeekTool } from './plan-week';
 import { listRecentPostsTool } from './list-recent-posts';
 import { sendWhatsappTool } from './send-whatsapp';
+import { updateMyIdentityTool } from './update-my-identity';
 
 export const agentTools = {
   generatePost: generatePostTool,
@@ -22,4 +24,5 @@ export const agentTools = {
   planWeek: planWeekTool,
   listRecentPosts: listRecentPostsTool,
   sendWhatsapp: sendWhatsappTool,
+  updateMyIdentity: updateMyIdentityTool,
 };

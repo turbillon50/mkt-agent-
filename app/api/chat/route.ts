@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       content: m.content,
     }));
 
-    const reply = await askWithHistoryForCampaign(turns, prompt, campaign);
+    const reply = await askWithHistoryForCampaign(turns, prompt, campaign, userId);
 
     if (userId) {
       await saveMessage({ userId, role: 'user', content: prompt }).catch(() => undefined);
