@@ -4,8 +4,11 @@ import { config } from '../config';
 let client: OpenAI | null = null;
 
 function getClient(): OpenAI {
+  if (!config.embeddings.enabled) {
+    throw new Error('Embeddings are disabled. Set EMBEDDINGS_ENABLED=true and provide EMBEDDINGS_API_KEY.');
+  }
   if (!config.embeddings.apiKey) {
-    throw new Error('OPENAI_API_KEY is not set (required for embeddings).');
+    throw new Error('EMBEDDINGS_API_KEY is not set.');
   }
   if (!client) {
     client = new OpenAI({

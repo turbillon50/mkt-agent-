@@ -1,7 +1,7 @@
 import { config } from '../config';
 import { upsertInbound, insertMessage } from './repo';
 import { sendViaBridge } from './bridge';
-import { ask } from '../agent/index';
+import { chat } from '../openrouter';
 import { recall, remember } from '../memory/index';
 
 export interface InboundPayload {
@@ -67,9 +67,16 @@ export async function handleInbound(payload: InboundPayload): Promise<InboundRes
       refType: 'whatsapp',
     }).catch(() => []);
     const prompt = buildAgentPrompt(payload, memories.map((m) => m.content));
+    // Auto-reply uses the cheap "reply" tier — no tool calling needed.
     replyText = await Promise.race([
-      ask(prompt),
-      new Promise<string>((_, rej) => setTimeout(() => rej(new Error('agent timeout')), REPLY_TIMEOUT_MS)),
+      chat(
+        [
+          { role: 'system', content: 'You are Goossip, replying on WhatsApp. Be brief and helpful.' },
+          { role: 'user', content: prompt },
+        ],
+        { model: config.openrouter.modelReply, temperature: 0.7, maxTokens: 400 },
+      ),
+      new Promise<string>((_, rej) => setTimeout(() => rej(new Error('reply timeout')), REPLY_TIMEOUT_MS)),
     ]);
     replyText = replyText.trim();
   } catch (e) {

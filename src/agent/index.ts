@@ -8,7 +8,7 @@ function buildModel() {
     throw new Error('OPENROUTER_API_KEY is not set.');
   }
   const provider = createOpenRouter({ apiKey: config.openrouter.apiKey });
-  return provider.chat(config.openrouter.model);
+  return provider.chat(config.openrouter.modelAgent);
 }
 
 function buildInstructions(): string {

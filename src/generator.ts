@@ -54,7 +54,11 @@ export async function generatePost(input: GenerateInput): Promise<string> {
   const text = await chat([
     { role: 'system', content: systemPrompt() },
     { role: 'user', content: user },
-  ], { temperature: 0.85, maxTokens: 600 });
+  ], {
+    temperature: 0.85,
+    maxTokens: 600,
+    model: config.openrouter.modelDraft,
+  });
 
   return text.length > limits.maxChars ? text.slice(0, limits.maxChars).trim() : text;
 }
@@ -83,7 +87,11 @@ export async function generateWeeklyPlan(opts: {
   const json = await chatJSON<{ items: PlanItemDraft[] }>([
     { role: 'system', content: systemPrompt() },
     { role: 'user', content: user },
-  ], { temperature: 0.7, maxTokens: 1500 });
+  ], {
+    temperature: 0.7,
+    maxTokens: 1500,
+    model: config.openrouter.modelPlan,
+  });
 
   if (!json || !Array.isArray(json.items)) throw new Error('Planner returned invalid JSON.');
   return json.items;

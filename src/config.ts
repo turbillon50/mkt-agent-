@@ -2,17 +2,42 @@ import 'dotenv/config';
 
 const truthy = (v: unknown) => /^(1|true|yes|on)$/i.test(String(v ?? '').trim());
 
+/**
+ * Tiered model strategy. Defaults bias toward cheap / free models for the
+ * routine work (post drafting, auto-replies) and reserve the heavy model
+ * for the tool-calling agent and the weekly plan, where reasoning quality
+ * actually changes the outcome.
+ *
+ * Every job is overridable via env so you can swap providers without code.
+ */
 export const config = {
   openrouter: {
     apiKey: process.env.OPENROUTER_API_KEY ?? '',
-    model: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
     baseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
+
+    // Tier A — heavy reasoning (Mastra agent main loop, weekly plan).
+    modelAgent: process.env.OPENROUTER_MODEL_AGENT || 'anthropic/claude-sonnet-4-5',
+    modelPlan:  process.env.OPENROUTER_MODEL_PLAN  || 'anthropic/claude-sonnet-4-5',
+
+    // Tier B — fast & cheap drafting (single post generation).
+    modelDraft: process.env.OPENROUTER_MODEL_DRAFT || 'google/gemini-2.5-flash',
+
+    // Tier C — free fast replies (WhatsApp auto-reply, ad-hoc lightweight tasks).
+    modelReply: process.env.OPENROUTER_MODEL_REPLY || 'google/gemini-2.5-flash-lite',
+
+    // Legacy single-model knob kept for backwards compat with `openrouter.ts`.
+    model: process.env.OPENROUTER_MODEL || process.env.OPENROUTER_MODEL_DRAFT || 'google/gemini-2.5-flash',
   },
   embeddings: {
-    apiKey: process.env.OPENAI_API_KEY ?? '',
-    model: process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
-    baseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
-    dimensions: 1536,
+    // Semantic memory is opt-in. With it OFF, recall() returns [] and the
+    // agent still works fine — it just won't do similarity-based dedup.
+    // Turn ON by setting EMBEDDINGS_ENABLED=true and pointing to any
+    // OpenAI-compatible /embeddings endpoint (Jina, Voyage, Cohere, etc.).
+    enabled: truthy(process.env.EMBEDDINGS_ENABLED ?? 'false'),
+    apiKey: process.env.EMBEDDINGS_API_KEY || process.env.OPENAI_API_KEY || '',
+    baseUrl: process.env.EMBEDDINGS_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+    model: process.env.EMBEDDINGS_MODEL || process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
+    dimensions: Number(process.env.EMBEDDINGS_DIMENSIONS ?? 1536),
   },
   db: {
     url: process.env.DATABASE_URL ?? '',
