@@ -129,6 +129,17 @@ export const socialAccounts = pgTable('social_accounts', {
   userPlatformIdx: index('social_accounts_user_platform_idx').on(t.userId, t.platform),
 }));
 
+export const chatMessages = pgTable('chat_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
+  content: text('content').notNull(),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('chat_messages_user_idx').on(t.userId, t.createdAt),
+}));
+
 export const whatsappMessages = pgTable('whatsapp_messages', {
   id: uuid('id').primaryKey().defaultRandom(),
   externalId: text('external_id'),
@@ -157,3 +168,5 @@ export type NewWhatsappMessage = typeof whatsappMessages.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type SocialAccount = typeof socialAccounts.$inferSelect;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type NewChatMessage = typeof chatMessages.$inferInsert;

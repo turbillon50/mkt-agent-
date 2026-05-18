@@ -11,7 +11,29 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hydrating, setHydrating] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/chat', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const msgs: Msg[] = (data?.messages ?? []).map((m: { role: string; content: string }) => ({
+          role: m.role === 'assistant' ? 'agent' : 'user',
+          text: m.content,
+        }));
+        setMessages(msgs);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setHydrating(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,10 +75,13 @@ export default function ChatPage() {
 
       <Card className="flex-1 overflow-y-auto">
         <CardContent className="space-y-3 py-4">
-          {messages.length === 0 && (
+          {hydrating && messages.length === 0 && (
+            <p className="text-sm text-[var(--color-muted-foreground)]">cargando conversación…</p>
+          )}
+          {!hydrating && messages.length === 0 && (
             <p className="text-sm text-[var(--color-muted-foreground)]">
-              Empieza con algo como <em>“¿qué hemos posteado esta semana?”</em> o{' '}
-              <em>“redacta un tweet sobre automatización”</em>.
+              Tira algo. <em>"qué onda, qué traes hoy"</em>, <em>"redáctame un tweet sobre X"</em>,{' '}
+              <em>"recuerda esto: …"</em>.
             </p>
           )}
           {messages.map((m, i) => (
