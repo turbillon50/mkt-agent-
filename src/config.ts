@@ -37,7 +37,7 @@ export const config = {
     apiKey: process.env.EMBEDDINGS_API_KEY || process.env.OPENAI_API_KEY || '',
     baseUrl: process.env.EMBEDDINGS_BASE_URL || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
     model: process.env.EMBEDDINGS_MODEL || process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
-    dimensions: Number(process.env.EMBEDDINGS_DIMENSIONS ?? 1536),
+    dimensions: Number(process.env.EMBEDDINGS_DIMENSIONS ?? 1024),
   },
   db: {
     url: process.env.DATABASE_URL ?? '',

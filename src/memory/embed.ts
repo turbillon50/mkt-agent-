@@ -23,6 +23,7 @@ export async function embed(text: string): Promise<number[]> {
   const res = await getClient().embeddings.create({
     model: config.embeddings.model,
     input: text,
+    dimensions: config.embeddings.dimensions,
   });
   const vec = res.data[0]?.embedding;
   if (!vec) throw new Error('Embedding API returned no vector.');

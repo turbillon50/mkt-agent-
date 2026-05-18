@@ -87,7 +87,7 @@ export const embeddings = pgTable('embeddings', {
   refType: text('ref_type').notNull(),
   refId: uuid('ref_id').notNull(),
   content: text('content').notNull(),
-  embedding: vector('embedding', { dimensions: 1536 }).notNull(),
+  embedding: vector('embedding', { dimensions: 1024 }).notNull(),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => ({
