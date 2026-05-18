@@ -65,6 +65,7 @@ export async function askWithHistoryForCampaign(
     manifesto?: string | null;
   } | null,
   userId?: string | null,
+  imageDataUrl?: string | null,
 ): Promise<string> {
   const brand = campaign
     ? {
@@ -90,9 +91,16 @@ export async function askWithHistoryForCampaign(
     ...(memory ? { memory } : {}),
   } as never);
 
+  const userContent: unknown = imageDataUrl
+    ? [
+        { type: 'text', text: prompt },
+        { type: 'image', image: imageDataUrl },
+      ]
+    : prompt;
+
   const messages = [
     ...history.map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user' as const, content: prompt },
+    { role: 'user' as const, content: userContent },
   ];
 
   const genOpts: Record<string, unknown> = {};

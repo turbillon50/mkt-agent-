@@ -6,10 +6,28 @@ export const maxDuration = 60;
 
 type Turn = { role: 'user' | 'assistant'; content: string };
 
+const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // ~6MB after base64 decode
+
+function validateDataUrl(s: string): { ok: boolean; reason?: string } {
+  if (!s.startsWith('data:image/')) return { ok: false, reason: 'not an image data url' };
+  const commaIdx = s.indexOf(',');
+  if (commaIdx < 0) return { ok: false, reason: 'malformed data url' };
+  const b64 = s.slice(commaIdx + 1);
+  const approxBytes = Math.floor(b64.length * 0.75);
+  if (approxBytes > MAX_IMAGE_BYTES) return { ok: false, reason: 'image too large' };
+  return { ok: true };
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const prompt = typeof body?.prompt === 'string' ? body.prompt.trim() : '';
-  if (!prompt) return NextResponse.json({ error: 'prompt required' }, { status: 400 });
+  const image = typeof body?.image === 'string' ? body.image : null;
+
+  if (!prompt && !image) return NextResponse.json({ error: 'prompt or image required' }, { status: 400 });
+  if (image) {
+    const v = validateDataUrl(image);
+    if (!v.ok) return NextResponse.json({ error: v.reason }, { status: 400 });
+  }
 
   let userId: string | null = null;
   let campaign: { name: string; brandVoice?: string | null; brandTopics?: string | null; brandLanguage?: string | null; manifesto?: string | null } | null = null;
@@ -24,7 +42,7 @@ export async function POST(req: NextRequest) {
         const { getActiveCampaign } = await import('@/lib/campaigns');
         campaign = await getActiveCampaign(user.id);
       }
-    } catch (e) {
+    } catch {
       return NextResponse.json({ error: 'auth failed' }, { status: 401 });
     }
   }
@@ -41,11 +59,21 @@ export async function POST(req: NextRequest) {
       content: m.content,
     }));
 
-    const reply = await askWithHistoryForCampaign(turns, prompt, campaign, userId);
+    const reply = await askWithHistoryForCampaign(turns, prompt || 'Mira esta imagen y dime qué ves.', campaign, userId, image);
 
     if (userId) {
-      await saveMessage({ userId, role: 'user', content: prompt }).catch(() => undefined);
-      await saveMessage({ userId, role: 'assistant', content: reply, metadata: campaign ? { campaign: campaign.name } : undefined }).catch(() => undefined);
+      await saveMessage({
+        userId,
+        role: 'user',
+        content: prompt || '(imagen)',
+        metadata: image ? { hasImage: true } : undefined,
+      }).catch(() => undefined);
+      await saveMessage({
+        userId,
+        role: 'assistant',
+        content: reply,
+        metadata: campaign ? { campaign: campaign.name } : undefined,
+      }).catch(() => undefined);
     }
 
     return NextResponse.json({ reply, campaign: campaign?.name ?? null });
@@ -55,7 +83,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   if (!isClerkConfigured()) return NextResponse.json({ messages: [] });
   try {
     const { getOrCreateUser } = await import('@/lib/users');
