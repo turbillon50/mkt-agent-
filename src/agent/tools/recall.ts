@@ -8,7 +8,7 @@ export const recallTool = createTool({
     'Semantic search across stored memories (past posts, knowledge base, mentions). Use to avoid repetition or to ground a draft in prior context.',
   inputSchema: z.object({
     query: z.string().min(3),
-    refType: z.enum(['post', 'knowledge', 'mention', 'reply', 'whatsapp']).optional(),
+    refType: z.enum(['post', 'knowledge', 'mention', 'reply', 'whatsapp', 'chat', 'identity']).optional(),
     k: z.number().int().positive().max(20).optional(),
   }),
   outputSchema: z.object({
