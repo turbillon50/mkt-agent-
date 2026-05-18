@@ -3,6 +3,7 @@ import { upsertInbound, insertMessage } from './repo';
 import { sendViaBridge } from './bridge';
 import { chat } from '../openrouter';
 import { recall, remember } from '../memory/index';
+import { buildClientManifesto } from '../agent/manifesto';
 
 export interface InboundPayload {
   externalId: string;
@@ -21,20 +22,19 @@ export interface InboundResult {
 
 const REPLY_TIMEOUT_MS = 45_000;
 
-function buildAgentPrompt(p: InboundPayload, recentBodies: string[]): string {
+function buildClientUserPrompt(p: InboundPayload, recentBodies: string[]): string {
   const ctx = recentBodies.length > 0
     ? `\n\nHistorial reciente con este contacto:\n${recentBodies.slice(0, 6).map((b, i) => `${i + 1}. ${b}`).join('\n')}`
     : '';
   return [
-    `Eres Goossip, el asistente de la marca "${config.brand.name}".`,
-    `Te llegó un mensaje de WhatsApp de ${p.pushName ?? p.from}.`,
-    `Responde en ${config.brand.language === 'es' ? 'español' : 'el idioma del usuario'}, en tono ${config.brand.voice}.`,
-    `Máximo 3 oraciones. No inventes datos. Si el usuario pide algo fuera de tu alcance, dilo y ofrece capturar el contexto.`,
+    `Te llegó un WhatsApp de ${p.pushName ?? p.from}.`,
+    `Máximo 3-4 oraciones. Espeja el tono del lead. No inventes datos.`,
+    `Si pide algo fuera de tu conocimiento, dilo y propón un siguiente paso suave.`,
     ctx,
     ``,
     `Mensaje recibido: "${p.body}"`,
     ``,
-    `Tu respuesta (solo el texto, sin prefijos):`,
+    `Tu respuesta (solo el texto del WhatsApp, sin prefijos):`,
   ].join('\n');
 }
 
@@ -62,17 +62,20 @@ export async function handleInbound(payload: InboundPayload): Promise<InboundRes
 
   let replyText = '';
   try {
-    const memories = await recall(`whatsapp ${payload.from} ${payload.body}`, {
-      k: 6,
-      refType: 'whatsapp',
-    }).catch(() => []);
-    const prompt = buildAgentPrompt(payload, memories.map((m) => m.content));
-    // Auto-reply uses the cheap "reply" tier — no tool calling needed.
+    const [memories, brandKnowledge] = await Promise.all([
+      recall(`whatsapp ${payload.from} ${payload.body}`, { k: 6, refType: 'whatsapp' }).catch(() => []),
+      recall(payload.body, { k: 5, refType: 'knowledge' }).catch(() => []),
+    ]);
+    const userPrompt = buildClientUserPrompt(payload, memories.map((m) => m.content));
+    const knowledgeBlock = brandKnowledge.length > 0
+      ? `\n\nConocimiento relevante de la marca (úsalo si aplica):\n${brandKnowledge.map((m, i) => `[${i + 1}] ${m.content.slice(0, 300)}`).join('\n')}`
+      : '';
+    // Modo CLIENT (profesional, no juguetón) — usa el tier "reply" barato.
     replyText = await Promise.race([
       chat(
         [
-          { role: 'system', content: 'You are Goossip, replying on WhatsApp. Be brief and helpful.' },
-          { role: 'user', content: prompt },
+          { role: 'system', content: buildClientManifesto(config.brand) + knowledgeBlock },
+          { role: 'user', content: userPrompt },
         ],
         { model: config.openrouter.modelReply, temperature: 0.7, maxTokens: 400 },
       ),
