@@ -8,9 +8,47 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
-type Msg = { role: 'user' | 'agent'; text: string; image?: string };
+const MAX_IMAGE_MB = 10;
+const MAX_LONGEST_SIDE = 1920;
 
-const MAX_IMAGE_MB = 5;
+/**
+ * Normaliza CUALQUIER imagen (HEIC del iPhone, PNG, JPEG, WebP, GIF) a JPEG.
+ * Usa decodificación nativa del browser (Safari moderno soporta HEIC) y
+ * canvas para re-encode. Reduce a 1920px de lado mayor, strip EXIF (privacidad),
+ * salida garantizada image/jpeg que TODOS los modelos de visión aceptan.
+ */
+async function fileToJpegDataUrl(file: File): Promise<string> {
+  const objUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('No pude leer la imagen — formato no soportado en este navegador'));
+      el.src = objUrl;
+    });
+    let w = img.naturalWidth || img.width;
+    let h = img.naturalHeight || img.height;
+    if (!w || !h) throw new Error('Imagen sin dimensiones legibles');
+    if (Math.max(w, h) > MAX_LONGEST_SIDE) {
+      const s = MAX_LONGEST_SIDE / Math.max(w, h);
+      w = Math.round(w * s);
+      h = Math.round(h * s);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (!ctx) throw new Error('Canvas no disponible');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', 0.88);
+  } finally {
+    URL.revokeObjectURL(objUrl);
+  }
+}
+
+type Msg = { role: 'user' | 'agent'; text: string; image?: string };
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -47,19 +85,18 @@ export default function ChatPage() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  function handleFile(file: File) {
+  async function handleFile(file: File) {
     setImageError(null);
-    if (!file.type.startsWith('image/')) {
-      setImageError('Solo imágenes (jpg, png, webp).');
-      return;
-    }
     if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
       setImageError(`Máximo ${MAX_IMAGE_MB} MB.`);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => setImage(reader.result as string);
-    reader.readAsDataURL(file);
+    try {
+      const jpeg = await fileToJpegDataUrl(file);
+      setImage(jpeg);
+    } catch (e) {
+      setImageError(e instanceof Error ? e.message : 'No se pudo procesar la imagen.');
+    }
   }
 
   async function send() {
@@ -171,11 +208,11 @@ export default function ChatPage() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,image/heic,image/heif"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) handleFile(f);
+            if (f) void handleFile(f);
             e.target.value = '';
           }}
         />

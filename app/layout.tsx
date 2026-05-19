@@ -2,6 +2,7 @@ import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata, Viewport } from 'next';
 import { isClerkConfigured } from '@/lib/clerk-config';
+import { PWABoot } from '@/components/pwa';
 
 export const metadata: Metadata = {
   title: 'Goossip — Tu agente social autónomo',
@@ -30,7 +31,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const body = (
     <html lang="es" suppressHydrationWarning>
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        {children}
+        <PWABoot />
+      </body>
     </html>
   );
   if (!isClerkConfigured()) return body;
