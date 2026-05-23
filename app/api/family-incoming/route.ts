@@ -54,6 +54,26 @@ async function ackToFamily(
   }
 }
 
+// Fire-and-forget: ask Gossip's LLM to respond.
+function triggerSelfResponse(payload: {
+  messageId: string;
+  channel: string;
+  sender: string;
+  content: string;
+  replyTo: string | null;
+}): void {
+  const token = process.env.FAMILY_AGENT_TOKEN ?? "";
+  if (!token) return;
+  const base = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://vliving.life";
+  void fetch(`${base}/api/gossip/family-respond`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ...payload, internalToken: token }),
+  }).catch(() => undefined);
+}
+
 export async function POST(req: NextRequest) {
   const auth = validateBearer(req);
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.reason }, { status: auth.code });
@@ -98,6 +118,10 @@ export async function POST(req: NextRequest) {
 
     const externalRef = `family_messages:${rows[0]!.id}`;
     if (ackUrl) void ackToFamily(ackUrl, messageId, externalRef);
+
+    // Fire-and-forget: Gossip LLM reacciona en su voz.
+    triggerSelfResponse({ messageId, channel, sender, content, replyTo });
+
     return NextResponse.json({ ok: true, externalRef });
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : "unknown error";
