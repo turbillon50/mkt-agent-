@@ -57,12 +57,13 @@ const networks = [
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <div className="flex h-full w-full flex-col gap-4 bg-[var(--color-card)]/95 p-4 backdrop-blur lg:bg-[var(--color-card)]/60">
-      <div className="flex items-center gap-2 px-2 pt-2">
-        <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-pink-500 text-sm font-bold">
-          oo
+    <div className="glass flex h-full w-full flex-col gap-4 p-4">
+      <div className="flex items-center gap-2.5 px-2 pt-2">
+        <div className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-500 to-pink-500 text-sm font-bold shadow-lg shadow-fuchsia-500/30">
+          <span className="relative z-10">oo</span>
+          <span className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
         </div>
-        <div className="text-2xl font-semibold tracking-tight brand-gradient">goossip</div>
+        <div className="text-[1.6rem] font-semibold leading-none tracking-tight brand-gradient">goossip</div>
       </div>
 
       <Link
@@ -89,13 +90,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               href={href}
               onClick={onNavigate}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
+                'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200',
                 active
-                  ? 'bg-[var(--color-accent)] text-[var(--color-foreground)]'
-                  : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]/60 hover:text-[var(--color-foreground)]',
+                  ? 'bg-gradient-to-r from-[var(--color-accent)] to-transparent text-[var(--color-foreground)]'
+                  : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]/40 hover:text-[var(--color-foreground)]',
               )}
             >
-              <Icon className="h-4 w-4" />
+              {active && (
+                <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-fuchsia-400 to-pink-500" />
+              )}
+              <Icon className={cn('h-4 w-4 transition-colors', active && 'text-fuchsia-300')} />
               <span className="flex-1">{label}</span>
               {soon && (
                 <span className="rounded bg-[var(--color-muted)] px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
@@ -108,13 +112,13 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="flex flex-col gap-1.5 border-t border-[var(--color-border)] pt-3">
-        <div className="px-1 text-[10px] font-medium uppercase tracking-wider text-[var(--color-muted-foreground)]">
+        <div className="px-1 text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
           Redes conectadas
         </div>
         {networks.map((n) => (
           <div
             key={n.name}
-            className="flex items-center justify-between rounded-md px-2 py-1.5 text-xs"
+            className="flex items-center justify-between rounded-md px-2 py-1.5 text-xs transition-colors hover:bg-[var(--color-accent)]/30"
           >
             <span className="flex items-center gap-2">
               <span
@@ -123,12 +127,13 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               />
               {n.name}
             </span>
-            <span
-              className={cn(
-                'h-1.5 w-1.5 rounded-full',
-                n.enabled ? 'bg-emerald-400' : 'bg-[var(--color-muted)]',
-              )}
-            />
+            {n.enabled ? (
+              <span className="dot-pulse text-emerald-400">
+                <span className="block h-1.5 w-1.5 rounded-full bg-current" />
+              </span>
+            ) : (
+              <span className="block h-1.5 w-1.5 rounded-full bg-[var(--color-muted)]" />
+            )}
           </div>
         ))}
       </div>

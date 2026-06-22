@@ -1,6 +1,8 @@
 import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata, Viewport } from 'next';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
 import { isClerkConfigured } from '@/lib/clerk-config';
 import { PWABoot } from '@/components/pwa';
 
@@ -30,7 +32,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const body = (
-    <html lang="es" suppressHydrationWarning>
+    <html
+      lang="es"
+      suppressHydrationWarning
+      className={`${GeistSans.variable} ${GeistMono.variable}`}
+    >
       <body className="min-h-screen antialiased">
         {children}
         <PWABoot />
