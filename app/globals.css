@@ -75,30 +75,12 @@ body {
   padding-right: env(safe-area-inset-right);
   overflow-x: hidden;
   overscroll-behavior-x: none;
-  position: relative;
-}
-
-/* Grano de fondo sutil — premium feel */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
+  /* Sutil tinte de fondo via gradient — sin pseudo-elementos para evitar
+     stacking context bugs en iOS Safari */
   background-image:
-    radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.06) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.05) 0px, transparent 50%);
-  opacity: 0.9;
-}
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.18'/%3E%3C/svg%3E");
-  opacity: 0.025;
-  mix-blend-mode: overlay;
+    radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.04) 0px, transparent 50%);
+  background-attachment: fixed;
 }
 
 button, a { touch-action: manipulation; }
@@ -264,12 +246,13 @@ button, a { touch-action: manipulation; }
   100% { background-position: 100% 0; }
 }
 
-/* Subtle fade-in on mount */
+/* Subtle fade-in on mount — sin opacity en el from para no quedarse
+   invisible si la animación falla en algún browser. Sólo desplazamiento. */
 .fade-up {
-  animation: fade-up 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fade-up 700ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0.4; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -309,5 +292,5 @@ h1, h2, h3, h4 {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-muted-foreground); }
 
-/* Ensure interactive layers go above the body grain */
-header, main, footer, aside, dialog, [role="dialog"] { position: relative; z-index: 1; }
+/* No extra stacking rules — el body ya no tiene pseudo-elementos en z-index 0
+   así que el flujo natural funciona. */
