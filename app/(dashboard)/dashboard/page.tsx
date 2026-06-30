@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Bell, Edit3 } from 'lucide-react';
+import { IconBell, IconEdit } from '@/components/icons';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CommandCenter } from '@/components/dashboard/command-center';
@@ -40,16 +40,16 @@ export default async function DashboardPage() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold lg:text-xl">
-              Goossip AI <span className="ml-1 inline-block h-2 w-2 rounded-full bg-fuchsia-400 align-middle" />
+              Goossip AI <span className="ml-1 inline-block h-2 w-2 rounded-full bg-[var(--color-primary)] align-middle" />
             </h1>
             <p className="text-xs text-[var(--color-muted-foreground)]">Online</p>
           </div>
           <div className="flex items-center gap-2">
             <button className="grid h-9 w-9 place-items-center rounded-full border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]">
-              <Edit3 className="h-4 w-4" />
+              <IconEdit className="h-4 w-4" />
             </button>
             <button className="grid h-9 w-9 place-items-center rounded-full border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]">
-              <Bell className="h-4 w-4" />
+              <IconBell className="h-4 w-4" />
             </button>
           </div>
         </header>
@@ -63,7 +63,7 @@ export default async function DashboardPage() {
           <CardContent className="p-5">
             <Link
               href="/chat"
-              className="block rounded-lg bg-[var(--color-muted)]/60 px-4 py-3 text-sm text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+              className="block rounded-lg bg-[var(--color-muted)]/70 px-4 py-3 text-sm text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
             >
               Cuéntame tu idea, objetivo o lo que necesitas…
             </Link>
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
                 <ul className="divide-y divide-[var(--color-border)]">
                   {stats.recent.map((p) => (
                     <li key={p.id} className="flex items-start gap-4 px-5 py-3">
-                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-fuchsia-500/40 to-pink-500/40 text-xs font-semibold">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[var(--color-accent)] text-xs font-semibold text-[var(--color-primary)]">
                         {p.platform === 'twitter' ? 'X' : p.platform === 'linkedin' ? 'in' : '·'}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
 
 function Chip({ label, emoji }: { label: string; emoji: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/60 px-2.5 py-1 text-xs">
+    <span className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-muted)]/70 px-2.5 py-1 text-xs">
       <span>{emoji}</span>
       <span>{label}</span>
     </span>
@@ -154,7 +154,7 @@ function ActionChip({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)]/60 px-3 py-1.5 text-xs text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+      className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 text-xs text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-muted)]"
     >
       {label}
     </Link>
