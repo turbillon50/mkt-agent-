@@ -1,78 +1,57 @@
 import Link from 'next/link';
-import { IconPlus } from '@/components/icons';
+import { IconPlus, IconFolder } from '@/components/icons';
 import { Card, CardContent } from '@/components/ui/card';
+import { getOrCreateUser } from '@/lib/users';
+import { listCampaigns } from '@/lib/campaigns';
 
-type Project = {
-  name: string;
-  kind: string;
-  pieces: number;
-  progress: number;
-  networks: Array<'IG' | 'X' | 'LI' | 'TT'>;
-};
+export async function ProjectsRow() {
+  let campaigns: Awaited<ReturnType<typeof listCampaigns>> = [];
+  try {
+    const user = await getOrCreateUser();
+    if (user) campaigns = await listCampaigns(user.id);
+  } catch {
+    campaigns = [];
+  }
 
-const projects: Project[] = [
-  { name: 'Lanzamiento Goossip', kind: 'Contenido', pieces: 12, progress: 75, networks: ['IG', 'X', 'LI', 'TT'] },
-  { name: 'Marca Personal',     kind: 'Estrategia', pieces: 8,  progress: 60, networks: ['IG', 'X', 'LI'] },
-  { name: 'VanDeFi',            kind: 'Campaña',    pieces: 15, progress: 40, networks: ['IG', 'X', 'LI', 'TT'] },
-];
-
-const networkColors: Record<Project['networks'][number], string> = {
-  IG: 'from-fuchsia-500 to-orange-400',
-  X: 'from-zinc-400 to-zinc-200',
-  LI: 'from-blue-500 to-blue-400',
-  TT: 'from-pink-500 to-cyan-400',
-};
-
-export function ProjectsRow() {
   return (
     <section>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Proyectos activos</h2>
-        <Link href="/projects" className="text-sm text-[var(--color-muted-foreground)] hover:underline">
-          Ver todos
+        <h2 className="text-lg font-semibold">Tus campañas</h2>
+        <Link href="/campaigns" className="text-sm text-[var(--color-muted-foreground)] hover:underline">
+          Ver todas
         </Link>
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {projects.map((p) => (
-          <Card key={p.name} className="card-glow">
-            <CardContent className="space-y-3 p-4">
-              <div>
-                <div className="text-sm font-semibold">{p.name}</div>
-                <div className="text-xs text-[var(--color-muted-foreground)]">
-                  {p.kind} · {p.pieces} piezas
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                {p.networks.map((n) => (
-                  <span
-                    key={n}
-                    className={`grid h-5 w-5 place-items-center rounded bg-gradient-to-br ${networkColors[n]} text-[10px] font-semibold text-white/90`}
-                  >
-                    {n}
+        {campaigns.slice(0, 3).map((c) => (
+          <Link key={c.id} href={`/campaigns/${c.id}`}>
+            <Card className="card-glow h-full transition-colors hover:bg-[var(--color-accent)]/40">
+              <CardContent className="space-y-3 p-4">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-[var(--color-accent)] text-[var(--color-primary)]">
+                    <IconFolder className="h-3.5 w-3.5" />
                   </span>
-                ))}
-                <span className="ml-auto text-xs text-[var(--color-muted-foreground)]">{p.progress}%</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--color-muted)]">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-pink-500"
-                  style={{ width: `${p.progress}%` }}
-                />
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{c.name}</div>
+                    <div className="truncate text-xs text-[var(--color-muted-foreground)]">
+                      {c.brandVoice || 'sin voz definida'}
+                    </div>
+                  </div>
+                </div>
+                <span className="inline-flex rounded bg-[var(--color-muted)] px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                  {c.status}
+                </span>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
         <Link
-          href="/projects"
+          href="/campaigns"
           className="flex min-h-[140px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--color-border)] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)]"
         >
           <IconPlus className="h-5 w-5" />
-          <span className="text-sm">Nuevo proyecto</span>
+          <span className="text-sm">{campaigns.length === 0 ? 'Crear tu primera campaña' : 'Nueva campaña'}</span>
         </Link>
       </div>
-      <p className="mt-2 text-xs text-[var(--color-muted-foreground)]">
-        Estos son ejemplos visuales — el módulo Proyectos llegará en una fase posterior.
-      </p>
     </section>
   );
 }
