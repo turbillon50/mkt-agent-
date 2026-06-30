@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       content: m.content,
     }));
 
-    const reply = await askWithHistoryForCampaign(turns, prompt || 'Mira esta imagen y dime qué ves.', campaign, userId, image);
+    const agentReply = await askWithHistoryForCampaign(turns, prompt || 'Mira esta imagen y dime qué ves.', campaign, userId, image);
 
     if (userId) {
       await saveMessage({
@@ -123,12 +123,19 @@ export async function POST(req: NextRequest) {
       await saveMessage({
         userId,
         role: 'assistant',
-        content: reply,
-        metadata: campaign ? { campaign: campaign.name } : undefined,
+        content: agentReply.text,
+        metadata: {
+          ...(campaign ? { campaign: campaign.name } : {}),
+          ...(agentReply.draftPost ? { draftPost: agentReply.draftPost } : {}),
+        },
       }).catch(() => undefined);
     }
 
-    return NextResponse.json({ reply, campaign: campaign?.name ?? null });
+    return NextResponse.json({
+      reply: agentReply.text,
+      draftPost: agentReply.draftPost ?? null,
+      campaign: campaign?.name ?? null,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'agent error';
     return NextResponse.json({ error: msg }, { status: 500 });
@@ -148,6 +155,7 @@ export async function GET() {
         role: m.role,
         content: m.content,
         imageDataUrl: (m.metadata as any)?.imageDataUrl ?? null,
+        draftPost: (m.metadata as any)?.draftPost ?? null,
       })),
     });
   } catch (e) {
