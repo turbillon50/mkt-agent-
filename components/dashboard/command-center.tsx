@@ -7,10 +7,10 @@ import type { getDashboardStats } from '@/lib/data';
 type Stats = Awaited<ReturnType<typeof getDashboardStats>>;
 
 const tiles = [
-  { href: '/knowledge', label: 'Memoria', Icon: Brain },
-  { href: '/audience', label: 'Audiencias', Icon: Users },
-  { href: '/posts', label: 'Contenido', Icon: FileText },
-  { href: '/plan', label: 'Calendario', Icon: CalendarDays },
+  { href: '/knowledge', label: 'Memoria', Icon: IconBrain },
+  { href: '/audience', label: 'Audiencias', Icon: IconUsers },
+  { href: '/posts', label: 'Contenido', Icon: IconFile },
+  { href: '/plan', label: 'Calendario', Icon: IconCalendar },
 ];
 
 export function CommandCenter({ stats }: { stats: Stats | null }) {
@@ -29,9 +29,9 @@ export function CommandCenter({ stats }: { stats: Stats | null }) {
           <Link
             key={href}
             href={href}
-            className="flex flex-col items-center gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/60 px-2 py-3 text-center text-[11px] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)]"
+            className="flex flex-col items-center gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-2 py-3 text-center text-[11px] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)]"
           >
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-fuchsia-500/30 to-violet-500/30 text-fuchsia-200">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--color-accent)] text-[var(--color-primary)]">
               <Icon className="h-4 w-4" />
             </span>
             {label}
@@ -48,7 +48,7 @@ export function CommandCenter({ stats }: { stats: Stats | null }) {
           <Sparkline data={series.length ? series : [0, 0, 0, 0, 0, 0, 0]} />
           <div className="mt-2 flex items-center justify-between text-xs text-[var(--color-muted-foreground)]">
             <span>Lun Mar Mié Jue Vie Sáb Dom</span>
-            <span className={delta >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
+            <span className={delta >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-destructive)]'}>
               {delta >= 0 ? '+' : ''}
               {delta}%
             </span>
@@ -56,7 +56,7 @@ export function CommandCenter({ stats }: { stats: Stats | null }) {
           <div className="mt-4 grid grid-cols-3 gap-3">
             <Metric label="Alcance" value={totalLast7 * 32} hint={`+${Math.max(0, delta)}%`} positive={delta >= 0} />
             <Metric label="Interacciones" value={totalLast7 * 4} hint="—" />
-            <Metric label="Seguidores" value={Math.round(totalLast7 * 0.8)} hint="—" />
+            <Metric label="Seguidores" value={Math.round(totalLast7 * 1.2)} hint="—" />
           </div>
         </CardContent>
       </Card>
@@ -73,11 +73,11 @@ export function CommandCenter({ stats }: { stats: Stats | null }) {
         <CardContent>
           <div className="grid grid-cols-5 gap-2 text-center text-[10px] text-[var(--color-muted-foreground)]">
             {[
-              { n: 'Instagram', c: 'from-fuchsia-500 to-orange-400' },
-              { n: 'X', c: 'from-zinc-400 to-zinc-200' },
-              { n: 'LinkedIn', c: 'from-blue-500 to-blue-400' },
-              { n: 'Facebook', c: 'from-blue-600 to-indigo-500' },
-              { n: 'TikTok', c: 'from-pink-500 to-cyan-400' },
+              { n: 'Instagram', c: 'from-[var(--color-brand-1)] to-orange-300' },
+              { n: 'X', c: 'from-zinc-700 to-zinc-400' },
+              { n: 'LinkedIn', c: 'from-blue-600 to-blue-400' },
+              { n: 'Facebook', c: 'from-blue-700 to-indigo-500' },
+              { n: 'TikTok', c: 'from-[var(--color-primary)] to-cyan-400' },
             ].map((it) => (
               <div key={it.n} className="flex flex-col items-center gap-1">
                 <div
@@ -90,11 +90,11 @@ export function CommandCenter({ stats }: { stats: Stats | null }) {
         </CardContent>
       </Card>
 
-      <Card className="border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-500/10 to-violet-500/10">
+      <Card className="border-[var(--color-primary)]/25 bg-gradient-to-br from-[var(--color-primary)]/8 to-[var(--color-secondary)]/8">
         <CardContent className="space-y-2 p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <IconSparkles className="h-4 w-4 text-fuchsia-300" />
+              <IconSparkles className="h-4 w-4 text-[var(--color-primary)]" />
               <span className="font-semibold">Goossip Pro</span>
             </div>
           </div>
@@ -130,7 +130,7 @@ function Metric({
         {label}
       </span>
       <span className="text-base font-semibold">{formatNumber(value)}</span>
-      <span className={positive ? 'text-[10px] text-emerald-300' : 'text-[10px] text-rose-300'}>
+      <span className={positive ? 'text-[10px] text-[var(--color-success)]' : 'text-[10px] text-[var(--color-destructive)]'}>
         {hint}
       </span>
     </div>
@@ -157,9 +157,9 @@ function ContenidoReciente({ recent }: { recent: Stats['recent'] }) {
               <Link
                 key={p.id}
                 href="/posts"
-                className="flex flex-col gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/40 p-2 transition-colors hover:bg-[var(--color-muted)]"
+                className="flex flex-col gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/50 p-2 transition-colors hover:bg-[var(--color-muted)]"
               >
-                <div className="aspect-square rounded-md bg-gradient-to-br from-violet-500/40 via-fuchsia-500/30 to-pink-500/40" />
+                <div className="aspect-square rounded-md bg-gradient-to-br from-[var(--color-brand-1)]/40 via-[var(--color-primary)]/30 to-[var(--color-brand-3)]/30" />
                 <div className="line-clamp-1 text-[11px]">{p.topic ?? p.text.slice(0, 28)}</div>
                 <div className="text-[10px] text-[var(--color-muted-foreground)]">
                   Post · {p.platform}
