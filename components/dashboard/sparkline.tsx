@@ -42,18 +42,18 @@ export function Sparkline({
     >
       <defs>
         <linearGradient id="spark-fill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#a872ff" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#a872ff" stopOpacity="0" />
+          <stop offset="0%" stopColor="#d6336c" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#d6336c" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="spark-line" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor="#c084fc" />
-          <stop offset="100%" stopColor="#f472b6" />
+          <stop offset="0%" stopColor="#ff5d8f" />
+          <stop offset="100%" stopColor="#6b2545" />
         </linearGradient>
       </defs>
       <path d={areaPath} fill="url(#spark-fill)" />
       <path d={path} fill="none" stroke="url(#spark-line)" strokeWidth="2" />
       {lastPoint && (
-        <circle cx={lastPoint[0]} cy={lastPoint[1]} r="3.5" fill="#f472b6" />
+        <circle cx={lastPoint[0]} cy={lastPoint[1]} r="3.5" fill="#d6336c" />
       )}
     </svg>
   );
