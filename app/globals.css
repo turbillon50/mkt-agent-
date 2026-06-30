@@ -2,8 +2,6 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  /* Goossip Signal — identidad propia, obsidian + senal viva.
-     Nada de purpura-rosa-naranja generico de plantilla AI. Cero dorado. */
   --color-background: #08080c;
   --color-background-elevated: #0c0c14;
   --color-foreground: #f3f4f1;
@@ -37,7 +35,6 @@
   --color-success: #2ee6a6;
   --color-warning: #ff6b5c;
 
-  /* Brand gradient — senal verde -> indigo profundo. Dos paradas, no arcoiris. */
   --color-brand-1: #2ee6a6;
   --color-brand-2: #4fd1c5;
   --color-brand-3: #6c5ce7;
@@ -49,10 +46,6 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
 }
-
-/* ============================================================
-   Base
-   ============================================================ */
 
 html, body {
   background: var(--color-background);
@@ -87,10 +80,6 @@ button, a { touch-action: manipulation; }
 @media (display-mode: standalone) {
   body { overscroll-behavior-y: contain; }
 }
-
-/* ============================================================
-   Premium utilities
-   ============================================================ */
 
 .brand-gradient {
   background: linear-gradient(110deg,
@@ -170,7 +159,6 @@ button, a { touch-action: manipulation; }
   height: 1px;
 }
 
-/* Animated mesh background (hero) — senal viva, no arcoiris */
 .mesh {
   position: absolute;
   inset: 0;
@@ -208,7 +196,6 @@ button, a { touch-action: manipulation; }
   .mesh::after  { width: 280px; height: 280px; filter: blur(60px); }
 }
 
-/* Status dot — pulsa cuando "online" */
 .dot-pulse {
   position: relative;
   display: inline-block;
@@ -227,7 +214,6 @@ button, a { touch-action: manipulation; }
   100% { transform: scale(2.2); opacity: 0; }
 }
 
-/* Skeleton shimmer */
 .skeleton {
   background: linear-gradient(90deg,
     var(--color-muted) 0%,
@@ -256,7 +242,6 @@ button, a { touch-action: manipulation; }
 .delay-400 { animation-delay: 320ms; }
 .delay-500 { animation-delay: 400ms; }
 
-/* Glass surface */
 .glass {
   background: rgba(14, 15, 22, 0.65);
   backdrop-filter: blur(20px) saturate(140%);
