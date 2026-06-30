@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { IconBarChart, IconPlus, IconClose } from '@/components/icons';
+import { useToast } from '@/components/ui/toast-provider';
 
 type Snapshot = {
   id: string;
@@ -18,6 +19,7 @@ type Snapshot = {
 };
 
 export function CompetitorsBoard() {
+  const { push } = useToast();
   const [items, setItems] = React.useState<Snapshot[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [label, setLabel] = React.useState('');
@@ -58,8 +60,11 @@ export function CompetitorsBoard() {
       setLabel('');
       setUrl('');
       await refresh();
+      push({ variant: 'success', title: 'Agregado', description: `${data.link?.label ?? ''} en la comparativa.` });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error desconocido');
+      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      setError(msg);
+      push({ variant: 'error', title: 'No se pudo agregar', description: msg });
     } finally {
       setAdding(false);
     }
@@ -67,7 +72,14 @@ export function CompetitorsBoard() {
 
   async function remove(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
-    await fetch(`/api/competitors/${id}`, { method: 'DELETE' });
+    try {
+      const res = await fetch(`/api/competitors/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('No se pudo quitar');
+      push({ variant: 'info', title: 'Link eliminado' });
+    } catch {
+      push({ variant: 'error', title: 'No se pudo quitar el link' });
+      await refresh();
+    }
   }
 
   const own = items.filter((i) => i.kind === 'own');
