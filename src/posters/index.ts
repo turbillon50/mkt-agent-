@@ -4,7 +4,7 @@ import * as linkedin from './linkedin';
 
 export interface Poster {
   platform: Platform;
-  post(text: string): Promise<{ id: string; url?: string }>;
+  post(text: string, imageUrl?: string): Promise<{ id: string; url?: string }>;
   check(): Promise<{ ok: boolean; user?: string }>;
 }
 
