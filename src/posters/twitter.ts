@@ -1,5 +1,6 @@
 import { TwitterApi, TwitterApiv2 } from 'twitter-api-v2';
 import { config } from '../config';
+import { postTweet } from '../../lib/composio';
 
 let client: TwitterApi | null = null;
 
@@ -15,6 +16,15 @@ function v2(): TwitterApiv2 {
 export async function post(text: string): Promise<{ id: string; url: string }> {
   const res = await v2().tweet(text);
   return { id: res.data.id, url: `https://twitter.com/i/status/${res.data.id}` };
+}
+
+export async function postForUser(
+  userId: string,
+  text: string
+): Promise<{ id: string; url: string }> {
+  const result: any = await postTweet(userId, text);
+  const id = result?.data?.id ?? result?.id ?? '';
+  return { id, url: id ? `https://twitter.com/i/status/${id}` : '' };
 }
 
 export async function check(): Promise<{ ok: boolean; user?: string }> {

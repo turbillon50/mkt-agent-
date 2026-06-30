@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { IconArrowRight, IconSignal } from '@/components/icons';
 
 export function Hero() {
   return (
@@ -8,7 +8,7 @@ export function Hero() {
 
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-28 lg:py-36">
         <div className="fade-up mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-card)]/60 px-3.5 py-1.5 text-xs text-[var(--color-foreground-muted)] backdrop-blur">
-          <Sparkles className="h-3.5 w-3.5 text-fuchsia-400" />
+          <IconSignal className="h-3.5 w-3.5 text-[var(--color-primary)]" />
           <span>Tu agente social autónomo · 24/7</span>
         </div>
 
@@ -27,9 +27,9 @@ export function Hero() {
           <Link
             href="/sign-up"
             prefetch={true}
-            className="btn-brand inline-flex items-center justify-center gap-2 rounded-lg px-7 py-3.5 text-base font-medium active:scale-[0.98] sm:text-sm"
+            className="btn-brand inline-flex items-center justify-center gap-2 rounded-lg px-7 py-3.5 text-base font-semibold active:scale-[0.98] sm:text-sm"
           >
-            Empezar gratis <ArrowRight className="h-4 w-4" />
+            Empezar gratis <IconArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href="/sign-in"

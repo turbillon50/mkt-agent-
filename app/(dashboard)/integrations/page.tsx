@@ -1,37 +1,103 @@
+import { auth } from '@clerk/nextjs/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ConnectButton } from '@/components/integrations/connect-button';
+import { isConnected } from '@/lib/composio';
+import { IconX, IconLinkedIn, IconChat } from '@/components/icons';
 
-const integrations = [
-  { name: 'X (Twitter)', envFlag: 'TWITTER_ENABLED', status: 'configurable' },
-  { name: 'LinkedIn', envFlag: 'LINKEDIN_ENABLED', status: 'configurable' },
-  { name: 'Instagram', envFlag: 'INSTAGRAM_ENABLED', status: 'soon' },
-  { name: 'Facebook', envFlag: 'FACEBOOK_ENABLED', status: 'soon' },
-  { name: 'TikTok', envFlag: 'TIKTOK_ENABLED', status: 'soon' },
+export const dynamic = 'force-dynamic';
+
+const soonIntegrations = [
+  { name: 'Instagram' },
+  { name: 'Facebook' },
+  { name: 'TikTok' },
 ];
 
-export default function IntegrationsPage() {
+export default async function IntegrationsPage() {
+  const { userId } = await auth();
+
+  let twitterConnected = false;
+  let linkedinConnected = false;
+
+  if (userId) {
+    [twitterConnected, linkedinConnected] = await Promise.all([
+      isConnected(userId, 'twitter').catch(() => false),
+      isConnected(userId, 'linkedin').catch(() => false),
+    ]);
+  }
+
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Integraciones</h1>
         <p className="text-sm text-[var(--color-muted-foreground)]">
-          Plataformas que Goossip puede manejar. Activa cada una en las variables de entorno en Vercel.
+          Conecta tus propias cuentas. Cada conexión es tuya — Goossip solo publica con tu
+          autorización explícita, y la puedes revocar cuando quieras.
         </p>
       </header>
+
       <div className="grid gap-3 md:grid-cols-2">
-        {integrations.map((i) => (
-          <Card key={i.name} className="card-glow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <Card className="card-glow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div className="flex items-center gap-3">
+              <IconX className="h-5 w-5" />
               <div>
-                <CardTitle className="text-base">{i.name}</CardTitle>
-                <CardDescription>flag: <code>{i.envFlag}</code></CardDescription>
+                <CardTitle className="text-base">X (Twitter)</CardTitle>
+                <CardDescription>Conexión gestionada vía OAuth, sin app de developer</CardDescription>
               </div>
-              <Badge variant={i.status === 'configurable' ? 'default' : 'outline'}>{i.status}</Badge>
+            </div>
+            <ConnectButton toolkit="twitter" connected={twitterConnected} label="Conectar" />
+          </CardHeader>
+          <CardContent className="text-xs text-[var(--color-muted-foreground)]">
+            {twitterConnected
+              ? 'Goossip puede publicar en tu nombre cuando tú lo apruebes.'
+              : 'Conéctate una vez y Goossip queda autorizado a publicar lo que tú apruebes.'}
+          </CardContent>
+        </Card>
+
+        <Card className="card-glow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div className="flex items-center gap-3">
+              <IconLinkedIn className="h-5 w-5" />
+              <div>
+                <CardTitle className="text-base">LinkedIn</CardTitle>
+                <CardDescription>Perfil personal o página de empresa</CardDescription>
+              </div>
+            </div>
+            <ConnectButton toolkit="linkedin" connected={linkedinConnected} label="Conectar" />
+          </CardHeader>
+          <CardContent className="text-xs text-[var(--color-muted-foreground)]">
+            {linkedinConnected
+              ? 'Goossip puede publicar en tu nombre cuando tú lo apruebes.'
+              : 'Conéctate una vez y Goossip queda autorizado a publicar lo que tú apruebes.'}
+          </CardContent>
+        </Card>
+
+        <Card className="card-glow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div className="flex items-center gap-3">
+              <IconChat className="h-5 w-5" />
+              <div>
+                <CardTitle className="text-base">WhatsApp</CardTitle>
+                <CardDescription>Business API oficial, en construcción</CardDescription>
+              </div>
+            </div>
+            <Badge variant="outline">próximo</Badge>
+          </CardHeader>
+          <CardContent className="text-xs text-[var(--color-muted-foreground)]">
+            Hoy corre sobre un bridge interno solo para pruebas. La versión que vas a poder
+            usar tú llega con WhatsApp Business API oficial.
+          </CardContent>
+        </Card>
+
+        {soonIntegrations.map((i) => (
+          <Card key={i.name} className="card-glow opacity-70">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base">{i.name}</CardTitle>
+              <Badge variant="outline">próximo</Badge>
             </CardHeader>
             <CardContent className="text-xs text-[var(--color-muted-foreground)]">
-              {i.status === 'configurable'
-                ? 'Define las credenciales en Vercel → Settings → Environment Variables.'
-                : 'Esta integración llegará en fases posteriores.'}
+              Llega en fases posteriores.
             </CardContent>
           </Card>
         ))}

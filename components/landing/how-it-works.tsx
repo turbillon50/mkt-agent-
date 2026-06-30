@@ -7,7 +7,7 @@ const steps = [
   {
     n: '02',
     title: 'Conecta tus canales',
-    body: 'X, LinkedIn y WhatsApp con flags de entorno. El bridge Baileys vive en tu propio servidor — tú eres dueño del WhatsApp.',
+    body: 'X y LinkedIn se conectan con un clic, sin que tengas que crear apps de desarrollador. WhatsApp llega pronto vía Business API oficial.',
   },
   {
     n: '03',
@@ -17,7 +17,7 @@ const steps = [
   {
     n: '04',
     title: 'Chat con tu agente',
-    body: 'Pídele drafts, ideas, que recuerde algo, que mande un WhatsApp. Tiene 7 herramientas y sabe cuándo usarlas.',
+    body: 'Pídele drafts, ideas, que recuerde algo, que mande un WhatsApp. Tiene herramientas propias y sabe cuándo usarlas.',
   },
 ];
 

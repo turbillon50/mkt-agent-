@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Check } from 'lucide-react';
+import { IconCheck } from '@/components/icons';
 
 const tiers = [
   {
@@ -59,7 +59,7 @@ export function Pricing() {
           </h2>
           <p className="mt-4 text-base text-[var(--color-muted-foreground)]">
             Goossip está en early access. Mientras tanto, gratis para quien lo quiera usar — sólo
-            pagas tus consumos de OpenRouter y Neon, que son centavos al mes.
+            pagas tus consumos de modelo y base de datos, que son centavos al mes.
           </p>
         </div>
 
@@ -69,14 +69,14 @@ export function Pricing() {
               key={t.name}
               className={`flex flex-col rounded-2xl border p-6 ${
                 t.featured
-                  ? 'border-fuchsia-500/40 bg-gradient-to-br from-fuchsia-500/10 to-violet-500/10 shadow-xl shadow-fuchsia-500/10'
+                  ? 'border-[var(--color-primary)]/40 bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-secondary)]/10 shadow-xl shadow-[var(--color-primary)]/10'
                   : 'border-[var(--color-border)] bg-[var(--color-card)]/60'
               }`}
             >
               <div className="flex items-baseline justify-between">
                 <h3 className="text-lg font-semibold">{t.name}</h3>
                 {t.featured && (
-                  <span className="rounded-md bg-fuchsia-500/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-fuchsia-200">
+                  <span className="rounded-md bg-[var(--color-primary)]/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--color-primary)]">
                     Early access
                   </span>
                 )}
@@ -88,7 +88,7 @@ export function Pricing() {
               <ul className="mt-6 flex-1 space-y-2 text-sm">
                 {t.features.map((f) => (
                   <li key={f} className="flex items-start gap-2">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-400" />
+                    <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-primary)]" />
                     <span>{f}</span>
                   </li>
                 ))}
@@ -97,7 +97,7 @@ export function Pricing() {
                 href={t.href}
                 className={`mt-6 inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium ${
                   t.featured
-                    ? 'btn-brand shadow-lg shadow-fuchsia-500/20'
+                    ? 'btn-brand shadow-lg shadow-[var(--color-primary)]/20 font-semibold'
                     : 'border border-[var(--color-border)] hover:bg-[var(--color-accent)]'
                 }`}
               >
