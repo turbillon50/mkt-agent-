@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { IconUsers, IconPlus, IconClose } from '@/components/icons';
+import { useToast } from '@/components/ui/toast-provider';
 
 type Lead = {
   id: string;
@@ -29,6 +30,7 @@ const STATUS_LABEL: Record<string, string> = {
 const STATUS_ORDER = ['new', 'contacted', 'qualified', 'discarded'];
 
 export function LeadsBoard() {
+  const { push } = useToast();
   const [leads, setLeads] = React.useState<Lead[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [url, setUrl] = React.useState('');
@@ -66,8 +68,15 @@ export function LeadsBoard() {
       if (!res.ok) throw new Error(data.error || 'Error al agregar el lead');
       setUrl('');
       await refresh();
+      push({
+        variant: 'success',
+        title: 'Prospecto agregado',
+        description: data.lead?.fullName ? `Se detectó: ${data.lead.fullName}` : 'Guardado correctamente.',
+      });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error desconocido');
+      const msg = e instanceof Error ? e.message : 'Error desconocido';
+      setError(msg);
+      push({ variant: 'error', title: 'No se pudo agregar', description: msg });
     } finally {
       setAdding(false);
     }
@@ -75,16 +84,29 @@ export function LeadsBoard() {
 
   async function setStatus(id: string, status: string) {
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } : l)));
-    await fetch(`/api/leads/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
+    try {
+      const res = await fetch(`/api/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error('No se pudo actualizar');
+    } catch {
+      push({ variant: 'error', title: 'No se pudo actualizar el status' });
+      await refresh();
+    }
   }
 
   async function remove(id: string) {
     setLeads((prev) => prev.filter((l) => l.id !== id));
-    await fetch(`/api/leads/${id}`, { method: 'DELETE' });
+    try {
+      const res = await fetch(`/api/leads/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('No se pudo quitar');
+      push({ variant: 'info', title: 'Prospecto eliminado' });
+    } catch {
+      push({ variant: 'error', title: 'No se pudo quitar el prospecto' });
+      await refresh();
+    }
   }
 
   return (
