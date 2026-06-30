@@ -25,19 +25,43 @@ export type SendResult = {
   error: string | null;
 };
 
-export async function sendEmail(input: {
+export const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+export function isValidEmail(s: string): boolean {
+  return EMAIL_RE.test((s ?? '').trim());
+}
+
+export type EmailInput = {
   to: string;
   subject: string;
   html?: string;
   text?: string;
   replyTo?: string;
-}): Promise<SendResult> {
+  // Si se da, agrega el header List-Unsubscribe (mejora entregabilidad y
+  // cumple buenas practicas anti-spam). El link visible va dentro del html.
+  unsubscribeUrl?: string;
+};
+
+function buildPayload(input: EmailInput) {
+  return {
+    from: resendFrom(),
+    to: [input.to.trim()],
+    subject: input.subject,
+    html: input.html ?? textToHtml(input.text ?? ''),
+    text: input.text ?? stripHtml(input.html ?? ''),
+    ...(input.replyTo ? { reply_to: input.replyTo } : {}),
+    ...(input.unsubscribeUrl
+      ? { headers: { 'List-Unsubscribe': `<${input.unsubscribeUrl}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }
+      : {}),
+  };
+}
+
+export async function sendEmail(input: EmailInput): Promise<SendResult> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     return { ok: false, id: null, error: 'RESEND_API_KEY no está configurada.' };
   }
   const to = input.to.trim();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) {
+  if (!isValidEmail(to)) {
     return { ok: false, id: null, error: `Correo destino inválido: ${to}` };
   }
 
@@ -48,14 +72,7 @@ export async function sendEmail(input: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        from: resendFrom(),
-        to: [to],
-        subject: input.subject,
-        html: input.html ?? textToHtml(input.text ?? ''),
-        text: input.text ?? stripHtml(input.html ?? ''),
-        ...(input.replyTo ? { reply_to: input.replyTo } : {}),
-      }),
+      body: JSON.stringify(buildPayload(input)),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -65,6 +82,41 @@ export async function sendEmail(input: {
     return { ok: true, id: data?.id ?? null, error: null };
   } catch (e) {
     return { ok: false, id: null, error: e instanceof Error ? e.message : 'error de red' };
+  }
+}
+
+// ── Envio por lotes (Resend /emails/batch, hasta 100 por request) ─────────
+// Cada elemento se personaliza por separado (html/subject propios). El indice
+// del resultado corresponde 1:1 con el de la entrada para poder mapear ids.
+export type BatchItemResult = { ok: boolean; id: string | null; error: string | null };
+
+export async function sendBatch(items: EmailInput[]): Promise<BatchItemResult[]> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return items.map(() => ({ ok: false, id: null, error: 'RESEND_API_KEY no está configurada.' }));
+  }
+  if (items.length === 0) return [];
+  if (items.length > 100) throw new Error('sendBatch acepta máximo 100 por lote.');
+
+  try {
+    const res = await fetch('https://api.resend.com/emails/batch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(items.map(buildPayload)),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = String(data?.message || data?.error?.message || `Resend respondió ${res.status}`).slice(0, 300);
+      return items.map(() => ({ ok: false, id: null, error: msg }));
+    }
+    const ids: Array<{ id?: string }> = Array.isArray(data?.data) ? data.data : [];
+    return items.map((_, i) => ({ ok: true, id: ids[i]?.id ?? null, error: null }));
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'error de red';
+    return items.map(() => ({ ok: false, id: null, error: msg }));
   }
 }
 
@@ -92,6 +144,26 @@ export function emailHtml(body: string, brandName?: string | null): string {
     <div style="font-size:15px;color:#2a2530">${safe}</div>
     <div style="margin-top:28px;padding-top:16px;border-top:1px solid #ececf1;font-size:12px;color:#9b96a3">
       Enviado por ${brand} · Si no esperabas este correo, ignóralo.
+    </div>
+  </div></body></html>`;
+}
+
+// Igual que emailHtml pero con link de baja real (opt-out) en el pie. Se usa
+// en campanas masivas — toda campana DEBE llevar como darse de baja.
+export function campaignHtml(body: string, brandName: string | null | undefined, unsubscribeUrl: string): string {
+  const safe = body
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 16px;line-height:1.6">${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
+    .join('');
+  const brand = escapeHtml(brandName?.trim() || 'Goossip');
+  const unsub = escapeHtml(unsubscribeUrl);
+  return `<!doctype html><html><body style="margin:0;background:#f6f6f7;padding:24px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1a1622">
+  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;border:1px solid #ececf1">
+    <div style="font-size:18px;font-weight:700;margin-bottom:20px;color:#d6336c">${brand}</div>
+    <div style="font-size:15px;color:#2a2530">${safe}</div>
+    <div style="margin-top:28px;padding-top:16px;border-top:1px solid #ececf1;font-size:12px;color:#9b96a3">
+      Enviado por ${brand}. Si ya no quieres recibir estos correos,
+      <a href="${unsub}" style="color:#9b96a3;text-decoration:underline">date de baja aquí</a>.
     </div>
   </div></body></html>`;
 }

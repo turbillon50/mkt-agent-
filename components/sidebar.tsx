@@ -17,6 +17,7 @@ import {
   IconPlug,
   IconPhone,
   IconTarget,
+  IconMail,
   IconArrowUpRight,
 } from '@/components/icons';
 import { cn } from '@/lib/utils';
@@ -38,6 +39,7 @@ const items: Item[] = [
   { href: '/campaigns', label: 'Campañas', Icon: IconFolder },
   { href: '/ads', label: 'Google Ads', Icon: IconTarget },
   { href: '/leads', label: 'Prospectos', Icon: IconUsers },
+  { href: '/mailing', label: 'Correos', Icon: IconMail },
   { href: '/competencia', label: 'Competencia', Icon: IconBarChart },
   { href: '/posts', label: 'Contenido', Icon: IconFile },
   { href: '/plan', label: 'Calendario', Icon: IconCalendar },

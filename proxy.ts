@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/admin/(.*)',
   '/api/webhooks/(.*)',
   '/api/whatsapp/inbound',
+  '/unsubscribe(.*)',
 ]);
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {

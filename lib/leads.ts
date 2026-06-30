@@ -232,12 +232,19 @@ export async function updateLeadStatus(
 export async function updateLead(
   userId: string,
   id: string,
-  patch: { email?: string | null; notes?: string | null; status?: string },
+  patch: { email?: string | null; notes?: string | null; status?: string; tags?: string | null },
 ): Promise<void> {
   const set: Record<string, unknown> = { updatedAt: new Date() };
   if (patch.email !== undefined) set.email = patch.email?.trim() || null;
   if (patch.notes !== undefined) set.notes = patch.notes;
   if (patch.status !== undefined) set.status = patch.status;
+  if (patch.tags !== undefined) {
+    const cleaned = (patch.tags ?? '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    set.tags = cleaned.length ? [...new Set(cleaned)].join(', ') : null;
+  }
   await db.update(leads).set(set).where(and(eq(leads.userId, userId), eq(leads.id, id)));
   // Si ahora tiene email o cambió de etapa, reevalúa la inscripción a embudos.
   if (patch.email !== undefined || patch.status !== undefined) {
