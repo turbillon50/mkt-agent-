@@ -269,3 +269,144 @@ export async function setCampaignStatus(
     GOOGLE_ADS_LOGIN_CUSTOMER_ID
   );
 }
+
+// ============================================================
+// Email — Gmail / Outlook via Composio. Mismo patrón self-service que
+// X/LinkedIn: cada usuario conecta SU propia cuenta y Goossip lee/envía
+// con su autorización explícita (multi-tenant, keyed por Clerk userId).
+//
+// Los auth_config de Gmail/Outlook se crean UNA vez en el dashboard de
+// Composio y se referencian por env var (igual que LinkedIn/Google Ads
+// traen su id). Se leen de env en vez de hardcodear ids inexistentes:
+// mientras no estén, isEmailToolkitConfigured() = false y la UI muestra
+// "en configuración" (mismo gate honesto que twitter). En cuanto se
+// setean COMPOSIO_GMAIL_AUTH_CONFIG_ID / COMPOSIO_OUTLOOK_AUTH_CONFIG_ID,
+// la conexión queda viva sin tocar código.
+// ============================================================
+
+export type EmailToolkit = 'gmail' | 'outlook';
+
+const EMAIL_AUTH_CONFIG_IDS: Partial<Record<EmailToolkit, string | undefined>> = {
+  gmail: process.env.COMPOSIO_GMAIL_AUTH_CONFIG_ID,
+  outlook: process.env.COMPOSIO_OUTLOOK_AUTH_CONFIG_ID,
+};
+
+// Slugs de tools de Composio por proveedor. Gmail son los slugs estables y
+// verificados; Outlook va detrás del mismo gate de auth_config, así que sus
+// slugs solo entran en juego cuando se habilita explícitamente.
+const EMAIL_TOOL_SLUGS: Record<EmailToolkit, { send: string; fetch: string }> = {
+  gmail: { send: 'GMAIL_SEND_EMAIL', fetch: 'GMAIL_FETCH_EMAILS' },
+  outlook: { send: 'OUTLOOK_OUTLOOK_SEND_EMAIL', fetch: 'OUTLOOK_OUTLOOK_LIST_MESSAGES' },
+};
+
+export function isEmailToolkitConfigured(toolkit: EmailToolkit): boolean {
+  return Boolean(EMAIL_AUTH_CONFIG_IDS[toolkit]);
+}
+
+export function configuredEmailToolkits(): EmailToolkit[] {
+  return (Object.keys(EMAIL_TOOL_SLUGS) as EmailToolkit[]).filter(isEmailToolkitConfigured);
+}
+
+export async function startEmailConnection(
+  userId: string,
+  toolkit: EmailToolkit
+): Promise<{ redirectUrl: string; connectionId: string }> {
+  const authConfigId = EMAIL_AUTH_CONFIG_IDS[toolkit];
+  if (!authConfigId) {
+    throw new Error(
+      `${toolkit === 'gmail' ? 'Gmail' : 'Outlook'} todavía no está configurado. Falta registrar el auth config de Composio.`
+    );
+  }
+  const connectionRequest = await composio.connectedAccounts.link(userId, authConfigId);
+  return {
+    redirectUrl: connectionRequest.redirectUrl ?? '',
+    connectionId: connectionRequest.id ?? '',
+  };
+}
+
+export async function isEmailConnected(userId: string, toolkit: EmailToolkit): Promise<boolean> {
+  if (!isEmailToolkitConfigured(toolkit)) return false;
+  const accounts = await composio.connectedAccounts.list({
+    userIds: [userId],
+    toolkitSlugs: [toolkit],
+  });
+  return accounts.items.some((acc) => acc.status === 'ACTIVE');
+}
+
+/** Devuelve el primer proveedor de correo que el usuario tenga conectado, o null. */
+export async function getConnectedEmailToolkit(userId: string): Promise<EmailToolkit | null> {
+  for (const tk of configuredEmailToolkits()) {
+    if (await isEmailConnected(userId, tk).catch(() => false)) return tk;
+  }
+  return null;
+}
+
+export type EmailMessage = {
+  id: string | null;
+  from: string | null;
+  subject: string | null;
+  snippet: string | null;
+  date: string | null;
+};
+
+/**
+ * Normaliza la respuesta de fetch de Gmail/Outlook a una forma común. Cada
+ * toolkit devuelve estructuras distintas, así que se buscan los campos por
+ * varios nombres posibles sin asumir uno solo.
+ */
+function normalizeEmails(raw: any): EmailMessage[] {
+  const data = raw?.data ?? raw ?? {};
+  const list: any[] =
+    data.messages ?? data.value ?? data.emails ?? data.items ?? (Array.isArray(data) ? data : []);
+  return list.slice(0, 25).map((m: any) => ({
+    id: m.id ?? m.messageId ?? m.message_id ?? null,
+    from: m.from ?? m.sender ?? m.fromAddress ?? m.payload?.from ?? null,
+    subject: m.subject ?? m.payload?.subject ?? null,
+    snippet: m.snippet ?? m.preview ?? m.bodyPreview ?? m.body?.slice?.(0, 160) ?? null,
+    date: m.date ?? m.receivedDateTime ?? m.internalDate ?? null,
+  }));
+}
+
+/** Lee los correos recientes de la cuenta conectada del usuario. */
+export async function fetchRecentEmails(
+  userId: string,
+  opts: { query?: string; maxResults?: number } = {}
+): Promise<{ toolkit: EmailToolkit; messages: EmailMessage[] }> {
+  const toolkit = await getConnectedEmailToolkit(userId);
+  if (!toolkit) {
+    throw new Error('No tienes ninguna cuenta de correo conectada. Conéctala en Integraciones.');
+  }
+  const res: any = await composio.tools.execute(EMAIL_TOOL_SLUGS[toolkit].fetch, {
+    userId,
+    arguments: {
+      max_results: Math.min(Math.max(opts.maxResults ?? 10, 1), 25),
+      ...(opts.query ? { query: opts.query } : {}),
+    },
+  });
+  return { toolkit, messages: normalizeEmails(res) };
+}
+
+/** Envía un correo básico desde la cuenta conectada del usuario. */
+export async function sendEmail(
+  userId: string,
+  input: { to: string; subject: string; body: string; isHtml?: boolean }
+): Promise<{ toolkit: EmailToolkit; ok: boolean }> {
+  const toolkit = await getConnectedEmailToolkit(userId);
+  if (!toolkit) {
+    throw new Error('No tienes ninguna cuenta de correo conectada. Conéctala en Integraciones.');
+  }
+  const args =
+    toolkit === 'gmail'
+      ? { recipient_email: input.to, subject: input.subject, body: input.body, is_html: Boolean(input.isHtml) }
+      : { to_recipients: [input.to], subject: input.subject, body: input.body, is_html: Boolean(input.isHtml) };
+
+  const res: any = await composio.tools.execute(EMAIL_TOOL_SLUGS[toolkit].send, {
+    userId,
+    arguments: args,
+  });
+  const ok = res?.successful ?? res?.success ?? !res?.error;
+  if (!ok) {
+    throw new Error(res?.error?.message ?? res?.error ?? 'No se pudo enviar el correo.');
+  }
+  return { toolkit, ok: true };
+}

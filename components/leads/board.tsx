@@ -34,6 +34,15 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_ORDER = ['new', 'contacted', 'qualified', 'discarded'];
 
+// Normaliza para búsqueda: minúsculas + sin acentos, para que "cancun"
+// encuentre "Cancún" y "jose" encuentre "José".
+function norm(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+
 export function LeadsBoard() {
   const { push } = useToast();
   const [leads, setLeads] = React.useState<Lead[]>([]);
@@ -44,6 +53,8 @@ export function LeadsBoard() {
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [messagePrompt, setMessagePrompt] = React.useState('');
   const [generating, setGenerating] = React.useState(false);
+  const [search, setSearch] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState<string>('all');
 
   async function refresh() {
     setLoading(true);
@@ -163,6 +174,28 @@ export function LeadsBoard() {
     });
   }
 
+  // Conteos por status (pipeline) sobre TODOS los leads, sin importar el texto buscado.
+  const counts = React.useMemo(() => {
+    const c: Record<string, number> = { all: leads.length, new: 0, contacted: 0, qualified: 0, discarded: 0 };
+    for (const l of leads) c[l.status] = (c[l.status] ?? 0) + 1;
+    return c;
+  }, [leads]);
+
+  // Búsqueda full-text (nombre, empresa, cargo, teléfono, dirección, resumen, link) + filtro de status.
+  const filtered = React.useMemo(() => {
+    const q = norm(search.trim());
+    return leads.filter((l) => {
+      if (statusFilter !== 'all' && l.status !== statusFilter) return false;
+      if (!q) return true;
+      const haystack = norm(
+        [l.fullName, l.company, l.headline, l.phone, l.address, l.summary, l.sourceUrl, l.platform]
+          .filter(Boolean)
+          .join(' '),
+      );
+      return q.split(/\s+/).every((term) => haystack.includes(term));
+    });
+  }, [leads, search, statusFilter]);
+
   return (
     <div className="space-y-4">
       <Card className="card-glow">
@@ -214,6 +247,33 @@ export function LeadsBoard() {
         </Card>
       )}
 
+      {!loading && leads.length > 0 && (
+        <Card className="card-glow">
+          <CardContent className="space-y-3 p-4">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar en tus contactos (nombre, empresa, teléfono, ciudad…)"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              {(['all', ...STATUS_ORDER] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`rounded-full px-2.5 py-1 text-[11px] transition-colors ${
+                    statusFilter === s
+                      ? 'btn-brand font-medium'
+                      : 'border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]'
+                  }`}
+                >
+                  {s === 'all' ? 'todos' : STATUS_LABEL[s]} ({counts[s] ?? 0})
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {loading ? (
         <Card className="card-glow">
           <CardContent className="py-10 text-center text-sm text-[var(--color-muted-foreground)]">
@@ -229,9 +289,27 @@ export function LeadsBoard() {
             </p>
           </CardContent>
         </Card>
+      ) : filtered.length === 0 ? (
+        <Card className="card-glow">
+          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
+            <IconUsers className="h-8 w-8 text-[var(--color-muted-foreground)]" />
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Ningún contacto coincide con tu búsqueda o filtro.
+            </p>
+            <button
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('all');
+              }}
+              className="text-xs font-medium text-[var(--color-primary)] hover:underline"
+            >
+              Limpiar filtros
+            </button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-3">
-          {leads.map((l) => (
+          {filtered.map((l) => (
             <Card key={l.id} className={`card-glow ${selected.has(l.id) ? 'border-[var(--color-primary)]/40' : ''}`}>
               <CardContent className="space-y-2 p-4">
                 <div className="flex items-start gap-3">

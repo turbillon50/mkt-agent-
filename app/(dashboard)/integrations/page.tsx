@@ -2,8 +2,8 @@ import { auth } from '@clerk/nextjs/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ConnectButton } from '@/components/integrations/connect-button';
-import { isConnected, isToolkitConfigured } from '@/lib/composio';
-import { IconX, IconLinkedIn, IconChat } from '@/components/icons';
+import { isConnected, isToolkitConfigured, isEmailConnected, isEmailToolkitConfigured } from '@/lib/composio';
+import { IconX, IconLinkedIn, IconChat, IconMail } from '@/components/icons';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,11 +18,15 @@ export default async function IntegrationsPage() {
 
   let twitterConnected = false;
   let linkedinConnected = false;
+  let gmailConnected = false;
+  let outlookConnected = false;
 
   if (userId) {
-    [twitterConnected, linkedinConnected] = await Promise.all([
+    [twitterConnected, linkedinConnected, gmailConnected, outlookConnected] = await Promise.all([
       isConnected(userId, 'twitter').catch(() => false),
       isConnected(userId, 'linkedin').catch(() => false),
+      isEmailConnected(userId, 'gmail').catch(() => false),
+      isEmailConnected(userId, 'outlook').catch(() => false),
     ]);
   }
 
@@ -91,6 +95,54 @@ export default async function IntegrationsPage() {
           <CardContent className="text-xs text-[var(--color-muted-foreground)]">
             Hoy corre sobre un bridge interno solo para pruebas. La versión que vas a poder
             usar tú llega con WhatsApp Business API oficial.
+          </CardContent>
+        </Card>
+
+        <Card className="card-glow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div className="flex items-center gap-3">
+              <IconMail className="h-5 w-5" />
+              <div>
+                <CardTitle className="text-base">Gmail</CardTitle>
+                <CardDescription>Lee y envía correo desde tu Gmail</CardDescription>
+              </div>
+            </div>
+            {isEmailToolkitConfigured('gmail') ? (
+              <ConnectButton toolkit="gmail" connected={gmailConnected} label="Conectar" />
+            ) : (
+              <Badge variant="outline">en configuración</Badge>
+            )}
+          </CardHeader>
+          <CardContent className="text-xs text-[var(--color-muted-foreground)]">
+            {isEmailToolkitConfigured('gmail')
+              ? gmailConnected
+                ? 'Goossip puede leer tu bandeja y enviar correos cuando tú lo apruebes.'
+                : 'Conéctate una vez y Goossip queda autorizado a leer/enviar correo en tu nombre.'
+              : 'Falta registrar la app de Gmail en Composio antes de habilitar esta conexión. Próximamente.'}
+          </CardContent>
+        </Card>
+
+        <Card className="card-glow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div className="flex items-center gap-3">
+              <IconMail className="h-5 w-5" />
+              <div>
+                <CardTitle className="text-base">Outlook</CardTitle>
+                <CardDescription>Lee y envía correo desde tu Outlook</CardDescription>
+              </div>
+            </div>
+            {isEmailToolkitConfigured('outlook') ? (
+              <ConnectButton toolkit="outlook" connected={outlookConnected} label="Conectar" />
+            ) : (
+              <Badge variant="outline">en configuración</Badge>
+            )}
+          </CardHeader>
+          <CardContent className="text-xs text-[var(--color-muted-foreground)]">
+            {isEmailToolkitConfigured('outlook')
+              ? outlookConnected
+                ? 'Goossip puede leer tu bandeja y enviar correos cuando tú lo apruebes.'
+                : 'Conéctate una vez y Goossip queda autorizado a leer/enviar correo en tu nombre.'
+              : 'Falta registrar la app de Outlook en Composio antes de habilitar esta conexión. Próximamente.'}
           </CardContent>
         </Card>
 
