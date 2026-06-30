@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.3.3",
+    "@composio/core": "^0.13.1",
     "@mastra/core": "^1.32.1",
     "@mastra/memory": "^1.18.2",
     "@mastra/pg": "^1.11.0",
@@ -37,7 +38,6 @@
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.36.4",
     "geist": "^1.7.2",
-    "lucide-react": "^1.14.0",
     "next": "^16.2.6",
     "node-cron": "^3.0.3",
     "openai": "^4.67.3",
