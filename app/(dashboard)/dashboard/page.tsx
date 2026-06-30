@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CommandCenter } from '@/components/dashboard/command-center';
 import { ProjectsRow } from '@/components/dashboard/projects-row';
+import { GettingStarted } from '@/components/dashboard/getting-started';
 import { getDashboardStats } from '@/lib/data';
 import { formatDate } from '@/lib/utils';
 import { isClerkConfigured } from '@/lib/clerk-config';
@@ -19,19 +20,50 @@ async function safeStats() {
   }
 }
 
-async function safeUserFirstName(): Promise<string> {
-  if (!isClerkConfigured()) return 'humano';
+type Onboarding = {
+  firstName: string;
+  hasManifesto: boolean;
+  hasConnectedNetwork: boolean;
+  hasChatted: boolean;
+};
+
+async function safeOnboarding(): Promise<Onboarding> {
+  const fallback: Onboarding = {
+    firstName: 'humano',
+    hasManifesto: true,
+    hasConnectedNetwork: true,
+    hasChatted: true,
+  };
+  if (!isClerkConfigured()) return fallback;
   try {
     const { currentUserOrNull } = await import('@/lib/users');
     const user = await currentUserOrNull();
-    return user?.firstName ?? user?.username ?? user?.email?.split('@')[0] ?? 'humano';
+    if (!user) return fallback;
+
+    const firstName = user.firstName ?? user.username ?? user.email?.split('@')[0] ?? 'humano';
+
+    const [campaign, twitterConnected, linkedinConnected, recentMessages] = await Promise.all([
+      user.activeCampaignId
+        ? import('@/lib/campaigns').then((m) => m.getActiveCampaign(user.id)).catch(() => null)
+        : Promise.resolve(null),
+      import('@/lib/composio').then((m) => m.isConnected(user.id, 'twitter')).catch(() => false),
+      import('@/lib/composio').then((m) => m.isConnected(user.id, 'linkedin')).catch(() => false),
+      import('@/lib/conversations').then((m) => m.getRecentMessages(user.id, 1)).catch(() => []),
+    ]);
+
+    return {
+      firstName,
+      hasManifesto: Boolean(campaign?.manifesto && campaign.manifesto.trim().length > 20),
+      hasConnectedNetwork: Boolean(twitterConnected || linkedinConnected),
+      hasChatted: recentMessages.length > 0,
+    };
   } catch {
-    return 'humano';
+    return fallback;
   }
 }
 
 export default async function DashboardPage() {
-  const firstName = await safeUserFirstName();
+  const { firstName, hasManifesto, hasConnectedNetwork, hasChatted } = await safeOnboarding();
   const stats = await safeStats();
 
   return (
@@ -59,6 +91,12 @@ export default async function DashboardPage() {
           <p className="mt-1 text-2xl font-semibold brand-gradient lg:text-3xl">¿Qué vamos a crear hoy?</p>
         </section>
 
+        <GettingStarted
+          hasManifesto={hasManifesto}
+          hasConnectedNetwork={hasConnectedNetwork}
+          hasChatted={hasChatted}
+        />
+
         <Card className="card-glow border border-[var(--color-border)]">
           <CardContent className="p-5">
             <Link
@@ -85,7 +123,7 @@ export default async function DashboardPage() {
           <ActionChip href="/posts" label="Diseñar arte" />
           <ActionChip href="/knowledge" label="Investigar tendencia" />
           <ActionChip href="/plan" label="Plan de contenidos" />
-          <ActionChip href="/audience" label="Analizar competencia" />
+          <ActionChip href="/competencia" label="Analizar competencia" />
         </div>
 
         <ProjectsRow />
