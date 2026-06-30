@@ -25,12 +25,25 @@ export const IconArrowLeft: React.FC<IconProps> = ({ className }) => (
   </svg>
 );
 
+export const IconArrowUpRight: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <path d="M7 17 17 7M8 7h9v9" />
+  </svg>
+);
+
 export const IconSignal: React.FC<IconProps> = ({ className }) => (
   <svg className={className} {...base}>
     <circle cx="6" cy="18" r="1.6" fill="currentColor" stroke="none" />
     <path d="M6 14a4 4 0 0 1 4 4" />
     <path d="M6 9.5A8.5 8.5 0 0 1 14.5 18" />
     <path d="M6 5A13 13 0 0 1 19 18" />
+  </svg>
+);
+
+export const IconSparkles: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" />
+    <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z" />
   </svg>
 );
 
@@ -218,5 +231,21 @@ export const IconEdit: React.FC<IconProps> = ({ className }) => (
   <svg className={className} {...base}>
     <path d="M12 20h9" />
     <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+  </svg>
+);
+
+export const IconDownload: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <path d="M12 4v12M7 11l5 5 5-5" />
+    <path d="M5 19h14" />
+  </svg>
+);
+
+export const IconShare: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <circle cx="6" cy="12" r="2.2" />
+    <circle cx="18" cy="6" r="2.2" />
+    <circle cx="18" cy="18" r="2.2" />
+    <path d="M7.9 10.9l8.2-3.8M7.9 13.1l8.2 3.8" />
   </svg>
 );
