@@ -40,6 +40,7 @@ const items: Item[] = [
   { href: '/campaigns', label: 'Campañas', Icon: IconFolder },
   { href: '/ads', label: 'Google Ads', Icon: IconTarget },
   { href: '/leads', label: 'Prospectos', Icon: IconUsers },
+  { href: '/competencia', label: 'Competencia', Icon: IconBarChart },
   { href: '/posts', label: 'Contenido', Icon: IconFile },
   { href: '/plan', label: 'Calendario', Icon: IconCalendar },
   { href: '/analytics', label: 'Analítica', Icon: IconBarChart, soon: true },
