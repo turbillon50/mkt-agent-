@@ -18,6 +18,7 @@ type Lead = {
   company: string | null;
   address: string | null;
   phone: string | null;
+  email: string | null;
   rating: string | null;
   summary: string | null;
   status: string;
@@ -33,6 +34,54 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_ORDER = ['new', 'contacted', 'qualified', 'discarded'];
+
+// Editor inline de correo: sin correo no hay a quién enviarle el embudo.
+function EmailField({ value, onSave }: { value: string | null; onSave: (email: string) => void }) {
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(value ?? '');
+  React.useEffect(() => setDraft(value ?? ''), [value]);
+
+  if (!editing) {
+    return value ? (
+      <button
+        onClick={() => setEditing(true)}
+        className="inline-flex items-center gap-1 text-xs text-[var(--color-primary)] hover:underline"
+      >
+        ✉︎ {value}
+      </button>
+    ) : (
+      <button
+        onClick={() => setEditing(true)}
+        className="text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)] hover:underline"
+      >
+        + agregar correo (para automatizar)
+      </button>
+    );
+  }
+  return (
+    <Input
+      autoFocus
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        setEditing(false);
+        if (draft.trim() !== (value ?? '')) onSave(draft);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          setEditing(false);
+          if (draft.trim() !== (value ?? '')) onSave(draft);
+        }
+        if (e.key === 'Escape') {
+          setDraft(value ?? '');
+          setEditing(false);
+        }
+      }}
+      placeholder="correo@empresa.com"
+      className="h-8 max-w-xs text-xs"
+    />
+  );
+}
 
 // Normaliza para búsqueda: minúsculas + sin acentos, para que "cancun"
 // encuentre "Cancún" y "jose" encuentre "José".
@@ -112,6 +161,24 @@ export function LeadsBoard() {
       if (!res.ok) throw new Error('No se pudo actualizar');
     } catch {
       push({ variant: 'error', title: 'No se pudo actualizar el status' });
+      await refresh();
+    }
+  }
+
+  async function saveEmail(id: string, email: string) {
+    const clean = email.trim();
+    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, email: clean || null } : l)));
+    try {
+      const res = await fetch(`/api/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: clean }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'No se pudo guardar');
+      if (clean) push({ variant: 'success', title: 'Correo guardado', description: 'Ya puede entrar a un embudo de automatización.' });
+    } catch (e) {
+      push({ variant: 'error', title: 'Correo no guardado', description: e instanceof Error ? e.message : 'error' });
       await refresh();
     }
   }
@@ -341,6 +408,9 @@ export function LeadsBoard() {
                         {[l.phone, l.rating ? `${l.rating}★` : null].filter(Boolean).join(' · ')}
                       </p>
                     )}
+                    <div className="mt-1">
+                      <EmailField value={l.email} onSave={(email) => saveEmail(l.id, email)} />
+                    </div>
                   </div>
                   <button
                     onClick={() => remove(l.id)}

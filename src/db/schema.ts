@@ -240,6 +240,9 @@ export const leads = pgTable('leads', {
   location: text('location'),
   address: text('address'),
   phone: text('phone'),
+  email: text('email'),
+  lat: text('lat'),
+  lng: text('lng'),
   rating: text('rating'),
   summary: text('summary'),
   status: text('status').notNull().default('new'),
@@ -255,6 +258,61 @@ export const leads = pgTable('leads', {
 
 export type Lead = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;
+
+// ── Embudo de automatizacion (addendum 681 punto 7) ──────────────────
+// Un funnel = una regla: cuando un lead llega a trigger_status, se inscribe
+// y recibe la secuencia de correos (steps) via Resend, paso a paso.
+export type FunnelStep = { delayHours: number; subject: string; body: string };
+
+export const funnels = pgTable('funnels', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  triggerStatus: text('trigger_status').notNull().default('new'),
+  enabled: boolean('enabled').notNull().default(true),
+  steps: jsonb('steps').$type<FunnelStep[]>().notNull().default(sql`'[]'::jsonb`),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('funnels_user_idx').on(t.userId),
+}));
+
+export const funnelEnrollments = pgTable('funnel_enrollments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  funnelId: uuid('funnel_id').notNull().references(() => funnels.id, { onDelete: 'cascade' }),
+  leadId: uuid('lead_id').notNull().references(() => leads.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  currentStep: integer('current_step').notNull().default(0),
+  status: text('status').notNull().default('active'),
+  nextRunAt: timestamp('next_run_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  uniq: index('funnel_enrollments_uniq').on(t.funnelId, t.leadId),
+  dueIdx: index('funnel_enrollments_due_idx').on(t.status, t.nextRunAt),
+}));
+
+export const emailLog = pgTable('email_log', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'set null' }),
+  funnelId: uuid('funnel_id').references(() => funnels.id, { onDelete: 'set null' }),
+  toEmail: text('to_email').notNull(),
+  subject: text('subject').notNull(),
+  step: integer('step'),
+  provider: text('provider').notNull().default('resend'),
+  status: text('status').notNull().default('sent'),
+  error: text('error'),
+  externalId: text('external_id'),
+  sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('email_log_user_idx').on(t.userId, t.sentAt),
+}));
+
+export type Funnel = typeof funnels.$inferSelect;
+export type NewFunnel = typeof funnels.$inferInsert;
+export type FunnelEnrollment = typeof funnelEnrollments.$inferSelect;
+export type EmailLogRow = typeof emailLog.$inferSelect;
 
 export const competitorLinks = pgTable('competitor_links', {
   id: uuid('id').primaryKey().defaultRandom(),

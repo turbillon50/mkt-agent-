@@ -45,7 +45,7 @@ const items: Item[] = [
   { href: '/plan', label: 'Calendario', Icon: IconCalendar },
   { href: '/analytics', label: 'Analítica', Icon: IconBarChart, soon: true },
   { href: '/audience', label: 'Audiencias', Icon: IconUsers, soon: true },
-  { href: '/automations', label: 'Automatizaciones', Icon: IconBolt, soon: true },
+  { href: '/automations', label: 'Automatizaciones', Icon: IconBolt },
   { href: '/integrations', label: 'Integraciones', Icon: IconPlug },
 ];
 

@@ -5,6 +5,8 @@ import { leads, type Lead, type NewLead } from '@/src/db/schema';
 import { chat } from '@/src/openrouter';
 import { isMapsConfigured, searchPlaces, type MapsPlace } from './maps';
 import { searchLinkedInPeople, type LinkedInPerson } from './linkedin-search';
+import { geocodeAddress } from './geocode';
+import { onLeadStatusChanged } from './automations';
 
 function detectPlatform(url: string): string {
   if (/linkedin\.com/i.test(url)) return 'linkedin';
@@ -37,10 +39,22 @@ function decodeHtmlEntities(s: string): string {
     .replace(/&#39;/g, "'");
 }
 
+function extractEmail(html: string): string | null {
+  // Prefiere mailto: (intención explícita de contacto), luego texto plano.
+  const mailto = html.match(/mailto:([^"'?\s>]+@[^"'?\s>]+)/i);
+  const raw = mailto?.[1] ?? html.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i)?.[0] ?? null;
+  if (!raw) return null;
+  const email = raw.trim().toLowerCase();
+  // Descarta correos basura de assets (sentry, wix, ejemplos, imágenes).
+  if (/(sentry|wixpress|example\.|\.png|\.jpg|\.svg|@2x)/i.test(email)) return null;
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? email : null;
+}
+
 export async function enrichFromPublicPage(url: string): Promise<{
   fullName: string | null;
   headline: string | null;
   summary: string | null;
+  email: string | null;
 }> {
   try {
     const res = await fetch(url, {
@@ -50,7 +64,7 @@ export async function enrichFromPublicPage(url: string): Promise<{
       },
       redirect: 'follow',
     });
-    if (!res.ok) return { fullName: null, headline: null, summary: null };
+    if (!res.ok) return { fullName: null, headline: null, summary: null, email: null };
     const html = await res.text();
 
     const title = extractMeta(html, 'og:title') ?? extractMeta(html, 'twitter:title');
@@ -70,18 +84,20 @@ export async function enrichFromPublicPage(url: string): Promise<{
       fullName,
       headline,
       summary: description ? description.slice(0, 500) : null,
+      email: extractEmail(html),
     };
   } catch {
-    return { fullName: null, headline: null, summary: null };
+    return { fullName: null, headline: null, summary: null, email: null };
   }
 }
 
 export async function createLead(
   userId: string,
-  input: { sourceUrl: string; campaignId?: string | null }
+  input: { sourceUrl: string; campaignId?: string | null; email?: string | null }
 ): Promise<Lead> {
   const platform = detectPlatform(input.sourceUrl);
   const enriched = await enrichFromPublicPage(input.sourceUrl);
+  const email = input.email?.trim() || enriched.email;
 
   const [row] = await db
     .insert(leads)
@@ -94,6 +110,7 @@ export async function createLead(
       fullName: enriched.fullName,
       headline: enriched.headline,
       summary: enriched.summary,
+      email: email ?? null,
     } satisfies NewLead)
     .onConflictDoUpdate({
       target: [leads.userId, leads.sourceUrl],
@@ -101,12 +118,15 @@ export async function createLead(
         fullName: enriched.fullName,
         headline: enriched.headline,
         summary: enriched.summary,
+        ...(email ? { email } : {}),
         updatedAt: new Date(),
       },
     })
     .returning();
 
   if (!row) throw new Error('No se pudo guardar el lead.');
+  // Si entra como 'new' y hay un embudo activo con ese trigger + email, lo inscribe.
+  await onLeadStatusChanged(userId, row.id);
   return row;
 }
 
@@ -150,6 +170,8 @@ export async function bulkCreateLeadsFromPlaces(
       failed++;
       continue;
     }
+    // Ubica el negocio en el mapa real (Leaflet/OSM) — geocodifica la dirección.
+    const geo = p.address ? await geocodeAddress(p.address) : null;
     try {
       await db
         .insert(leads)
@@ -163,12 +185,20 @@ export async function bulkCreateLeadsFromPlaces(
           company: p.name,
           address: p.address,
           phone: p.phone,
+          lat: geo?.lat ?? null,
+          lng: geo?.lng ?? null,
           rating: p.rating,
           summary: [p.address, p.rating ? `${p.rating}★` : null].filter(Boolean).join(' · ') || null,
         } satisfies NewLead)
         .onConflictDoUpdate({
           target: [leads.userId, leads.sourceUrl],
-          set: { address: p.address, phone: p.phone, rating: p.rating, updatedAt: new Date() },
+          set: {
+            address: p.address,
+            phone: p.phone,
+            ...(geo ? { lat: geo.lat, lng: geo.lng } : {}),
+            rating: p.rating,
+            updatedAt: new Date(),
+          },
         });
       created++;
     } catch {
@@ -194,6 +224,25 @@ export async function updateLeadStatus(
     .update(leads)
     .set({ status, updatedAt: new Date() })
     .where(and(eq(leads.userId, userId), eq(leads.id, id)));
+  // Cambiar de etapa puede disparar un embudo cuyo trigger sea ese status.
+  await onLeadStatusChanged(userId, id);
+}
+
+/** Edita campos sueltos del lead (email, notas) — usado por el board. */
+export async function updateLead(
+  userId: string,
+  id: string,
+  patch: { email?: string | null; notes?: string | null; status?: string },
+): Promise<void> {
+  const set: Record<string, unknown> = { updatedAt: new Date() };
+  if (patch.email !== undefined) set.email = patch.email?.trim() || null;
+  if (patch.notes !== undefined) set.notes = patch.notes;
+  if (patch.status !== undefined) set.status = patch.status;
+  await db.update(leads).set(set).where(and(eq(leads.userId, userId), eq(leads.id, id)));
+  // Si ahora tiene email o cambió de etapa, reevalúa la inscripción a embudos.
+  if (patch.email !== undefined || patch.status !== undefined) {
+    await onLeadStatusChanged(userId, id);
+  }
 }
 
 export async function deleteLead(userId: string, id: string): Promise<void> {
