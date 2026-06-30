@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { IconMenu, IconClose } from '@/components/icons';
 import { Sidebar } from './sidebar';
 import { cn } from '@/lib/utils';
 
@@ -30,8 +30,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-background)]/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="flex items-center gap-2">
-          <div className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-pink-500 text-xs font-bold">
-            oo
+          <div className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-[var(--color-brand-1)] to-[var(--color-brand-3)] text-white">
+            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+              <path
+                d="M4 11a8 8 0 1 1 3.1 6.3L4 18l1-3.1A7.96 7.96 0 0 1 4 11z"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="12" cy="11" r="2" fill="currentColor" />
+            </svg>
           </div>
           <span className="text-lg font-semibold tracking-tight brand-gradient">goossip</span>
         </div>
@@ -40,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onClick={() => setOpen(true)}
           className="grid h-9 w-9 place-items-center rounded-md border border-[var(--color-border)] text-[var(--color-foreground)]"
         >
-          <Menu className="h-4 w-4" />
+          <IconMenu className="h-4 w-4" />
         </button>
       </header>
 
@@ -59,7 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setOpen(false)}
               className="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-md text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] lg:hidden"
             >
-              <X className="h-4 w-4" />
+              <IconClose className="h-4 w-4" />
             </button>
           )}
           <Sidebar onNavigate={() => setOpen(false)} />
@@ -71,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <button
           aria-label="Cerrar"
           onClick={() => setOpen(false)}
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-[var(--color-foreground)]/30 backdrop-blur-sm lg:hidden"
         />
       )}
 

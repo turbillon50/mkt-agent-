@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { IconArrowLeft } from '@/components/icons';
 import { isClerkConfigured } from '@/lib/clerk-config';
 
 export default async function Page() {
@@ -17,7 +17,7 @@ export default async function Page() {
             href="/"
             className="inline-flex items-center gap-1 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Volver
+            <IconArrowLeft className="h-3.5 w-3.5" /> Volver
           </Link>
         </div>
       </header>

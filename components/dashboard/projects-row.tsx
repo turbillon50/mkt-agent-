@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus } from 'lucide-react';
+import { IconPlus } from '@/components/icons';
 import { Card, CardContent } from '@/components/ui/card';
 
 type Project = {
@@ -66,7 +66,7 @@ export function ProjectsRow() {
           href="/projects"
           className="flex min-h-[140px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--color-border)] text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-accent)]"
         >
-          <Plus className="h-5 w-5" />
+          <IconPlus className="h-5 w-5" />
           <span className="text-sm">Nuevo proyecto</span>
         </Link>
       </div>

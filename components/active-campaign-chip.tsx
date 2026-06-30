@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronDown, FolderKanban, Plus } from 'lucide-react';
+import { IconChevronDown, IconFolder, IconPlus } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
 type Campaign = {
@@ -55,7 +55,7 @@ export function ActiveCampaignChip({ onNavigate }: { onNavigate?: () => void }) 
         className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
       >
         <span className="flex items-center gap-2">
-          <Plus className="h-3.5 w-3.5" />
+          <IconPlus className="h-3.5 w-3.5" />
           Crear primera campaña
         </span>
       </Link>
@@ -68,13 +68,13 @@ export function ActiveCampaignChip({ onNavigate }: { onNavigate?: () => void }) 
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)]/60 px-3 py-2 text-xs hover:bg-[var(--color-accent)]"
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)]/80 px-3 py-2 text-xs hover:bg-[var(--color-accent)]"
       >
         <span className="flex min-w-0 items-center gap-2">
-          <FolderKanban className="h-3.5 w-3.5 shrink-0 text-fuchsia-300" />
+          <IconFolder className="h-3.5 w-3.5 shrink-0 text-[var(--color-primary)]" />
           <span className="truncate font-medium">{active?.name ?? 'Sin campaña'}</span>
         </span>
-        <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
+        <IconChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
       </button>
 
       {open && (
@@ -90,7 +90,7 @@ export function ActiveCampaignChip({ onNavigate }: { onNavigate?: () => void }) 
             >
               <span className="truncate">{c.name}</span>
               {c.id === activeId && (
-                <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-emerald-300">
+                <span className="rounded bg-[var(--color-success)]/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-[var(--color-success)]">
                   activa
                 </span>
               )}
@@ -104,7 +104,7 @@ export function ActiveCampaignChip({ onNavigate }: { onNavigate?: () => void }) 
             }}
             className="mt-1 flex items-center gap-2 border-t border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
           >
-            <Plus className="h-3 w-3" />
+            <IconPlus className="h-3 w-3" />
             Nueva campaña
           </Link>
         </div>

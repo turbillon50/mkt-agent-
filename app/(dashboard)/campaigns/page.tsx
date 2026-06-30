@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, CheckCircle2 } from 'lucide-react';
+import { IconPlus, IconCheckCircle } from '@/components/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CreateCampaignForm } from '@/components/campaigns/create-form';
@@ -29,7 +29,7 @@ export default async function CampaignsPage() {
       <Card className="card-glow">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <Plus className="h-4 w-4" /> Nueva campaña
+            <IconPlus className="h-4 w-4" /> Nueva campaña
           </CardTitle>
           <CardDescription>
             Nombre, voz, audiencia y manifiesto. Puedes refinar todo después.
@@ -50,15 +50,15 @@ export default async function CampaignsPage() {
         <div className="grid gap-3">
           {items.map((c) => (
             <Link key={c.id} href={`/campaigns/${c.id}`}>
-              <Card className="card-glow transition-colors hover:bg-[var(--color-accent)]/40">
+              <Card className="card-glow transition-colors hover:bg-[var(--color-accent)]/60">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <CardTitle className="text-base">
                         {c.name}
                         {c.id === activeId && (
-                          <span className="ml-2 inline-flex items-center gap-1 rounded-md bg-emerald-500/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-emerald-300">
-                            <CheckCircle2 className="h-3 w-3" /> activa
+                          <span className="ml-2 inline-flex items-center gap-1 rounded-md bg-[var(--color-success)]/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--color-success)]">
+                            <IconCheckCircle className="h-3 w-3" /> activa
                           </span>
                         )}
                       </CardTitle>

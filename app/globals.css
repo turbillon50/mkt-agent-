@@ -2,42 +2,44 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --color-background: #08080c;
-  --color-background-elevated: #0c0c14;
-  --color-foreground: #f3f4f1;
-  --color-foreground-muted: #b9bcc4;
+  /* Goossip Bloom — claro, premium, acento rosa. No todo dark. */
+  --color-background: #fbf7f8;
+  --color-background-elevated: #ffffff;
+  --color-foreground: #221821;
+  --color-foreground-muted: #6b5b66;
 
-  --color-card: #0e0f16;
-  --color-card-elevated: #131521;
-  --color-card-foreground: #f3f4f1;
+  --color-card: #ffffff;
+  --color-card-elevated: #fffafb;
+  --color-card-foreground: #221821;
 
-  --color-muted: #161924;
-  --color-muted-foreground: #868c98;
+  --color-muted: #f3e9ec;
+  --color-muted-foreground: #8a7a85;
 
-  --color-border: #1e2230;
-  --color-border-strong: #2a2f42;
+  --color-border: #ecdde2;
+  --color-border-strong: #e0c9d2;
 
-  --color-input: #161924;
-  --color-ring: #2ee6a6;
+  --color-input: #ffffff;
+  --color-ring: #d6336c;
 
-  --color-primary: #2ee6a6;
-  --color-primary-foreground: #04130d;
+  --color-primary: #d6336c;
+  --color-primary-foreground: #ffffff;
 
-  --color-secondary: #6c5ce7;
-  --color-secondary-foreground: #f3f4f1;
+  --color-secondary: #4a2f3f;
+  --color-secondary-foreground: #ffffff;
 
-  --color-accent: #1a1d2c;
-  --color-accent-foreground: #f3f4f1;
+  --color-accent: #fbe8ee;
+  --color-accent-foreground: #221821;
 
-  --color-destructive: oklch(0.65 0.23 22);
-  --color-destructive-foreground: #f3f4f1;
+  --color-destructive: oklch(0.6 0.22 25);
+  --color-destructive-foreground: #ffffff;
 
-  --color-success: #2ee6a6;
-  --color-warning: #ff6b5c;
+  --color-success: #2ba87a;
+  --color-warning: #d6336c;
 
-  --color-brand-1: #2ee6a6;
-  --color-brand-2: #4fd1c5;
-  --color-brand-3: #6c5ce7;
+  /* Brand gradient — rosa profundo a ciruela */
+  --color-brand-1: #ff5d8f;
+  --color-brand-2: #d6336c;
+  --color-brand-3: #6b2545;
 
   --radius: 0.875rem;
   --radius-lg: 1.25rem;
@@ -68,8 +70,8 @@ body {
   overflow-x: hidden;
   overscroll-behavior-x: none;
   background-image:
-    radial-gradient(at 0% 0%, rgba(46, 230, 166, 0.06) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(108, 92, 231, 0.07) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(214, 51, 108, 0.06) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(107, 37, 69, 0.05) 0px, transparent 50%);
   background-attachment: fixed;
 }
 
@@ -100,33 +102,35 @@ button, a { touch-action: manipulation; }
 
 .btn-brand {
   position: relative;
-  background: linear-gradient(135deg, #2ee6a6 0%, #4fd1c5 55%, #6c5ce7 100%);
-  color: #04130d;
+  background: linear-gradient(135deg, #ff5d8f 0%, #d6336c 60%, #6b2545 100%);
+  color: #ffffff;
   isolation: isolate;
   transition: transform 200ms ease, box-shadow 200ms ease;
   box-shadow:
     0 1px 0 0 rgba(255, 255, 255, 0.25) inset,
-    0 -1px 0 0 rgba(0, 0, 0, 0.2) inset,
-    0 4px 20px -4px rgba(46, 230, 166, 0.4);
+    0 -1px 0 0 rgba(0, 0, 0, 0.08) inset,
+    0 4px 20px -4px rgba(214, 51, 108, 0.35);
 }
 .btn-brand:hover {
   transform: translateY(-1px);
   box-shadow:
     0 1px 0 0 rgba(255, 255, 255, 0.3) inset,
-    0 -1px 0 0 rgba(0, 0, 0, 0.2) inset,
-    0 6px 28px -4px rgba(46, 230, 166, 0.5);
+    0 -1px 0 0 rgba(0, 0, 0, 0.08) inset,
+    0 6px 28px -4px rgba(214, 51, 108, 0.45);
 }
 .btn-brand:active { transform: translateY(0); }
 
 .card-glow {
   background:
-    radial-gradient(140% 100% at 0% 0%, rgba(46, 230, 166, 0.06), transparent 55%),
+    radial-gradient(140% 100% at 0% 0%, rgba(214, 51, 108, 0.04), transparent 55%),
     var(--color-card);
   border: 1px solid var(--color-border);
-  transition: border-color 200ms ease, background 200ms ease;
+  box-shadow: 0 1px 2px rgba(34, 24, 33, 0.04), 0 8px 24px -12px rgba(214, 51, 108, 0.08);
+  transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 .card-glow:hover {
   border-color: var(--color-border-strong);
+  box-shadow: 0 1px 2px rgba(34, 24, 33, 0.05), 0 12px 32px -12px rgba(214, 51, 108, 0.14);
 }
 
 .card-premium {
@@ -143,8 +147,8 @@ button, a { touch-action: manipulation; }
   padding: 1px;
   border-radius: inherit;
   background: linear-gradient(135deg,
-    rgba(46, 230, 166, 0.35) 0%,
-    rgba(108, 92, 231, 0.2) 50%,
+    rgba(255, 93, 143, 0.4) 0%,
+    rgba(107, 37, 69, 0.18) 50%,
     transparent 100%);
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -171,17 +175,17 @@ button, a { touch-action: manipulation; }
   position: absolute;
   border-radius: 50%;
   filter: blur(90px);
-  opacity: 0.3;
+  opacity: 0.22;
   animation: mesh-drift 18s ease-in-out infinite;
 }
 .mesh::before {
   width: 520px; height: 520px;
-  background: radial-gradient(circle, #2ee6a6, transparent 70%);
+  background: radial-gradient(circle, #ff5d8f, transparent 70%);
   top: -120px; left: 15%;
 }
 .mesh::after {
   width: 480px; height: 480px;
-  background: radial-gradient(circle, #6c5ce7, transparent 70%);
+  background: radial-gradient(circle, #6b2545, transparent 70%);
   bottom: -100px; right: 10%;
   animation-delay: -9s;
 }
@@ -242,11 +246,12 @@ button, a { touch-action: manipulation; }
 .delay-400 { animation-delay: 320ms; }
 .delay-500 { animation-delay: 400ms; }
 
+/* Glass claro */
 .glass {
-  background: rgba(14, 15, 22, 0.65);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(34, 24, 33, 0.06);
 }
 
 h1, h2, h3, h4 {
@@ -255,8 +260,8 @@ h1, h2, h3, h4 {
 }
 
 ::selection {
-  background: rgba(46, 230, 166, 0.35);
-  color: #04130d;
+  background: rgba(214, 51, 108, 0.25);
+  color: #221821;
 }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
