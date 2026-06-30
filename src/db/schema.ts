@@ -226,3 +226,42 @@ export const agentIdentity = pgTable('agent_identity', {
 
 export type AgentIdentity = typeof agentIdentity.$inferSelect;
 export type NewAgentIdentity = typeof agentIdentity.$inferInsert;
+
+export const leads = pgTable('leads', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'set null' }),
+  sourceUrl: text('source_url').notNull(),
+  platform: text('platform').notNull().default('linkedin'),
+  fullName: text('full_name'),
+  headline: text('headline'),
+  company: text('company'),
+  location: text('location'),
+  summary: text('summary'),
+  status: text('status').notNull().default('new'),
+  notes: text('notes'),
+  raw: jsonb('raw').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('leads_user_idx').on(t.userId, t.createdAt),
+  campaignIdx: index('leads_campaign_idx').on(t.campaignId),
+}));
+
+export type Lead = typeof leads.$inferSelect;
+export type NewLead = typeof leads.$inferInsert;
+
+export const competitorLinks = pgTable('competitor_links', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'set null' }),
+  label: text('label').notNull(),
+  url: text('url').notNull(),
+  kind: text('kind').notNull().default('competitor'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('competitor_links_user_idx').on(t.userId),
+}));
+
+export type CompetitorLink = typeof competitorLinks.$inferSelect;
+export type NewCompetitorLink = typeof competitorLinks.$inferInsert;

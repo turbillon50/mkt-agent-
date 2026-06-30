@@ -39,6 +39,7 @@ const items: Item[] = [
   { href: '/knowledge', label: 'Memoria', Icon: IconBrain },
   { href: '/campaigns', label: 'Campañas', Icon: IconFolder },
   { href: '/ads', label: 'Google Ads', Icon: IconTarget },
+  { href: '/leads', label: 'Prospectos', Icon: IconUsers },
   { href: '/posts', label: 'Contenido', Icon: IconFile },
   { href: '/plan', label: 'Calendario', Icon: IconCalendar },
   { href: '/analytics', label: 'Analítica', Icon: IconBarChart, soon: true },
