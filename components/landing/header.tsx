@@ -15,8 +15,7 @@ export function LandingHeader() {
         <nav className="hidden items-center gap-7 text-sm text-[var(--color-foreground-muted)] md:flex">
           <a href="#features" className="transition-colors hover:text-[var(--color-foreground)]">Funciones</a>
           <a href="#how" className="transition-colors hover:text-[var(--color-foreground)]">Cómo funciona</a>
-          <a href="#pricing" className="transition-colors hover:text-[var(--color-foreground)]">Precios</a>
-          <a href="#faq" className="transition-colors hover:text-[var(--color-foreground)]">Preguntas</a>
+          <a href="#pricing" className="transition-colors hover:text-[var(--color-foreground)]">Precio</a>
         </nav>
         <div className="flex items-center gap-2">
           <Link
@@ -29,7 +28,7 @@ export function LandingHeader() {
             href="/sign-up"
             className="btn-brand rounded-lg px-4 py-1.5 text-sm font-semibold"
           >
-            Empieza gratis
+            Empezar gratis
           </Link>
         </div>
       </div>
