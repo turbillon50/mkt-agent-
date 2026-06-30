@@ -3,30 +3,39 @@ import 'dotenv/config';
 const truthy = (v: unknown) => /^(1|true|yes|on)$/i.test(String(v ?? '').trim());
 
 /**
- * Tiered model strategy. Defaults bias toward cheap / free models for the
- * routine work (post drafting, auto-replies) and reserve the heavy model
- * for the tool-calling agent and the weekly plan, where reasoning quality
- * actually changes the outcome.
+ * Proveedor de LLM: Mesh Router propio (Cerebras + GPUs propias + V-brain),
+ * expuesto en api.mindcontextia.one/mesh. Endpoint OpenAI-compatible real
+ * (/v1/chat/completions), ruteo automatico por modelo/policy. Cero OpenRouter.
  *
- * Every job is overridable via env so you can swap providers without code.
+ * gpt-oss-120b es un modelo "razonador": gasta tokens pensando antes de
+ * contestar. Con max_tokens bajo se queda a medias (content vacio,
+ * finish_reason length). 800 es el piso seguro para que siempre alcance
+ * a terminar de razonar y dar el contenido real.
  */
+const MESH_DEFAULT_MAX_TOKENS = 800;
+
 export const config = {
   openrouter: {
-    apiKey: process.env.OPENROUTER_API_KEY ?? '',
-    baseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
+    apiKey: process.env.MESH_API_KEY ?? '',
+    baseUrl: process.env.MESH_BASE_URL || 'https://api.mindcontextia.one/mesh/v1',
 
     // Tier A — heavy reasoning (Mastra agent main loop, weekly plan).
-    modelAgent: process.env.OPENROUTER_MODEL_AGENT || 'anthropic/claude-sonnet-4-5',
-    modelPlan:  process.env.OPENROUTER_MODEL_PLAN  || 'anthropic/claude-sonnet-4-5',
+    modelAgent: process.env.MESH_MODEL_AGENT || process.env.MESH_MODEL || 'gpt-oss-120b',
+    modelPlan: process.env.MESH_MODEL_PLAN || process.env.MESH_MODEL || 'gpt-oss-120b',
 
     // Tier B — fast & cheap drafting (single post generation).
-    modelDraft: process.env.OPENROUTER_MODEL_DRAFT || 'google/gemini-2.5-flash',
+    modelDraft: process.env.MESH_MODEL_DRAFT || process.env.MESH_MODEL || 'gpt-oss-120b',
 
-    // Tier C — free fast replies (WhatsApp auto-reply, ad-hoc lightweight tasks).
-    modelReply: process.env.OPENROUTER_MODEL_REPLY || 'google/gemini-2.5-flash-lite',
+    // Tier C — fast replies (WhatsApp auto-reply, ad-hoc lightweight tasks).
+    modelReply: process.env.MESH_MODEL_REPLY || process.env.MESH_MODEL || 'gpt-oss-120b',
 
     // Legacy single-model knob kept for backwards compat with `openrouter.ts`.
-    model: process.env.OPENROUTER_MODEL || process.env.OPENROUTER_MODEL_DRAFT || 'google/gemini-2.5-flash',
+    model: process.env.MESH_MODEL || 'gpt-oss-120b',
+
+    // Piso de max_tokens para que el modelo razonador alcance a responder.
+    minMaxTokens: MESH_DEFAULT_MAX_TOKENS,
+
+    provider: 'mesh' as const,
   },
   embeddings: {
     // Semantic memory is opt-in. With it OFF, recall() returns [] and the

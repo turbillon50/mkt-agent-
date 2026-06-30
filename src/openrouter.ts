@@ -5,7 +5,7 @@ let client: OpenAI | null = null;
 
 export function getClient(): OpenAI {
   if (!config.openrouter.apiKey) {
-    throw new Error('OPENROUTER_API_KEY is not set.');
+    throw new Error(`${config.openrouter.provider.toUpperCase()}_API_KEY is not set.`);
   }
   if (!client) {
     client = new OpenAI({
@@ -26,11 +26,13 @@ export async function chat(
   messages: ChatMessage[],
   opts: { temperature?: number; maxTokens?: number; model?: string } = {},
 ): Promise<string> {
+  const requested = opts.maxTokens ?? 800;
+  const maxTokens = Math.max(requested, config.openrouter.minMaxTokens);
   const completion = await getClient().chat.completions.create({
     model: opts.model || config.openrouter.model,
     messages,
     temperature: opts.temperature ?? 0.8,
-    max_tokens: opts.maxTokens ?? 800,
+    max_tokens: maxTokens,
   });
   return completion.choices[0]?.message?.content?.trim() ?? '';
 }
