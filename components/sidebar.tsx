@@ -16,6 +16,7 @@ import {
   IconBolt,
   IconPlug,
   IconPhone,
+  IconTarget,
 } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { ActiveCampaignChip } from './active-campaign-chip';
@@ -37,6 +38,7 @@ const items: Item[] = [
   { href: '/whatsapp', label: 'WhatsApp', Icon: IconPhone },
   { href: '/knowledge', label: 'Memoria', Icon: IconBrain },
   { href: '/campaigns', label: 'Campañas', Icon: IconFolder },
+  { href: '/ads', label: 'Google Ads', Icon: IconTarget },
   { href: '/posts', label: 'Contenido', Icon: IconFile },
   { href: '/plan', label: 'Calendario', Icon: IconCalendar },
   { href: '/analytics', label: 'Analítica', Icon: IconBarChart, soon: true },
