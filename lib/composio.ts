@@ -74,7 +74,10 @@ export async function postLinkedIn(
 // trae muy pocas tools predefinidas (no permite crear/editar campañas),
 // asi que para operaciones reales usamos proxy execute contra la API
 // REST v23 de Google Ads directamente, dejando que Composio adjunte
-// las credenciales (sin exponer el token crudo a la app).
+// las credenciales (sin exponer el token crudo a la app). La conexión
+// inicial se hace con fetch directo a la REST API de Composio porque el
+// SDK (@composio/core) no expone bien el campo extra "customer_id" que
+// requiere este auth config particular.
 // ============================================================
 
 const GOOGLE_ADS_AUTH_CONFIG_ID = 'ac_Z0uC87Lgpj-3';
@@ -90,13 +93,24 @@ export async function startGoogleAdsConnection(
   if (normalized.length !== 10) {
     throw new Error('El ID de cliente de Google Ads debe tener 10 dígitos (formato 123-456-7890).');
   }
-  const res: any = await composio.connectedAccounts.create(userId, {
-    authConfigId: GOOGLE_ADS_AUTH_CONFIG_ID,
-    config: { data: { customer_id: normalized } } as any,
-  } as any);
+  const res = await fetch('https://backend.composio.dev/api/v3/connected_accounts', {
+    method: 'POST',
+    headers: {
+      'x-api-key': process.env.COMPOSIO_API_KEY!,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      auth_config: { id: GOOGLE_ADS_AUTH_CONFIG_ID },
+      connection: { user_id: userId, data: { customer_id: normalized } },
+    }),
+  });
+  const json: any = await res.json();
+  if (!res.ok || json?.error) {
+    throw new Error(json?.error?.message ?? 'No se pudo iniciar la conexión con Google Ads.');
+  }
   return {
-    redirectUrl: res.redirectUrl ?? res.redirect_url ?? '',
-    connectionId: res.id ?? '',
+    redirectUrl: json.redirect_url ?? '',
+    connectionId: json.id ?? '',
   };
 }
 
@@ -144,7 +158,7 @@ async function googleAdsProxy(
       ...(body ? { body } : {}),
     }),
   });
-  const json = await res.json();
+  const json: any = await res.json();
   if (!res.ok || json?.error) {
     throw new Error(json?.error?.message ?? json?.data?.message ?? 'Google Ads API request failed.');
   }
