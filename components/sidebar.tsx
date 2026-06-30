@@ -35,7 +35,7 @@ type Item = {
 const items: Item[] = [
   { href: '/dashboard', label: 'Inicio', Icon: IconHome },
   { href: '/chat', label: 'Chats', Icon: IconChat },
-  { href: '/whatsapp', label: 'WhatsApp', Icon: IconPhone },
+  { href: '/whatsapp', label: 'WhatsApp', Icon: IconPhone, soon: true },
   { href: '/knowledge', label: 'Memoria', Icon: IconBrain },
   { href: '/campaigns', label: 'Campañas', Icon: IconFolder },
   { href: '/ads', label: 'Google Ads', Icon: IconTarget },
@@ -48,10 +48,11 @@ const items: Item[] = [
 ];
 
 const networks = [
-  { name: 'WhatsApp', dot: '#2ba87a', enabled: true },
+  { name: 'WhatsApp', dot: '#2ba87a', enabled: false },
   { name: 'Instagram', dot: '#d6336c', enabled: false },
   { name: 'X (Twitter)', dot: '#221821', enabled: true },
   { name: 'LinkedIn', dot: '#0a66c2', enabled: true },
+  { name: 'Google Ads', dot: '#4285f4', enabled: true },
   { name: 'Facebook', dot: '#1877f2', enabled: false },
   { name: 'TikTok', dot: '#d6336c', enabled: false },
 ];
