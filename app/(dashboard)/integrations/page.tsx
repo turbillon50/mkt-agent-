@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ConnectButton } from '@/components/integrations/connect-button';
-import { isConnected } from '@/lib/composio';
+import { isConnected, isToolkitConfigured } from '@/lib/composio';
 import { IconX, IconLinkedIn, IconChat } from '@/components/icons';
 
 export const dynamic = 'force-dynamic';
@@ -43,15 +43,19 @@ export default async function IntegrationsPage() {
               <IconX className="h-5 w-5" />
               <div>
                 <CardTitle className="text-base">X (Twitter)</CardTitle>
-                <CardDescription>Conexión gestionada vía OAuth, sin app de developer</CardDescription>
+                <CardDescription>Requiere app de developer propia</CardDescription>
               </div>
             </div>
-            <ConnectButton toolkit="twitter" connected={twitterConnected} label="Conectar" />
+            {isToolkitConfigured('twitter') ? (
+              <ConnectButton toolkit="twitter" connected={twitterConnected} label="Conectar" />
+            ) : (
+              <Badge variant="outline">en configuración</Badge>
+            )}
           </CardHeader>
           <CardContent className="text-xs text-[var(--color-muted-foreground)]">
-            {twitterConnected
-              ? 'Goossip puede publicar en tu nombre cuando tú lo apruebes.'
-              : 'Conéctate una vez y Goossip queda autorizado a publicar lo que tú apruebes.'}
+            {isToolkitConfigured('twitter')
+              ? 'Conéctate una vez y Goossip queda autorizado a publicar lo que tú apruebes.'
+              : 'Necesitamos registrar una app de X Developer antes de habilitar esta conexión. Próximamente.'}
           </CardContent>
         </Card>
 
