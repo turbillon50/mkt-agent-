@@ -5,6 +5,7 @@ import { agentTools } from './tools/index';
 import { buildOperatorManifesto } from './manifesto';
 import { getIdentity, identityBlock } from './identity';
 import { getMastraMemory, memoryIdsFor } from './memory';
+import { askGeminiVision } from '../../lib/gemini-vision';
 import type { AgentIdentity } from '../db/schema';
 
 // Mesh Router propio (Cerebras + GPUs propias) hablando el protocolo
@@ -90,27 +91,30 @@ export async function askWithHistoryForCampaign(
     : config.brand;
 
   const identity = userId ? await getIdentity(userId).catch(() => null) : null;
+  const instructions = composeInstructions(brand, campaign?.manifesto ?? null, identity);
+
+  // El Mesh (Cerebras gpt-oss-120b) es texto puro, no ve imagenes. Si el
+  // mensaje trae una foto, este turno lo resuelve Gemini directo (si que
+  // tiene vision) en vez del agente con tools. Se pierde tool-calling SOLO
+  // en ese mensaje puntual; el resto de la conversacion sigue por el Mesh.
+  if (imageDataUrl) {
+    return askGeminiVision(instructions, history, prompt, imageDataUrl);
+  }
+
   const ids = userId ? memoryIdsFor(userId) : null;
 
   const perRequestAgent = new Agent({
     id: `goossip${campaign ? '-' + campaign.name.toLowerCase().replace(/\s+/g, '-').slice(0, 30) : ''}`,
     name: 'goossip',
-    instructions: composeInstructions(brand, campaign?.manifesto ?? null, identity),
+    instructions,
     model: buildModel(),
     tools: agentTools,
     ...(memory ? { memory } : {}),
   } as never);
 
-  const userContent: unknown = imageDataUrl
-    ? [
-        { type: 'text', text: prompt },
-        { type: 'image', image: imageDataUrl },
-      ]
-    : prompt;
-
   const messages = [
     ...history.map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user' as const, content: userContent },
+    { role: 'user' as const, content: prompt },
   ];
 
   const genOpts: Record<string, unknown> = { ...MODEL_SETTINGS };
