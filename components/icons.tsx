@@ -249,3 +249,11 @@ export const IconShare: React.FC<IconProps> = ({ className }) => (
     <path d="M7.9 10.9l8.2-3.8M7.9 13.1l8.2 3.8" />
   </svg>
 );
+
+export const IconTarget: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <circle cx="12" cy="12" r="8.5" />
+    <circle cx="12" cy="12" r="4.5" />
+    <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+  </svg>
+);
