@@ -19,6 +19,8 @@ import {
   IconTarget,
   IconMail,
   IconArrowUpRight,
+  IconShare,
+  IconShield,
 } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { ActiveCampaignChip } from './active-campaign-chip';
@@ -39,6 +41,13 @@ const items: Item[] = [
   { href: '/campaigns', label: 'Campañas', Icon: IconFolder },
   { href: '/ads', label: 'Google Ads', Icon: IconTarget },
   { href: '/leads', label: 'Prospectos', Icon: IconUsers },
+  { href: '/ofertas', label: 'Ofertas Flash', Icon: IconBolt },
+  { href: '/landings', label: 'Landings', Icon: IconFile },
+  { href: '/embajadores', label: 'Embajadores', Icon: IconUsers },
+  { href: '/story-links', label: 'Story Links', Icon: IconShare },
+  { href: '/votaciones', label: 'Votaciones', Icon: IconBarChart },
+  { href: '/comentarios', label: 'Venta x Comentario', Icon: IconChat },
+  { href: '/membresias', label: 'Membresías', Icon: IconShield },
   { href: '/mailing', label: 'Correos', Icon: IconMail },
   { href: '/competencia', label: 'Competencia', Icon: IconBarChart },
   { href: '/posts', label: 'Contenido', Icon: IconFile },

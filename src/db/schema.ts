@@ -7,6 +7,7 @@ import {
   boolean,
   jsonb,
   index,
+  uniqueIndex,
   vector,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -403,3 +404,192 @@ export const competitorLinks = pgTable('competitor_links', {
 
 export type CompetitorLink = typeof competitorLinks.$inferSelect;
 export type NewCompetitorLink = typeof competitorLinks.$inferInsert;
+
+// ════════════════════════════════════════════════════════════════════════
+// FEATURES INFLUENCER + VENTAS (feat/influencer-features)
+// Cada bloque alimenta una feature. uniqueIndex en los slug/code porque son
+// la URL publica (vliving.life/oferta/[slug], /ref/[code], etc.).
+// ════════════════════════════════════════════════════════════════════════
+
+// (3) OFERTAS FLASH — oferta con countdown, link publico, clicks/conversiones.
+export const flashOffers = pgTable('flash_offers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  price: text('price'),
+  currency: text('currency').notNull().default('MXN'),
+  destinationUrl: text('destination_url').notNull(),
+  endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+  active: boolean('active').notNull().default(true),
+  clickCount: integer('click_count').notNull().default(0),
+  conversionCount: integer('conversion_count').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  slugUniq: uniqueIndex('flash_offers_slug_uniq').on(t.slug),
+  userIdx: index('flash_offers_user_idx').on(t.userId, t.createdAt),
+}));
+
+// (8) PAGINA DE VENTAS POR CAMPANA — landing publica con formulario de captura.
+export const campaignLandings = pgTable('campaign_landings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'set null' }),
+  slug: text('slug').notNull(),
+  title: text('title').notNull(),
+  subtitle: text('subtitle'),
+  description: text('description'),
+  ctaLabel: text('cta_label').notNull().default('Quiero más información'),
+  published: boolean('published').notNull().default(true),
+  views: integer('views').notNull().default(0),
+  submissions: integer('submissions').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  slugUniq: uniqueIndex('campaign_landings_slug_uniq').on(t.slug),
+  userIdx: index('campaign_landings_user_idx').on(t.userId, t.createdAt),
+}));
+
+// (5) EMBAJADORES GAMIFICADOS — codigo de referido por lead, ranking por nivel.
+export const referrals = pgTable('referrals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'cascade' }),
+  code: text('code').notNull(),
+  name: text('name'),
+  visits: integer('visits').notNull().default(0),
+  leadsGenerated: integer('leads_generated').notNull().default(0),
+  salesGenerated: integer('sales_generated').notNull().default(0),
+  level: text('level').notNull().default('bronce'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  codeUniq: uniqueIndex('referrals_code_uniq').on(t.code),
+  userIdx: index('referrals_user_idx').on(t.userId),
+  leadIdx: index('referrals_lead_idx').on(t.leadId),
+}));
+
+// (6) STORY LINK INTELIGENTE — un link maestro que redirige por reglas (utm/cookie).
+export type StoryRule = { param: string; value: string; url: string };
+export const storyLinks = pgTable('story_links', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  name: text('name').notNull(),
+  defaultUrl: text('default_url').notNull(),
+  rules: jsonb('rules').$type<StoryRule[]>().notNull().default(sql`'[]'::jsonb`),
+  clickCount: integer('click_count').notNull().default(0),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  slugUniq: uniqueIndex('story_links_slug_uniq').on(t.slug),
+  userIdx: index('story_links_user_idx').on(t.userId),
+}));
+
+export const linkClicks = pgTable('link_clicks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storyLinkId: uuid('story_link_id').notNull().references(() => storyLinks.id, { onDelete: 'cascade' }),
+  matchedUrl: text('matched_url').notNull(),
+  utmSource: text('utm_source'),
+  utmCampaign: text('utm_campaign'),
+  referrer: text('referrer'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  linkIdx: index('link_clicks_link_idx').on(t.storyLinkId, t.createdAt),
+}));
+
+// (10) CO-CREACION DE PRODUCTOS — votacion publica, votantes quedan como leads.
+export type PollOption = { id: string; label: string; description?: string };
+export const polls = pgTable('polls', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  slug: text('slug').notNull(),
+  question: text('question').notNull(),
+  description: text('description'),
+  options: jsonb('options').$type<PollOption[]>().notNull().default(sql`'[]'::jsonb`),
+  status: text('status').notNull().default('open'), // open|closed
+  winnerOptionId: text('winner_option_id'),
+  totalVotes: integer('total_votes').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  closedAt: timestamp('closed_at', { withTimezone: true }),
+}, (t) => ({
+  slugUniq: uniqueIndex('polls_slug_uniq').on(t.slug),
+  userIdx: index('polls_user_idx').on(t.userId),
+}));
+
+export const pollVotes = pgTable('poll_votes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  pollId: uuid('poll_id').notNull().references(() => polls.id, { onDelete: 'cascade' }),
+  optionId: text('option_id').notNull(),
+  name: text('name'),
+  email: text('email').notNull(),
+  leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  pollEmailUniq: uniqueIndex('poll_votes_poll_email_uniq').on(t.pollId, t.email),
+  pollIdx: index('poll_votes_poll_idx').on(t.pollId),
+}));
+
+// (1) VENTA POR COMENTARIO — reglas de palabra clave -> respuesta + link de pago.
+export const commentRules = pgTable('comment_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  platform: text('platform').notNull().default('instagram'),
+  keywords: jsonb('keywords').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  replyMessage: text('reply_message').notNull(),
+  paymentLink: text('payment_link'),
+  active: boolean('active').notNull().default(true),
+  matchedCount: integer('matched_count').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('comment_rules_user_idx').on(t.userId),
+}));
+
+// (7) HOT LEADS — senales de compra acumuladas por lead; al pasar umbral, alerta WA.
+export const leadSignals = pgTable('lead_signals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  leadId: uuid('lead_id').notNull().references(() => leads.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(), // email_open|email_click|referral_visit|landing|vote|comment
+  weight: integer('weight').notNull().default(1),
+  meta: jsonb('meta').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  leadIdx: index('lead_signals_lead_idx').on(t.leadId),
+  userIdx: index('lead_signals_user_idx').on(t.userId, t.createdAt),
+}));
+
+// (4) SUSCRIPCIONES / MEMBRESIAS — planes VIP; link de WhatsApp para cierre manual.
+export const membershipPlans = pgTable('membership_plans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  price: text('price').notNull(),
+  currency: text('currency').notNull().default('MXN'),
+  interval: text('interval').notNull().default('mensual'),
+  benefits: jsonb('benefits').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  whatsappNumber: text('whatsapp_number'),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('membership_plans_user_idx').on(t.userId),
+}));
+
+export type FlashOffer = typeof flashOffers.$inferSelect;
+export type NewFlashOffer = typeof flashOffers.$inferInsert;
+export type CampaignLanding = typeof campaignLandings.$inferSelect;
+export type Referral = typeof referrals.$inferSelect;
+export type StoryLink = typeof storyLinks.$inferSelect;
+export type LinkClick = typeof linkClicks.$inferSelect;
+export type Poll = typeof polls.$inferSelect;
+export type PollVote = typeof pollVotes.$inferSelect;
+export type CommentRule = typeof commentRules.$inferSelect;
+export type LeadSignal = typeof leadSignals.$inferSelect;
+export type MembershipPlan = typeof membershipPlans.$inferSelect;

@@ -11,6 +11,13 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks/(.*)',
   '/api/whatsapp/inbound',
   '/unsubscribe(.*)',
+  // Paginas publicas de las features influencer (sin login).
+  '/oferta/(.*)',
+  '/c/(.*)',
+  '/ref/(.*)',
+  '/go/(.*)',
+  '/vota/(.*)',
+  '/api/public/(.*)',
 ]);
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {
