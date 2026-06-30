@@ -53,6 +53,26 @@ export async function postTweet(userId: string, text: string) {
   });
 }
 
+/**
+ * Saca el URN propio del usuario conectado (urn:li:person:XXXX). Necesario
+ * porque LINKEDIN_CREATE_LINKED_IN_POST exige "author" explicito — no asume
+ * "publica como quien esta conectado". Sin esto, publicar multi-tenant
+ * publicaría siempre en la cuenta de quien sea que tenga el URN hardcodeado.
+ */
+export async function getMyLinkedInUrn(userId: string): Promise<string> {
+  const res: any = await composio.tools.execute('LINKEDIN_GET_MY_INFO', {
+    userId,
+    arguments: {},
+  });
+  const data = res?.data ?? res;
+  const rawId: string | undefined =
+    data?.id ?? data?.sub ?? data?.author ?? data?.personUrn ?? data?.urn;
+  if (!rawId) {
+    throw new Error('No se pudo obtener tu identidad de LinkedIn. Reconecta tu cuenta en Integraciones.');
+  }
+  return rawId.startsWith('urn:li:person:') ? rawId : `urn:li:person:${rawId}`;
+}
+
 export async function postLinkedIn(
   userId: string,
   authorUrn: string,
@@ -66,6 +86,22 @@ export async function postLinkedIn(
       visibility: 'PUBLIC',
     },
   });
+}
+
+/**
+ * Publica en LinkedIn usando la cuenta CONECTADA del usuario (multi-tenant
+ * real). Saca el URN propio en el momento, no lo asume ni lo cachea —
+ * publicar en la cuenta equivocada es el peor error posible aqui.
+ */
+export async function postLinkedInForUser(
+  userId: string,
+  commentary: string
+): Promise<{ id?: string; url?: string }> {
+  const urn = await getMyLinkedInUrn(userId);
+  const res: any = await postLinkedIn(userId, urn, commentary);
+  const data = res?.data ?? res;
+  const postId: string | undefined = data?.id ?? data?.postId ?? data?.shareId;
+  return { id: postId, url: postId ? `https://www.linkedin.com/feed/update/${postId}/` : undefined };
 }
 
 // ============================================================
