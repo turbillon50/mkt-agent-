@@ -4,13 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { ConnectButton } from '@/components/integrations/connect-button';
 import { isConnected, isToolkitConfigured, isEmailConnected, isEmailToolkitConfigured } from '@/lib/composio';
 import { IconX, IconLinkedIn, IconChat, IconMail } from '@/components/icons';
+import { IntegrationFocus } from '@/components/integrations/focus';
 
 export const dynamic = 'force-dynamic';
 
 const soonIntegrations = [
-  { name: 'Instagram' },
-  { name: 'Facebook' },
-  { name: 'TikTok' },
+  { name: 'Instagram', id: 'int-instagram' },
+  { name: 'Facebook', id: 'int-facebook' },
+  { name: 'TikTok', id: 'int-tiktok' },
 ];
 
 export default async function IntegrationsPage() {
@@ -40,8 +41,10 @@ export default async function IntegrationsPage() {
         </p>
       </header>
 
+      <IntegrationFocus />
+
       <div className="grid gap-3 md:grid-cols-2">
-        <Card className="card-glow">
+        <Card id="int-twitter" className="card-glow scroll-mt-24 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div className="flex items-center gap-3">
               <IconX className="h-5 w-5" />
@@ -63,7 +66,7 @@ export default async function IntegrationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="card-glow">
+        <Card id="int-linkedin" className="card-glow scroll-mt-24 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div className="flex items-center gap-3">
               <IconLinkedIn className="h-5 w-5" />
@@ -81,7 +84,7 @@ export default async function IntegrationsPage() {
           </CardContent>
         </Card>
 
-        <Card className="card-glow">
+        <Card id="int-whatsapp" className="card-glow scroll-mt-24 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div className="flex items-center gap-3">
               <IconChat className="h-5 w-5" />
@@ -147,7 +150,7 @@ export default async function IntegrationsPage() {
         </Card>
 
         {soonIntegrations.map((i) => (
-          <Card key={i.name} className="card-glow opacity-70">
+          <Card key={i.name} id={i.id} className="card-glow scroll-mt-24 opacity-70 transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base">{i.name}</CardTitle>
               <Badge variant="outline">próximo</Badge>
