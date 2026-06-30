@@ -49,10 +49,34 @@ export const socialAgent = new Agent({
 
 export type ChatTurn = { role: 'user' | 'assistant'; content: string };
 
+export type DraftPost = { platform: 'twitter' | 'linkedin'; text: string; topic?: string };
+
+export type AgentReply = { text: string; draftPost?: DraftPost };
+
+function extractText(result: unknown): string {
+  const r = result as { text?: string; finalText?: string; content?: string };
+  return r.text ?? r.finalText ?? r.content ?? JSON.stringify(result);
+}
+
+// Busca si el agente uso la tool generate-post en este turno. Si la uso,
+// extrae {platform, text} para que el chat pueda mostrar un boton de
+// "publicar este post" en vez de obligar al usuario a copiar/pegar texto.
+function extractDraftPost(result: unknown): DraftPost | undefined {
+  const r = result as { toolResults?: Array<{ payload?: { toolName?: string; args?: any; result?: any } }> };
+  const calls = r.toolResults ?? [];
+  for (let i = calls.length - 1; i >= 0; i--) {
+    const payload = calls[i]?.payload;
+    if (payload?.toolName === 'generatePost' && payload.result?.text) {
+      const platform = payload.args?.platform === 'linkedin' ? 'linkedin' : 'twitter';
+      return { platform, text: String(payload.result.text), topic: payload.args?.topic };
+    }
+  }
+  return undefined;
+}
+
 export async function ask(prompt: string): Promise<string> {
   const result = await socialAgent.generate(prompt, MODEL_SETTINGS as never);
-  const r = result as unknown as { text?: string; finalText?: string; content?: string };
-  return r.text ?? r.finalText ?? r.content ?? JSON.stringify(result);
+  return extractText(result);
 }
 
 export async function askWithHistory(history: ChatTurn[], prompt: string): Promise<string> {
@@ -61,8 +85,7 @@ export async function askWithHistory(history: ChatTurn[], prompt: string): Promi
     { role: 'user' as const, content: prompt },
   ];
   const result = await socialAgent.generate(messages as never, MODEL_SETTINGS as never);
-  const r = result as unknown as { text?: string; finalText?: string; content?: string };
-  return r.text ?? r.finalText ?? r.content ?? JSON.stringify(result);
+  return extractText(result);
 }
 
 export async function askWithHistoryForCampaign(
@@ -77,7 +100,7 @@ export async function askWithHistoryForCampaign(
   } | null,
   userId?: string | null,
   imageDataUrl?: string | null,
-): Promise<string> {
+): Promise<AgentReply> {
   const brand = campaign
     ? {
         name: campaign.name,
@@ -98,7 +121,8 @@ export async function askWithHistoryForCampaign(
   // tiene vision) en vez del agente con tools. Se pierde tool-calling SOLO
   // en ese mensaje puntual; el resto de la conversacion sigue por el Mesh.
   if (imageDataUrl) {
-    return askGeminiVision(instructions, history, prompt, imageDataUrl);
+    const text = await askGeminiVision(instructions, history, prompt, imageDataUrl);
+    return { text };
   }
 
   const ids = userId ? memoryIdsFor(userId) : null;
@@ -121,6 +145,5 @@ export async function askWithHistoryForCampaign(
   if (memory && ids) genOpts.memory = ids;
 
   const result = await perRequestAgent.generate(messages as never, genOpts as never);
-  const r = result as unknown as { text?: string; finalText?: string; content?: string };
-  return r.text ?? r.finalText ?? r.content ?? JSON.stringify(result);
+  return { text: extractText(result), draftPost: extractDraftPost(result) };
 }

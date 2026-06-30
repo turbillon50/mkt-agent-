@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { IconPaperclip, IconSend, IconClose } from '@/components/icons';
+import { IconPaperclip, IconSend, IconClose, IconX, IconLinkedIn, IconCheckCircle } from '@/components/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,7 +49,8 @@ async function fileToJpegDataUrl(file: File): Promise<string> {
   }
 }
 
-type Msg = { role: 'user' | 'agent'; text: string; image?: string };
+type DraftPost = { platform: 'twitter' | 'linkedin'; text: string; topic?: string };
+type Msg = { role: 'user' | 'agent'; text: string; image?: string; draftPost?: DraftPost | null };
 
 const IS_IMAGE_COMMAND = /^\/imagen\s+/i;
 
@@ -62,6 +63,8 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
   const [hydrating, setHydrating] = useState(true);
+  const [publishingIdx, setPublishingIdx] = useState<number | null>(null);
+  const [publishedIdx, setPublishedIdx] = useState<Record<number, string | null>>({});
   const endRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -72,10 +75,11 @@ export default function ChatPage() {
       .then((data) => {
         if (cancelled) return;
         const msgs: Msg[] = (data?.messages ?? []).map(
-          (m: { role: string; content: string; imageDataUrl?: string | null }) => ({
+          (m: { role: string; content: string; imageDataUrl?: string | null; draftPost?: DraftPost | null }) => ({
             role: m.role === 'assistant' ? 'agent' : 'user',
             text: m.content,
             image: m.imageDataUrl ?? undefined,
+            draftPost: m.draftPost ?? undefined,
           }),
         );
         setMessages(msgs);
@@ -130,7 +134,10 @@ export default function ChatPage() {
         if (isImageGen) push({ variant: 'error', title: 'No se pudo generar la imagen', description: errMsg });
       } else {
         const text = data.reply ?? 'sin respuesta';
-        setMessages((m) => [...m, { role: 'agent', text, image: data.imageDataUrl ?? undefined }]);
+        setMessages((m) => [
+          ...m,
+          { role: 'agent', text, image: data.imageDataUrl ?? undefined, draftPost: data.draftPost ?? undefined },
+        ]);
       }
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : 'error';
@@ -139,6 +146,30 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
       setGeneratingImage(false);
+    }
+  }
+
+  async function publishDraft(idx: number, draft: DraftPost) {
+    if (publishingIdx !== null) return;
+    setPublishingIdx(idx);
+    try {
+      const res = await fetch('/api/posts/publish-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: draft.platform, text: draft.text, topic: draft.topic }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo publicar');
+      setPublishedIdx((prev) => ({ ...prev, [idx]: data.externalUrl ?? '' }));
+      push({
+        variant: 'success',
+        title: `Publicado en ${draft.platform === 'twitter' ? 'X' : 'LinkedIn'}`,
+        description: data.externalUrl ? 'Ábrelo desde el link.' : undefined,
+      });
+    } catch (e) {
+      push({ variant: 'error', title: 'No se pudo publicar', description: e instanceof Error ? e.message : 'error' });
+    } finally {
+      setPublishingIdx(null);
     }
   }
 
@@ -185,6 +216,36 @@ export default function ChatPage() {
                 </div>
               ) : (
                 <p className="whitespace-pre-wrap">{m.text}</p>
+              )}
+              {m.draftPost && (
+                <div className="mt-3 border-t border-[var(--color-border)] pt-2.5">
+                  {publishedIdx[i] !== undefined ? (
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-primary)]">
+                      <IconCheckCircle className="h-3.5 w-3.5" />
+                      Publicado
+                      {publishedIdx[i] && (
+                        <a href={publishedIdx[i]!} target="_blank" rel="noreferrer" className="underline">
+                          ver post →
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => publishDraft(i, m.draftPost!)}
+                      disabled={publishingIdx === i}
+                      className="btn-brand h-8 gap-1.5 px-3 text-xs"
+                    >
+                      {m.draftPost.platform === 'twitter' ? (
+                        <IconX className="h-3 w-3" />
+                      ) : (
+                        <IconLinkedIn className="h-3.5 w-3.5" />
+                      )}
+                      {publishingIdx === i
+                        ? 'Publicando…'
+                        : `Publicar en ${m.draftPost.platform === 'twitter' ? 'X' : 'LinkedIn'}`}
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           ))}
