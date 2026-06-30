@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Check } from 'lucide-react';
+import { IconArrowLeft, IconCheck } from '@/components/icons';
 import { isClerkConfigured } from '@/lib/clerk-config';
 
 const perks = [
@@ -25,7 +25,7 @@ export default async function Page() {
             href="/"
             className="inline-flex items-center gap-1 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Volver
+            <IconArrowLeft className="h-3.5 w-3.5" /> Volver
           </Link>
         </div>
       </header>
@@ -50,7 +50,7 @@ export default async function Page() {
             <ul className="mt-6 space-y-2 text-sm">
               {perks.map((p) => (
                 <li key={p} className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-fuchsia-400" />
+                  <IconCheck className="h-4 w-4 text-fuchsia-400" />
                   <span>{p}</span>
                 </li>
               ))}

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
+import { IconSparkles } from '@/components/icons';
 import { isClerkConfigured } from '@/lib/clerk-config';
 import { getOrCreateUser } from '@/lib/users';
 
@@ -26,7 +26,7 @@ export default async function OnboardingPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--color-background)] px-6 py-12 text-center">
       <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-pink-500">
-        <Sparkles className="h-7 w-7 text-white" />
+        <IconSparkles className="h-7 w-7 text-white" />
       </div>
       <h1 className="mt-6 text-2xl font-semibold brand-gradient">¡Bienvenido a Goossip!</h1>
       <p className="mt-3 max-w-md text-sm text-[var(--color-muted-foreground)]">
