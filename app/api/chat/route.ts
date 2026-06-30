@@ -7,6 +7,7 @@ export const maxDuration = 60;
 type Turn = { role: 'user' | 'assistant'; content: string };
 
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // ~6MB after base64 decode
+const IMAGE_COMMAND_RE = /^\/imagen\s+(.+)/is;
 
 function sniffMime(dataUrl: string): string | null {
   const m = dataUrl.match(/^data:[^;]+;base64,(.+)$/);
@@ -71,6 +72,33 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Comando /imagen <prompt> — genera imagen real con Gemini, bypassa el agente de texto.
+  const imageCommand = prompt.match(IMAGE_COMMAND_RE);
+  if (imageCommand) {
+    const imgPrompt = imageCommand[1]!.trim();
+    try {
+      const { generateImage } = await import('@/lib/gemini-image');
+      const result = await generateImage(imgPrompt);
+      const reply = `Aquí tienes: "${imgPrompt}"`;
+
+      if (userId) {
+        const { saveMessage } = await import('@/lib/conversations');
+        await saveMessage({ userId, role: 'user', content: prompt }).catch(() => undefined);
+        await saveMessage({
+          userId,
+          role: 'assistant',
+          content: reply,
+          metadata: { imageDataUrl: result.dataUrl, imagePrompt: imgPrompt },
+        }).catch(() => undefined);
+      }
+
+      return NextResponse.json({ reply, imageDataUrl: result.dataUrl, campaign: campaign?.name ?? null });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'No se pudo generar la imagen.';
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+  }
+
   try {
     const { askWithHistoryForCampaign } = await import('@/src/agent/index');
     const { getRecentMessages, saveMessage } = userId
@@ -115,7 +143,13 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
     const { getRecentMessages } = await import('@/lib/conversations');
     const messages = await getRecentMessages(user.id);
-    return NextResponse.json({ messages: messages.map((m) => ({ role: m.role, content: m.content })) });
+    return NextResponse.json({
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        imageDataUrl: (m.metadata as any)?.imageDataUrl ?? null,
+      })),
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'error';
     return NextResponse.json({ messages: [], error: msg }, { status: 200 });
