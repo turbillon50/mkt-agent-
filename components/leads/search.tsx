@@ -4,10 +4,19 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { IconSparkles, IconCheck } from '@/components/icons';
 import { useToast } from '@/components/ui/toast-provider';
 
-type Candidate = { url: string; label: string; snippet: string | null };
+type Candidate = {
+  url: string;
+  label: string;
+  snippet: string | null;
+  address?: string | null;
+  phone?: string | null;
+  rating?: string | null;
+  source: 'maps' | 'web';
+};
 
 export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
   const { push } = useToast();
@@ -32,8 +41,9 @@ export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudo buscar');
-      setCandidates(data.candidates ?? []);
-      setSelected(new Set((data.candidates ?? []).map((c: Candidate) => c.url)));
+      const list: Candidate[] = data.candidates ?? [];
+      setCandidates(list);
+      setSelected(new Set(list.map((c) => c.url)));
     } catch (e) {
       push({ variant: 'error', title: 'No se pudo buscar', description: e instanceof Error ? e.message : 'error' });
     } finally {
@@ -52,14 +62,14 @@ export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
   }
 
   async function addSelected() {
-    const urls = Array.from(selected);
-    if (urls.length === 0 || adding) return;
+    const picked = candidates.filter((c) => selected.has(c.url));
+    if (picked.length === 0 || adding) return;
     setAdding(true);
     try {
       const res = await fetch('/api/leads/search', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls }),
+        body: JSON.stringify({ candidates: picked }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudo agregar');
@@ -87,9 +97,8 @@ export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
         </CardTitle>
         <CardDescription>
           Describe a quién buscas (ej. "agencias de marketing digital en Cancún") y Goossip busca
-          negocios reales en internet — solo trae resultados con fuente verificable, nunca inventa
-          nombres o links. Por ahora busca empresas/negocios, no perfiles individuales de LinkedIn
-          (esos los agregas a mano arriba, ya que LinkedIn bloquea que se indexen).
+          negocios reales — usa Google Maps si está conectado (dirección, teléfono, rating reales),
+          y si no, Google Search con verificación de fuente. Nunca inventa nombres ni links.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -119,14 +128,14 @@ export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
                 <button
                   key={c.url}
                   onClick={() => toggle(c.url)}
-                  className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                  className={`flex items-start gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                     selected.has(c.url)
                       ? 'border-[var(--color-primary)]/40 bg-[var(--color-accent)]'
                       : 'border-[var(--color-border)] hover:bg-[var(--color-accent)]/50'
                   }`}
                 >
                   <span
-                    className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${
+                    className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border ${
                       selected.has(c.url)
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
                         : 'border-[var(--color-border)]'
@@ -134,7 +143,19 @@ export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
                   >
                     {selected.has(c.url) && <IconCheck className="h-3 w-3" />}
                   </span>
-                  <span className="truncate">{c.label}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate font-medium">{c.label}</span>
+                      {c.source === 'maps' && (
+                        <Badge variant="outline" className="shrink-0 text-[10px]">
+                          Maps
+                        </Badge>
+                      )}
+                    </span>
+                    {c.snippet && (
+                      <span className="block truncate text-xs text-[var(--color-muted-foreground)]">{c.snippet}</span>
+                    )}
+                  </span>
                 </button>
               ))}
             </div>
