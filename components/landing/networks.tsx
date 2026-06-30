@@ -1,11 +1,13 @@
+import { IconX, IconLinkedIn, IconWhatsApp } from '@/components/icons';
+
 export function Networks() {
   const items = [
-    { name: 'X / Twitter', tag: 'Live' },
-    { name: 'LinkedIn', tag: 'Live' },
-    { name: 'WhatsApp', tag: 'Live' },
-    { name: 'Instagram', tag: 'Próximo' },
-    { name: 'Facebook', tag: 'Próximo' },
-    { name: 'TikTok', tag: 'Próximo' },
+    { name: 'X / Twitter', tag: 'Live', icon: IconX },
+    { name: 'LinkedIn', tag: 'Live', icon: IconLinkedIn },
+    { name: 'WhatsApp', tag: 'Live', icon: IconWhatsApp },
+    { name: 'Instagram', tag: 'Próximo', icon: null },
+    { name: 'Facebook', tag: 'Próximo', icon: null },
+    { name: 'TikTok', tag: 'Próximo', icon: null },
   ];
   return (
     <section className="border-b border-[var(--color-border)] bg-[var(--color-card)]/30">
@@ -17,13 +19,18 @@ export function Networks() {
           {items.map((it) => (
             <div
               key={it.name}
-              className="flex flex-col items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4 text-center"
+              className="flex flex-col items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] p-4 text-center"
             >
+              {it.icon ? (
+                <it.icon className="h-5 w-5 text-[var(--color-foreground-muted)]" />
+              ) : (
+                <span className="h-5 w-5" />
+              )}
               <span className="text-sm font-medium">{it.name}</span>
               <span
                 className={`rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider ${
                   it.tag === 'Live'
-                    ? 'bg-emerald-500/20 text-emerald-300'
+                    ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
                     : 'bg-[var(--color-muted)] text-[var(--color-muted-foreground)]'
                 }`}
               >
