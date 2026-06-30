@@ -208,6 +208,15 @@ export type ProspectCandidate = {
   phone?: string | null;
   rating?: string | null;
   source: 'maps' | 'web' | 'linkedin';
+  aiReason?: string | null;
+};
+
+export type SearchFilters = {
+  minRating?: number;
+  requirePhone?: boolean;
+  requireWebsite?: boolean;
+  maxResults?: number;
+  aiPrompt?: string;
 };
 
 /**
@@ -218,12 +227,88 @@ export type ProspectCandidate = {
  * individuales de LinkedIn y el modelo INVENTABA URLs porque LinkedIn
  * bloquea esa indexacion; nunca se acepta nada sin fuente verificable).
  */
-export async function searchProspects(query: string): Promise<ProspectCandidate[]> {
+function applyStructuredFilters(candidates: ProspectCandidate[], filters?: SearchFilters): ProspectCandidate[] {
+  if (!filters) return candidates;
+  let out = candidates;
+  if (filters.minRating != null) {
+    out = out.filter((c) => {
+      const r = c.rating ? parseFloat(c.rating) : null;
+      return r != null && r >= filters.minRating!;
+    });
+  }
+  if (filters.requirePhone) {
+    out = out.filter((c) => Boolean(c.phone));
+  }
+  if (filters.requireWebsite) {
+    // Para resultados de Maps, "website" real es distinto del mapsUrl de respaldo.
+    // Aqui lo aproximamos: si el source es maps y no hay phone+address juntos asumimos que
+    // el url SI es su sitio (ya viene filtrado en searchPlaces para preferir website).
+    out = out.filter((c) => c.source !== 'maps' || Boolean(c.phone) || Boolean(c.address));
+  }
+  return out;
+}
+
+/**
+ * Filtro/orden por IA: el usuario describe en lenguaje natural qué quiere
+ * (ej. "solo negocios boutique, descarta cadenas grandes") y el Mesh
+ * (Cerebras) revisa cada candidato y decide si califica + por que. No
+ * inventa candidatos nuevos — solo filtra/explica los que ya vinieron de
+ * Maps/Google.
+ */
+async function aiFilterCandidates(
+  candidates: ProspectCandidate[],
+  prompt: string,
+): Promise<ProspectCandidate[]> {
+  if (candidates.length === 0 || !prompt.trim()) return candidates;
+
+  const list = candidates
+    .map((c, i) => `${i}. ${c.label}${c.snippet ? ` — ${c.snippet}` : ''}`)
+    .join('\n');
+
+  const sys = `Eres un filtro de prospectos B2B. Te doy una lista numerada de negocios reales y una instrucción del usuario sobre cuáles le interesan. Responde SOLO un JSON array, sin texto extra, con este formato exacto: [{"i": 0, "match": true, "reason": "por que califica, max 8 palabras"}, ...]. Incluye TODOS los indices de la lista, marca match:false en los que no cumplan la instrucción. No inventes datos que no esten en la lista.`;
+
+  const userMsg = `Instrucción: ${prompt}
+
+Lista:
+${list}`;
+
+  try {
+    const raw = await chat(
+      [
+        { role: 'system', content: sys },
+        { role: 'user', content: userMsg },
+      ],
+      { temperature: 0.3, maxTokens: 1200 },
+    );
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (!match) return candidates;
+    const parsed: Array<{ i: number; match: boolean; reason?: string }> = JSON.parse(match[0]);
+    const byIndex = new Map(parsed.map((p) => [p.i, p]));
+    return candidates
+      .map((c, i) => {
+        const verdict = byIndex.get(i);
+        if (!verdict) return { ...c, aiReason: null };
+        return { ...c, aiReason: verdict.match ? verdict.reason ?? null : null, __keep: verdict.match } as any;
+      })
+      .filter((c: any) => c.__keep !== false)
+      .map((c: any) => {
+        delete c.__keep;
+        return c;
+      });
+  } catch {
+    // si el filtro de IA falla, regresa la lista sin filtrar en vez de tronar la busqueda
+    return candidates;
+  }
+}
+
+export async function searchProspects(query: string, filters?: SearchFilters): Promise<ProspectCandidate[]> {
+  let results: ProspectCandidate[] = [];
+
   if (isMapsConfigured()) {
     try {
-      const places = await searchPlaces(query);
+      const places = await searchPlaces(query, filters?.maxResults ? Math.min(filters.maxResults * 2, 20) : 14);
       if (places.length > 0) {
-        return places
+        results = places
           .filter((p) => p.website || p.mapsUrl)
           .map((p) => ({
             url: (p.website || p.mapsUrl)!,
@@ -240,6 +325,24 @@ export async function searchProspects(query: string): Promise<ProspectCandidate[
     }
   }
 
+  if (results.length === 0) {
+    results = await searchProspectsViaGrounding(query);
+  }
+
+  results = applyStructuredFilters(results, filters);
+
+  if (filters?.aiPrompt) {
+    results = await aiFilterCandidates(results, filters.aiPrompt);
+  }
+
+  if (filters?.maxResults) {
+    results = results.slice(0, filters.maxResults);
+  }
+
+  return results;
+}
+
+async function searchProspectsViaGrounding(query: string): Promise<ProspectCandidate[]> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY no está configurada.');
 
@@ -278,7 +381,7 @@ export async function searchProspects(query: string): Promise<ProspectCandidate[
   }
 
   if (out.length === 0 && text) return [];
-  return out.slice(0, 12);
+  return out.slice(0, 14);
 }
 
 // ============================================================
