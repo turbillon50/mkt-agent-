@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { IconSparkles, IconCheck, IconLinkedIn } from '@/components/icons';
+import { IconSparkles, IconCheck, IconChevronDown } from '@/components/icons';
 import { useToast } from '@/components/ui/toast-provider';
 
 type Candidate = {
@@ -16,26 +16,32 @@ type Candidate = {
   phone?: string | null;
   rating?: string | null;
   source: 'maps' | 'web' | 'linkedin';
+  aiReason?: string | null;
 };
-
-type Mode = 'business' | 'linkedin';
 
 export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
   const { push } = useToast();
-  const [mode, setMode] = React.useState<Mode>('business');
-  const [linkedinReady, setLinkedinReady] = React.useState<boolean | null>(null);
   const [query, setQuery] = React.useState('');
   const [searching, setSearching] = React.useState(false);
   const [candidates, setCandidates] = React.useState<Candidate[]>([]);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [adding, setAdding] = React.useState(false);
   const [searched, setSearched] = React.useState(false);
+  const [showFilters, setShowFilters] = React.useState(false);
+  const [mapsReady, setMapsReady] = React.useState<boolean | null>(null);
+
+  // filtros
+  const [minRating, setMinRating] = React.useState('');
+  const [requirePhone, setRequirePhone] = React.useState(false);
+  const [requireWebsite, setRequireWebsite] = React.useState(false);
+  const [maxResults, setMaxResults] = React.useState('14');
+  const [aiPrompt, setAiPrompt] = React.useState('');
 
   React.useEffect(() => {
     fetch('/api/leads/search', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((d) => setLinkedinReady(Boolean(d.linkedinAvailable)))
-      .catch(() => setLinkedinReady(false));
+      .then((d) => setMapsReady(Boolean(d.mapsAvailable)))
+      .catch(() => setMapsReady(false));
   }, []);
 
   async function search() {
@@ -48,7 +54,14 @@ export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
       const res = await fetch('/api/leads/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query.trim(), mode }),
+        body: JSON.stringify({
+          query: query.trim(),
+          minRating: minRating ? parseFloat(minRating) : undefined,
+          requirePhone,
+          requireWebsite,
+          maxResults: maxResults ? parseInt(maxResults, 10) : undefined,
+          aiPrompt: aiPrompt.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudo buscar');
@@ -99,6 +112,8 @@ export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
     }
   }
 
+  const activeFilterCount = [minRating, requirePhone, requireWebsite, aiPrompt.trim()].filter(Boolean).length;
+
   return (
     <Card className="card-glow">
       <CardHeader>
@@ -107,59 +122,85 @@ export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
           Buscador de prospectos
         </CardTitle>
         <CardDescription>
-          {mode === 'business'
-            ? 'Describe a quién buscas (ej. "agencias de marketing digital en Cancún"). Usa Google Maps si está conectado (datos reales), o Google Search verificado. Nunca inventa nombres ni links.'
-            : 'Busca personas reales en LinkedIn usando tu propia sesión logueada. Riesgo real: úsalo con moderación para no levantar banderas de spam en tu cuenta.'}
+          Describe a quién buscas (ej. "agencias de marketing digital en Cancún").{' '}
+          {mapsReady ? 'Usa Google Maps — datos reales' : 'Usa Google Search verificado'} (dirección,
+          teléfono, rating). Nunca inventa nombres ni links.
         </CardDescription>
-        <div className="mt-2 flex gap-1.5">
-          <button
-            onClick={() => {
-              setMode('business');
-              setCandidates([]);
-              setSearched(false);
-            }}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              mode === 'business' ? 'btn-brand' : 'border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]'
-            }`}
-          >
-            Negocios
-          </button>
-          <button
-            onClick={() => {
-              setMode('linkedin');
-              setCandidates([]);
-              setSearched(false);
-            }}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              mode === 'linkedin' ? 'btn-brand' : 'border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]'
-            }`}
-          >
-            <IconLinkedIn className="h-3 w-3" /> Personas en LinkedIn
-          </button>
-        </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {mode === 'linkedin' && linkedinReady === false && (
-          <p className="rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/50 p-2.5 text-xs text-[var(--color-muted-foreground)]">
-            Falta loguearse en el Navegador Vulcano una vez para activar esto. Avísale al admin.
-          </p>
-        )}
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && search()}
-            placeholder={mode === 'business' ? 'ej. clínicas dentales en Cancún' : 'ej. directores de marketing en Cancún'}
+            placeholder="ej. clínicas dentales en Cancún"
           />
           <Button onClick={search} disabled={searching || !query.trim()} className="btn-brand shrink-0">
             {searching ? 'Buscando…' : 'Buscar'}
           </Button>
         </div>
 
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          className="flex items-center gap-1.5 text-xs font-medium text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+        >
+          <IconChevronDown className={`h-3.5 w-3.5 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          Filtros{activeFilterCount > 0 ? ` (${activeFilterCount} activos)` : ''}
+        </button>
+
+        {showFilters && (
+          <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/30 p-3">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <label className="text-xs">
+                <span className="mb-1 block text-[var(--color-muted-foreground)]">Rating mínimo</span>
+                <Input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="5"
+                  value={minRating}
+                  onChange={(e) => setMinRating(e.target.value)}
+                  placeholder="ej. 4"
+                />
+              </label>
+              <label className="text-xs">
+                <span className="mb-1 block text-[var(--color-muted-foreground)]">Cuántos resultados</span>
+                <Input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={maxResults}
+                  onChange={(e) => setMaxResults(e.target.value)}
+                />
+              </label>
+              <div className="flex items-end gap-3 pb-1.5 text-xs">
+                <label className="flex items-center gap-1.5">
+                  <input type="checkbox" checked={requirePhone} onChange={(e) => setRequirePhone(e.target.checked)} />
+                  Con teléfono
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <input type="checkbox" checked={requireWebsite} onChange={(e) => setRequireWebsite(e.target.checked)} />
+                  Con sitio web
+                </label>
+              </div>
+            </div>
+            <label className="block text-xs">
+              <span className="mb-1 flex items-center gap-1.5 text-[var(--color-muted-foreground)]">
+                <IconSparkles className="h-3 w-3" /> Filtro por IA (prompt libre, opcional)
+              </span>
+              <Input
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder='ej. "solo negocios boutique, descarta cadenas grandes"'
+              />
+            </label>
+          </div>
+        )}
+
         {searched && candidates.length === 0 && !searching && (
           <p className="text-xs text-[var(--color-muted-foreground)]">
-            No encontré resultados verificables para esa búsqueda. Intenta ser más específico (ciudad,
-            giro del negocio).
+            No encontré resultados verificables (o los filtros descartaron todo). Intenta ser más
+            específico o aflojar los filtros.
           </p>
         )}
 
@@ -193,14 +234,14 @@ export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
                           Maps
                         </Badge>
                       )}
-                      {c.source === 'linkedin' && (
-                        <Badge variant="outline" className="shrink-0 text-[10px]">
-                          LinkedIn
-                        </Badge>
-                      )}
                     </span>
                     {c.snippet && (
                       <span className="block truncate text-xs text-[var(--color-muted-foreground)]">{c.snippet}</span>
+                    )}
+                    {c.aiReason && (
+                      <span className="mt-0.5 flex items-center gap-1 text-[11px] text-[var(--color-primary)]">
+                        <IconSparkles className="h-2.5 w-2.5" /> {c.aiReason}
+                      </span>
                     )}
                   </span>
                 </button>
