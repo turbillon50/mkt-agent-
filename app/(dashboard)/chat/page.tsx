@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Paperclip, Send, X } from 'lucide-react';
+import { IconPaperclip, IconSend, IconClose } from '@/components/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, CardContent } from '@/components/ui/card';
@@ -151,7 +151,7 @@ export default function ChatPage() {
               key={i}
               className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
                 m.role === 'user'
-                  ? 'ml-auto bg-gradient-to-br from-fuchsia-500 to-pink-500 text-white'
+                  ? 'ml-auto btn-brand'
                   : 'bg-[var(--color-card)] border border-[var(--color-border)]'
               }`}
             >
@@ -160,7 +160,7 @@ export default function ChatPage() {
                 <img src={m.image} alt="imagen" className="mb-2 max-h-64 rounded-lg" />
               )}
               {m.role === 'agent' ? (
-                <div className="prose prose-invert prose-sm max-w-none prose-p:my-1.5 prose-li:my-0.5 prose-strong:text-fuchsia-300 prose-headings:text-[var(--color-foreground)] prose-headings:mt-3 prose-headings:mb-1 prose-code:rounded prose-code:bg-[var(--color-muted)] prose-code:px-1 prose-code:py-0.5 prose-code:text-fuchsia-200 prose-code:before:content-none prose-code:after:content-none prose-a:text-fuchsia-300">
+                <div className="prose prose-sm max-w-none prose-p:my-1.5 prose-li:my-0.5 prose-strong:text-[var(--color-primary)] prose-headings:text-[var(--color-foreground)] prose-headings:mt-3 prose-headings:mb-1 prose-code:rounded prose-code:bg-[var(--color-muted)] prose-code:px-1 prose-code:py-0.5 prose-code:text-[var(--color-secondary)] prose-code:before:content-none prose-code:after:content-none prose-a:text-[var(--color-primary)]">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
                 </div>
               ) : (
@@ -188,12 +188,12 @@ export default function ChatPage() {
             onClick={() => setImage(null)}
             className="grid h-7 w-7 place-items-center rounded-md hover:bg-[var(--color-accent)]"
           >
-            <X className="h-4 w-4" />
+            <IconClose className="h-4 w-4" />
           </button>
         </div>
       )}
       {imageError && (
-        <p className="text-xs text-rose-300">{imageError}</p>
+        <p className="text-xs text-[var(--color-destructive)]">{imageError}</p>
       )}
 
       <div className="flex items-end gap-2">
@@ -203,7 +203,7 @@ export default function ChatPage() {
           aria-label="Adjuntar imagen"
           className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]"
         >
-          <Paperclip className="h-4 w-4" />
+          <IconPaperclip className="h-4 w-4" />
         </button>
         <input
           ref={fileInputRef}
@@ -233,7 +233,7 @@ export default function ChatPage() {
           disabled={loading || (input.trim().length === 0 && !image)}
           className="btn-brand h-10 px-4"
         >
-          <Send className="h-4 w-4" />
+          <IconSend className="h-4 w-4" />
         </Button>
       </div>
     </div>
