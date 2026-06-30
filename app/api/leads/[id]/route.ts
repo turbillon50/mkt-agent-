@@ -9,8 +9,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const patch: { status?: string; email?: string | null; notes?: string | null } = {};
+  const patch: { status?: string; email?: string | null; notes?: string | null; tags?: string | null } = {};
   if (typeof body.status === 'string' && body.status.trim()) patch.status = body.status.trim();
+  if (body.tags !== undefined) patch.tags = String(body.tags ?? '');
   if (body.email !== undefined) {
     const email = String(body.email ?? '').trim();
     if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {

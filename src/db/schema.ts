@@ -246,6 +246,11 @@ export const leads = pgTable('leads', {
   rating: text('rating'),
   summary: text('summary'),
   status: text('status').notNull().default('new'),
+  tags: text('tags'),
+  emailStatus: text('email_status').notNull().default('unknown'),
+  unsubscribed: boolean('unsubscribed').notNull().default(false),
+  unsubscribedAt: timestamp('unsubscribed_at', { withTimezone: true }),
+  unsubscribeToken: uuid('unsubscribe_token').notNull().defaultRandom(),
   notes: text('notes'),
   draftMessage: text('draft_message'),
   raw: jsonb('raw').$type<Record<string, unknown>>(),
@@ -292,11 +297,55 @@ export const funnelEnrollments = pgTable('funnel_enrollments', {
   dueIdx: index('funnel_enrollments_due_idx').on(t.status, t.nextRunAt),
 }));
 
+// ── Mailing real (tarea 681 — mailer completo) ───────────────────────────
+// Plantillas reutilizables (borradores guardados por el usuario).
+export const emailTemplates = pgTable('email_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  subject: text('subject').notNull().default(''),
+  body: text('body').notNull().default(''),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('email_templates_user_idx').on(t.userId, t.updatedAt),
+}));
+
+// Una campana = un correo masivo a un segmento de leads. segment define a quien.
+export type CampaignSegment =
+  | { type: 'all' }
+  | { type: 'status'; value: string }
+  | { type: 'tag'; value: string }
+  | { type: 'manual'; ids: string[] };
+
+export const emailCampaigns = pgTable('email_campaigns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  subject: text('subject').notNull().default(''),
+  body: text('body').notNull().default(''),
+  segment: jsonb('segment').$type<CampaignSegment>().notNull().default(sql`'{"type":"all"}'::jsonb`),
+  status: text('status').notNull().default('draft'), // draft|scheduled|sending|sent|failed
+  scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+  totalRecipients: integer('total_recipients').notNull().default(0),
+  sentCount: integer('sent_count').notNull().default(0),
+  failedCount: integer('failed_count').notNull().default(0),
+  skippedCount: integer('skipped_count').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+}, (t) => ({
+  userIdx: index('email_campaigns_user_idx').on(t.userId, t.createdAt),
+  dueIdx: index('email_campaigns_due_idx').on(t.status, t.scheduledAt),
+}));
+
 export const emailLog = pgTable('email_log', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   leadId: uuid('lead_id').references(() => leads.id, { onDelete: 'set null' }),
   funnelId: uuid('funnel_id').references(() => funnels.id, { onDelete: 'set null' }),
+  campaignId: uuid('campaign_id').references(() => emailCampaigns.id, { onDelete: 'set null' }),
+  kind: text('kind').notNull().default('funnel'), // funnel|campaign
   toEmail: text('to_email').notNull(),
   subject: text('subject').notNull(),
   step: integer('step'),
@@ -304,15 +353,41 @@ export const emailLog = pgTable('email_log', {
   status: text('status').notNull().default('sent'),
   error: text('error'),
   externalId: text('external_id'),
+  deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+  openedAt: timestamp('opened_at', { withTimezone: true }),
+  clickedAt: timestamp('clicked_at', { withTimezone: true }),
+  bouncedAt: timestamp('bounced_at', { withTimezone: true }),
+  complainedAt: timestamp('complained_at', { withTimezone: true }),
+  openCount: integer('open_count').notNull().default(0),
+  clickCount: integer('click_count').notNull().default(0),
   sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => ({
   userIdx: index('email_log_user_idx').on(t.userId, t.sentAt),
+  campaignIdx: index('email_log_campaign_idx').on(t.campaignId),
+  externalIdx: index('email_log_external_idx').on(t.externalId),
+}));
+
+// Bitacora cruda de eventos de webhook de Resend (auditoria + idempotencia).
+export const emailEvents = pgTable('email_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  externalId: text('external_id'),
+  type: text('type').notNull(),
+  toEmail: text('to_email'),
+  payload: jsonb('payload').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  externalIdx: index('email_events_external_idx').on(t.externalId),
+  typeIdx: index('email_events_type_idx').on(t.type, t.createdAt),
 }));
 
 export type Funnel = typeof funnels.$inferSelect;
 export type NewFunnel = typeof funnels.$inferInsert;
 export type FunnelEnrollment = typeof funnelEnrollments.$inferSelect;
 export type EmailLogRow = typeof emailLog.$inferSelect;
+export type EmailTemplate = typeof emailTemplates.$inferSelect;
+export type EmailCampaign = typeof emailCampaigns.$inferSelect;
+export type NewEmailCampaign = typeof emailCampaigns.$inferInsert;
+export type EmailEvent = typeof emailEvents.$inferSelect;
 
 export const competitorLinks = pgTable('competitor_links', {
   id: uuid('id').primaryKey().defaultRandom(),

@@ -22,6 +22,7 @@ type Lead = {
   rating: string | null;
   summary: string | null;
   status: string;
+  tags: string | null;
   draftMessage: string | null;
   createdAt: string;
 };
@@ -78,6 +79,57 @@ function EmailField({ value, onSave }: { value: string | null; onSave: (email: s
         }
       }}
       placeholder="correo@empresa.com"
+      className="h-8 max-w-xs text-xs"
+    />
+  );
+}
+
+// Editor de tags inline: separadas por coma. Sirven para segmentar campañas.
+function TagField({ value, onSave }: { value: string | null; onSave: (tags: string) => void }) {
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(value ?? '');
+  React.useEffect(() => setDraft(value ?? ''), [value]);
+  const list = (value ?? '').split(',').map((t) => t.trim()).filter(Boolean);
+
+  if (!editing) {
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        className="inline-flex flex-wrap items-center gap-1 text-left"
+        title="Editar tags (para segmentar campañas de correo)"
+      >
+        {list.length ? (
+          list.map((t) => (
+            <span key={t} className="rounded-full bg-[var(--color-accent)] px-2 py-0.5 text-[10px] text-[var(--color-primary)]">
+              #{t}
+            </span>
+          ))
+        ) : (
+          <span className="text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-primary)] hover:underline">+ tags</span>
+        )}
+      </button>
+    );
+  }
+  return (
+    <Input
+      autoFocus
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        setEditing(false);
+        if (draft.trim() !== (value ?? '')) onSave(draft);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          setEditing(false);
+          if (draft.trim() !== (value ?? '')) onSave(draft);
+        }
+        if (e.key === 'Escape') {
+          setDraft(value ?? '');
+          setEditing(false);
+        }
+      }}
+      placeholder="vip, webinar, cdmx"
       className="h-8 max-w-xs text-xs"
     />
   );
@@ -179,6 +231,22 @@ export function LeadsBoard() {
       if (clean) push({ variant: 'success', title: 'Correo guardado', description: 'Ya puede entrar a un embudo de automatización.' });
     } catch (e) {
       push({ variant: 'error', title: 'Correo no guardado', description: e instanceof Error ? e.message : 'error' });
+      await refresh();
+    }
+  }
+
+  async function saveTags(id: string, tags: string) {
+    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, tags: tags.trim() || null } : l)));
+    try {
+      const res = await fetch(`/api/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags }),
+      });
+      if (!res.ok) throw new Error('No se pudo guardar');
+      push({ variant: 'success', title: 'Tags guardados', description: 'Úsalos para segmentar campañas de correo.' });
+    } catch {
+      push({ variant: 'error', title: 'No se pudieron guardar los tags' });
       await refresh();
     }
   }
@@ -410,6 +478,9 @@ export function LeadsBoard() {
                     )}
                     <div className="mt-1">
                       <EmailField value={l.email} onSave={(email) => saveEmail(l.id, email)} />
+                    </div>
+                    <div className="mt-1">
+                      <TagField value={l.tags} onSave={(tags) => saveTags(l.id, tags)} />
                     </div>
                   </div>
                   <button
