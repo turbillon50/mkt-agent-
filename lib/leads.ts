@@ -4,6 +4,7 @@ import { db } from '@/src/db/client';
 import { leads, type Lead, type NewLead } from '@/src/db/schema';
 import { chat } from '@/src/openrouter';
 import { isMapsConfigured, searchPlaces, type MapsPlace } from './maps';
+import { searchLinkedInPeople, type LinkedInPerson } from './linkedin-search';
 
 function detectPlatform(url: string): string {
   if (/linkedin\.com/i.test(url)) return 'linkedin';
@@ -206,7 +207,7 @@ export type ProspectCandidate = {
   address?: string | null;
   phone?: string | null;
   rating?: string | null;
-  source: 'maps' | 'web';
+  source: 'maps' | 'web' | 'linkedin';
 };
 
 /**
@@ -347,4 +348,64 @@ export async function generateOutreachMessages(
   }
 
   return updated;
+}
+
+/**
+ * Busca PERSONAS reales en LinkedIn (no empresas) usando la sesion
+ * autenticada de Luis via Navegador Vulcano + Playwright. A diferencia del
+ * buscador de negocios, esto SI puede encontrar perfiles individuales --
+ * porque se lee la sesion real logueada, no se intenta indexar via un
+ * motor de busqueda externo. Riesgo real de baneo de cuenta si se abusa.
+ */
+export async function searchLinkedInProspects(query: string, limit = 10): Promise<ProspectCandidate[]> {
+  const people = await searchLinkedInPeople(query, limit);
+  return people.map((p) => ({
+    url: p.url.startsWith('http') ? p.url : `https://www.linkedin.com${p.url}`,
+    label: p.name ?? p.url,
+    snippet: [p.headline, p.location].filter(Boolean).join(' · ') || null,
+    source: 'linkedin' as const,
+  }));
+}
+
+/**
+ * Guarda candidatos de LinkedIn directo (ya traen nombre/headline/ubicacion
+ * de la pagina de resultados — no se visita el perfil individual, eso
+ * subiria mucho el riesgo de deteccion).
+ */
+export async function bulkCreateLeadsFromLinkedIn(
+  userId: string,
+  people: LinkedInPerson[],
+  campaignId?: string | null,
+): Promise<{ created: number; failed: number }> {
+  let created = 0;
+  let failed = 0;
+  for (const p of people.slice(0, 25)) {
+    if (!p.url) {
+      failed++;
+      continue;
+    }
+    const sourceUrl = p.url.startsWith('http') ? p.url : `https://www.linkedin.com${p.url}`;
+    try {
+      await db
+        .insert(leads)
+        .values({
+          userId,
+          campaignId: campaignId ?? null,
+          sourceUrl,
+          platform: 'linkedin',
+          source: 'linkedin',
+          fullName: p.name,
+          headline: p.headline,
+          location: p.location,
+        } satisfies NewLead)
+        .onConflictDoUpdate({
+          target: [leads.userId, leads.sourceUrl],
+          set: { fullName: p.name, headline: p.headline, location: p.location, updatedAt: new Date() },
+        });
+      created++;
+    } catch {
+      failed++;
+    }
+  }
+  return { created, failed };
 }
