@@ -7,7 +7,7 @@ export function ConnectButton({
   connected,
   label,
 }: {
-  toolkit: 'twitter' | 'linkedin';
+  toolkit: 'twitter' | 'linkedin' | 'gmail' | 'outlook';
   connected: boolean;
   label: string;
 }) {
