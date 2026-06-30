@@ -152,10 +152,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const loading = status === null;
 
   return (
-    <div className="glass flex h-full w-full flex-col p-3">
-      {/* Header con respiro: logo + tagline */}
-      <div className="flex items-center gap-3 px-2 pb-4 pt-4">
-        <div className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-[var(--color-brand-1)] to-[var(--color-brand-3)] text-white shadow-lg shadow-[var(--color-primary)]/25">
+    <div className="glass flex h-full w-full flex-col p-3 pt-2">
+      {/* Header con respiro real: logo + tagline */}
+      <div className="flex items-center gap-3.5 px-2 pb-6 pt-7">
+        <div className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-[var(--color-brand-1)] to-[var(--color-brand-3)] text-white shadow-lg shadow-[var(--color-primary)]/25">
           <svg viewBox="0 0 24 24" fill="none" className="relative z-10 h-5 w-5">
             <path
               d="M4 11a8 8 0 1 1 3.1 6.3L4 18l1-3.1A7.96 7.96 0 0 1 4 11z"
@@ -177,11 +177,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {/* Acciones primarias con aire entre ellas */}
-      <div className="flex flex-col gap-2.5 pb-4">
+      <div className="flex flex-col gap-3 pb-5">
         <Link
           href="/chat"
           onClick={onNavigate}
-          className="btn-brand flex items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-semibold hover:opacity-95"
+          className="btn-brand flex items-center justify-between gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold hover:opacity-95"
         >
           <span className="flex items-center gap-2">
             <IconPlus className="h-4 w-4" /> Nuevo chat
@@ -195,7 +195,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {/* Navegación */}
-      <nav className="-mx-1 flex flex-1 flex-col gap-0.5 overflow-y-auto px-1">
+      <nav className="-mx-1 flex flex-1 flex-col gap-1 overflow-y-auto px-1">
         {items.map(({ href, label, Icon, soon }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
           return (
@@ -204,7 +204,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               href={href}
               onClick={onNavigate}
               className={cn(
-                'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200',
+                'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-200',
                 active
                   ? 'bg-[var(--color-accent)] text-[var(--color-foreground)]'
                   : 'text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]/60 hover:text-[var(--color-foreground)]',
