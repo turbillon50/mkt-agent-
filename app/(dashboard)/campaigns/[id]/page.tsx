@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { IconArrowLeft } from '@/components/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CampaignEditForm } from '@/components/campaigns/edit-form';
@@ -25,7 +25,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
       <header className="flex items-start justify-between gap-3">
         <div>
           <Link href="/campaigns" className="mb-2 inline-flex items-center gap-1 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]">
-            <ArrowLeft className="h-3 w-3" /> Volver
+            <IconArrowLeft className="h-3 w-3" /> Volver
           </Link>
           <h1 className="text-2xl font-semibold">{campaign.name}</h1>
           <p className="text-sm text-[var(--color-muted-foreground)]">
@@ -34,7 +34,7 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
         </div>
         <div className="flex items-center gap-2">
           {isActive ? (
-            <Badge className="bg-emerald-500/20 text-emerald-300">campaña activa</Badge>
+            <Badge className="bg-[var(--color-success)]/15 text-[var(--color-success)]">campaña activa</Badge>
           ) : (
             <Badge variant="outline">{campaign.status}</Badge>
           )}
