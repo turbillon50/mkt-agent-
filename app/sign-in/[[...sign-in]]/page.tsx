@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { IconArrowLeft } from '@/components/icons';
+import { IconArrowLeft, IconLogoMark } from '@/components/icons';
 import { isClerkConfigured } from '@/lib/clerk-config';
 
 export default async function Page() {
@@ -8,8 +8,8 @@ export default async function Page() {
       <header className="border-b border-[var(--color-border)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-pink-500 text-sm font-bold">
-              oo
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-[var(--color-brand-1)] to-[var(--color-brand-3)] text-white">
+              <IconLogoMark className="h-4 w-4" />
             </div>
             <span className="text-xl font-semibold tracking-tight brand-gradient">goossip</span>
           </Link>
@@ -23,8 +23,8 @@ export default async function Page() {
       </header>
 
       <main className="relative flex flex-1 items-center justify-center px-4 py-12">
-        <div className="pointer-events-none absolute inset-0 -z-10 opacity-40">
-          <div className="absolute -top-32 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full bg-fuchsia-500/20 blur-[120px]" />
+        <div className="pointer-events-none absolute inset-0 -z-10 opacity-50">
+          <div className="absolute -top-32 left-1/2 h-[480px] w-[720px] -translate-x-1/2 rounded-full bg-[var(--color-primary)]/12 blur-[120px]" />
         </div>
 
         <div className="grid w-full max-w-5xl items-center gap-12 lg:grid-cols-2">
@@ -55,7 +55,7 @@ export default async function Page() {
 async function renderForm() {
   if (!isClerkConfigured()) {
     return (
-      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]/60 p-8 text-center">
+      <div className="card-glow rounded-2xl p-8 text-center">
         <h2 className="text-lg font-semibold">Modo demo</h2>
         <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
           La autenticación con Clerk no está configurada. Entra directo al dashboard de muestra.
@@ -78,9 +78,18 @@ async function renderForm() {
           fallbackRedirectUrl="/dashboard"
           signUpUrl="/sign-up"
           appearance={{
+            variables: {
+              colorPrimary: '#d6336c',
+              colorBackground: '#ffffff',
+              colorText: '#221821',
+              colorTextSecondary: '#6b5b66',
+              colorInputBackground: '#ffffff',
+              colorInputText: '#221821',
+              borderRadius: '0.875rem',
+            },
             elements: {
               rootBox: 'mx-auto',
-              card: 'shadow-2xl shadow-fuchsia-500/10',
+              card: 'shadow-xl border border-[var(--color-border)]',
             },
           }}
         />

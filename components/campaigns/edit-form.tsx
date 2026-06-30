@@ -104,7 +104,7 @@ export function CampaignEditForm({ campaign }: { campaign: Campaign }) {
             Manifiesto de la campaña
             <span className="ml-2 text-[10px] uppercase tracking-wider">opcional · sobreescribe la voz default de Goossip</span>
           </label>
-          <label className="cursor-pointer text-xs text-fuchsia-300 hover:underline">
+          <label className="cursor-pointer text-xs text-[var(--color-primary)] hover:underline">
             Cargar archivo
             <input
               type="file"
@@ -128,7 +128,7 @@ export function CampaignEditForm({ campaign }: { campaign: Campaign }) {
       <div className="flex items-center justify-between">
         <p className="text-xs">
           {feedback ? (
-            <span className={feedback.ok ? 'text-emerald-300' : 'text-rose-300'}>{feedback.msg}</span>
+            <span className={feedback.ok ? 'text-[var(--color-success)]' : 'text-[var(--color-destructive)]'}>{feedback.msg}</span>
           ) : (
             <span className="text-[var(--color-muted-foreground)]">Los cambios aplican al siguiente mensaje del agente.</span>
           )}

@@ -18,7 +18,7 @@ export function ComingSoon({
       </header>
       <Card className="card-glow">
         <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-          <IconSparkles className="h-8 w-8 text-fuchsia-400" />
+          <IconSparkles className="h-8 w-8 text-[var(--color-primary)]" />
           <p className="text-sm">En desarrollo.</p>
           <p className="max-w-md text-xs text-[var(--color-muted-foreground)]">
             Este módulo llegará en próximas fases. Mientras tanto puedes usar Chats, Memoria,
