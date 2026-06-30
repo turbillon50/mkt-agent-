@@ -1,7 +1,9 @@
 import 'server-only';
-import { and, eq, desc } from 'drizzle-orm';
+import { and, eq, inArray, desc } from 'drizzle-orm';
 import { db } from '@/src/db/client';
 import { leads, type Lead, type NewLead } from '@/src/db/schema';
+import { chat } from '@/src/openrouter';
+import { isMapsConfigured, searchPlaces, type MapsPlace } from './maps';
 
 function detectPlatform(url: string): string {
   if (/linkedin\.com/i.test(url)) return 'linkedin';
@@ -87,6 +89,7 @@ export async function createLead(
       campaignId: input.campaignId ?? null,
       sourceUrl: input.sourceUrl,
       platform,
+      source: 'manual',
       fullName: enriched.fullName,
       headline: enriched.headline,
       summary: enriched.summary,
@@ -108,7 +111,8 @@ export async function createLead(
 
 /**
  * Bulk version de createLead: agrega varias URLs de una sola pasada (usado
- * por el buscador). Tolera fallos individuales sin tronar el batch completo.
+ * por el buscador de Google/grounding). Tolera fallos individuales sin
+ * tronar el batch completo.
  */
 export async function bulkCreateLeads(
   userId: string,
@@ -120,6 +124,51 @@ export async function bulkCreateLeads(
   for (const url of urls.slice(0, 25)) {
     try {
       await createLead(userId, { sourceUrl: url, campaignId });
+      created++;
+    } catch {
+      failed++;
+    }
+  }
+  return { created, failed };
+}
+
+/**
+ * Guarda candidatos de Google Maps directo (ya traen nombre/direccion/
+ * telefono/sitio/rating reales — no hace falta re-enriquecer via fetch).
+ */
+export async function bulkCreateLeadsFromPlaces(
+  userId: string,
+  places: MapsPlace[],
+  campaignId?: string | null,
+): Promise<{ created: number; failed: number }> {
+  let created = 0;
+  let failed = 0;
+  for (const p of places.slice(0, 25)) {
+    const sourceUrl = p.website || p.mapsUrl;
+    if (!sourceUrl) {
+      failed++;
+      continue;
+    }
+    try {
+      await db
+        .insert(leads)
+        .values({
+          userId,
+          campaignId: campaignId ?? null,
+          sourceUrl,
+          platform: 'web',
+          source: 'maps',
+          fullName: p.name,
+          company: p.name,
+          address: p.address,
+          phone: p.phone,
+          rating: p.rating,
+          summary: [p.address, p.rating ? `${p.rating}★` : null].filter(Boolean).join(' · ') || null,
+        } satisfies NewLead)
+        .onConflictDoUpdate({
+          target: [leads.userId, leads.sourceUrl],
+          set: { address: p.address, phone: p.phone, rating: p.rating, updatedAt: new Date() },
+        });
       created++;
     } catch {
       failed++;
@@ -150,18 +199,46 @@ export async function deleteLead(userId: string, id: string): Promise<void> {
   await db.delete(leads).where(and(eq(leads.userId, userId), eq(leads.id, id)));
 }
 
-export type ProspectCandidate = { url: string; label: string; snippet: string | null };
+export type ProspectCandidate = {
+  url: string;
+  label: string;
+  snippet: string | null;
+  address?: string | null;
+  phone?: string | null;
+  rating?: string | null;
+  source: 'maps' | 'web';
+};
 
 /**
- * Buscador de prospectos REAL — usa Gemini con Google Search grounding.
- * IMPORTANTE: solo se aceptan resultados con fuente verificable
- * (groundingChunks reales). Se probo pedirle directamente "perfiles de
- * LinkedIn" y el modelo INVENTABA URLs creíbles sin fuente real (LinkedIn
- * bloquea la indexación de perfiles individuales) — por eso esta función
- * busca EMPRESAS/NEGOCIOS, no personas, que sí están bien indexados y
- * traen groundingChunks reales para verificar.
+ * Buscador de prospectos REAL. Si GOOGLE_MAPS_API_KEY esta configurada usa
+ * Places API (New) — datos estructurados reales (direccion, telefono,
+ * rating), la opcion mas confiable. Si no, cae a Gemini + Google Search
+ * grounding sobre EMPRESAS (no personas — se probo pedir perfiles
+ * individuales de LinkedIn y el modelo INVENTABA URLs porque LinkedIn
+ * bloquea esa indexacion; nunca se acepta nada sin fuente verificable).
  */
 export async function searchProspects(query: string): Promise<ProspectCandidate[]> {
+  if (isMapsConfigured()) {
+    try {
+      const places = await searchPlaces(query);
+      if (places.length > 0) {
+        return places
+          .filter((p) => p.website || p.mapsUrl)
+          .map((p) => ({
+            url: (p.website || p.mapsUrl)!,
+            label: p.name,
+            snippet: [p.address, p.rating ? `${p.rating}★` : null].filter(Boolean).join(' · ') || null,
+            address: p.address,
+            phone: p.phone,
+            rating: p.rating,
+            source: 'maps' as const,
+          }));
+      }
+    } catch {
+      // si Maps falla, cae al fallback de grounding
+    }
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY no está configurada.');
 
@@ -189,23 +266,85 @@ export async function searchProspects(query: string): Promise<ProspectCandidate[
   const chunks: Array<{ web?: { uri?: string; title?: string } }> = candidate?.groundingMetadata?.groundingChunks ?? [];
   const text: string = candidate?.content?.parts?.[0]?.text ?? '';
 
-  // groundingChunks trae el dominio en "title" (ej. "mjmarketingmx.com") y
-  // un link de redirect que expira rapido — NO lo persistimos, construimos
-  // la URL directa al dominio real.
   const seen = new Set<string>();
   const out: ProspectCandidate[] = [];
   for (const c of chunks) {
     const domain = c.web?.title?.trim();
     if (!domain || seen.has(domain)) continue;
-    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) continue; // descarta titulos que no son dominios
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) continue;
     seen.add(domain);
-    out.push({ url: `https://${domain}`, label: domain, snippet: null });
+    out.push({ url: `https://${domain}`, label: domain, snippet: null, source: 'web' });
   }
 
-  if (out.length === 0 && text) {
-    // Hubo busqueda pero sin chunks verificables -> no inventar nada, regresar vacio.
-    return [];
-  }
-
+  if (out.length === 0 && text) return [];
   return out.slice(0, 12);
+}
+
+// ============================================================
+// Mensajes personalizados por prospecto. Cada uno se redacta por
+// separado, con instrucciones explicitas de variar tono/estructura entre
+// mensajes — mandar el mismo texto a 20 personas es justo el patron que
+// hace que X/LinkedIn detecte spam y banee la cuenta.
+// ============================================================
+
+export async function generateOutreachMessages(
+  userId: string,
+  leadIds: string[],
+  customPrompt: string | undefined,
+  brand: { name: string; voice?: string | null } | null,
+): Promise<Lead[]> {
+  const rows = await db
+    .select()
+    .from(leads)
+    .where(and(eq(leads.userId, userId), inArray(leads.id, leadIds)));
+
+  const updated: Lead[] = [];
+  for (const lead of rows) {
+    const context = [
+      lead.fullName ? `Nombre/empresa: ${lead.fullName}` : null,
+      lead.headline ? `Cargo/giro: ${lead.headline}` : null,
+      lead.company && lead.company !== lead.fullName ? `Empresa: ${lead.company}` : null,
+      lead.summary ? `Sobre ellos: ${lead.summary}` : null,
+      lead.address ? `Ubicación: ${lead.address}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const sys = `Eres un asistente de prospección B2B en español mexicano. Escribes mensajes cortos de primer contacto (DM/email), naturales y específicos a cada prospecto — NUNCA genéricos ni con cara de plantilla. Cada mensaje debe sonar escrito por una persona distinta, variando saludo, estructura y tono — mandar el mismo patrón a muchos contactos hace que las redes detecten spam y bloqueen la cuenta. Máximo 3-4 líneas. Sin emojis excesivos, sin signos de exclamación de más.`;
+
+    const userMsg = [
+      brand ? `Quien escribe: ${brand.name}${brand.voice ? ` (tono: ${brand.voice})` : ''}.` : null,
+      `Prospecto:\n${context || 'sin más datos, usa solo el nombre/empresa'}`,
+      customPrompt ? `Instrucción extra del usuario: ${customPrompt}` : null,
+      'Redacta el mensaje de primer contacto ahora. Solo el mensaje, sin explicación ni comillas.',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    let message: string;
+    try {
+      message = await chat(
+        [
+          { role: 'system', content: sys },
+          { role: 'user', content: userMsg },
+        ],
+        { temperature: 1.0, maxTokens: 600 },
+      );
+    } catch (e) {
+      message = '';
+    }
+
+    if (message) {
+      const [row] = await db
+        .update(leads)
+        .set({ draftMessage: message.trim(), updatedAt: new Date() })
+        .where(and(eq(leads.userId, userId), eq(leads.id, lead.id)))
+        .returning();
+      if (row) updated.push(row);
+    } else {
+      updated.push(lead);
+    }
+  }
+
+  return updated;
 }
