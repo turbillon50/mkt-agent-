@@ -5,18 +5,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { IconUsers, IconPlus, IconClose } from '@/components/icons';
+import { IconUsers, IconPlus, IconClose, IconCheck, IconSparkles } from '@/components/icons';
 import { useToast } from '@/components/ui/toast-provider';
 
 type Lead = {
   id: string;
   sourceUrl: string;
   platform: string;
+  source: string;
   fullName: string | null;
   headline: string | null;
   company: string | null;
+  address: string | null;
+  phone: string | null;
+  rating: string | null;
   summary: string | null;
   status: string;
+  draftMessage: string | null;
   createdAt: string;
 };
 
@@ -36,6 +41,9 @@ export function LeadsBoard() {
   const [url, setUrl] = React.useState('');
   const [adding, setAdding] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [messagePrompt, setMessagePrompt] = React.useState('');
+  const [generating, setGenerating] = React.useState(false);
 
   async function refresh() {
     setLoading(true);
@@ -99,6 +107,11 @@ export function LeadsBoard() {
 
   async function remove(id: string) {
     setLeads((prev) => prev.filter((l) => l.id !== id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     try {
       const res = await fetch(`/api/leads/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('No se pudo quitar');
@@ -109,11 +122,52 @@ export function LeadsBoard() {
     }
   }
 
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function generateMessages() {
+    const leadIds = Array.from(selected);
+    if (leadIds.length === 0 || generating) return;
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/leads/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadIds, prompt: messagePrompt.trim() || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo generar');
+      const byId = new Map((data.leads as Lead[]).map((l) => [l.id, l]));
+      setLeads((prev) => prev.map((l) => byId.get(l.id) ?? l));
+      push({
+        variant: 'success',
+        title: `${leadIds.length} mensaje${leadIds.length === 1 ? '' : 's'} listo${leadIds.length === 1 ? '' : 's'}`,
+        description: 'Cada uno es distinto a propósito — no copies el mismo texto a todos.',
+      });
+    } catch (e) {
+      push({ variant: 'error', title: 'No se pudo generar', description: e instanceof Error ? e.message : 'error' });
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function copyMessage(text: string) {
+    navigator.clipboard?.writeText(text).then(() => {
+      push({ variant: 'success', title: 'Copiado' });
+    });
+  }
+
   return (
     <div className="space-y-4">
       <Card className="card-glow">
         <CardHeader>
-          <CardTitle className="text-base">Agregar prospecto</CardTitle>
+          <CardTitle className="text-base">Agregar prospecto manual</CardTitle>
           <CardDescription>
             Pega el link de un perfil público (LinkedIn, X, sitio web). Goossip saca nombre, cargo
             y resumen automáticamente de la información pública de esa página.
@@ -135,6 +189,31 @@ export function LeadsBoard() {
         </CardContent>
       </Card>
 
+      {selected.size > 0 && (
+        <Card className="card-glow border-[var(--color-primary)]/30">
+          <CardContent className="space-y-2 p-4">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <IconSparkles className="h-4 w-4 text-[var(--color-primary)]" />
+              {selected.size} seleccionado{selected.size === 1 ? '' : 's'} — generar mensajes personalizados
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={messagePrompt}
+                onChange={(e) => setMessagePrompt(e.target.value)}
+                placeholder="Instrucción opcional (ej. invítalos a una demo gratis de 15 min)"
+              />
+              <Button onClick={generateMessages} disabled={generating} className="btn-brand shrink-0">
+                {generating ? 'Redactando…' : 'Generar mensajes'}
+              </Button>
+            </div>
+            <p className="text-xs text-[var(--color-muted-foreground)]">
+              Cada mensaje se redacta por separado y distinto a propósito — mandar el mismo texto a
+              todos es justo lo que hace que las redes detecten spam.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {loading ? (
         <Card className="card-glow">
           <CardContent className="py-10 text-center text-sm text-[var(--color-muted-foreground)]">
@@ -146,23 +225,43 @@ export function LeadsBoard() {
           <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
             <IconUsers className="h-8 w-8 text-[var(--color-muted-foreground)]" />
             <p className="text-sm text-[var(--color-muted-foreground)]">
-              Aún no tienes prospectos. Pega un link arriba para agregar el primero.
+              Aún no tienes prospectos. Búscalos arriba o pega un link.
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-3">
           {leads.map((l) => (
-            <Card key={l.id} className="card-glow">
+            <Card key={l.id} className={`card-glow ${selected.has(l.id) ? 'border-[var(--color-primary)]/40' : ''}`}>
               <CardContent className="space-y-2 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
+                <div className="flex items-start gap-3">
+                  <button
+                    onClick={() => toggleSelect(l.id)}
+                    className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded border ${
+                      selected.has(l.id)
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
+                        : 'border-[var(--color-border)]'
+                    }`}
+                  >
+                    {selected.has(l.id) && <IconCheck className="h-3 w-3" />}
+                  </button>
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{l.fullName ?? 'Sin nombre detectado'}</span>
                       <Badge variant="outline">{l.platform}</Badge>
+                      {l.source === 'maps' && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Maps
+                        </Badge>
+                      )}
                     </div>
                     {l.headline && (
                       <p className="text-xs text-[var(--color-muted-foreground)]">{l.headline}</p>
+                    )}
+                    {(l.phone || l.rating) && (
+                      <p className="text-xs text-[var(--color-muted-foreground)]">
+                        {[l.phone, l.rating ? `${l.rating}★` : null].filter(Boolean).join(' · ')}
+                      </p>
                     )}
                   </div>
                   <button
@@ -174,9 +273,20 @@ export function LeadsBoard() {
                   </button>
                 </div>
                 {l.summary && (
-                  <p className="line-clamp-2 text-xs text-[var(--color-muted-foreground)]">{l.summary}</p>
+                  <p className="line-clamp-2 pl-7 text-xs text-[var(--color-muted-foreground)]">{l.summary}</p>
                 )}
-                <div className="flex flex-wrap items-center gap-2 pt-1">
+                {l.draftMessage && (
+                  <div className="ml-7 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)]/40 p-2.5">
+                    <p className="whitespace-pre-wrap text-xs">{l.draftMessage}</p>
+                    <button
+                      onClick={() => copyMessage(l.draftMessage!)}
+                      className="mt-1.5 text-[11px] font-medium text-[var(--color-primary)] hover:underline"
+                    >
+                      Copiar mensaje
+                    </button>
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center gap-2 pl-7 pt-1">
                   {STATUS_ORDER.map((s) => (
                     <button
                       key={s}
@@ -196,7 +306,7 @@ export function LeadsBoard() {
                     rel="noreferrer"
                     className="ml-auto text-[11px] text-[var(--color-primary)] hover:underline"
                   >
-                    Ver perfil →
+                    Ver →
                   </a>
                 </div>
               </CardContent>
