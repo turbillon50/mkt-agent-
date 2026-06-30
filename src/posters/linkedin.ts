@@ -13,17 +13,61 @@ function headers() {
   };
 }
 
-export async function post(text: string): Promise<{ id: string; url?: string }> {
+async function uploadImageFromUrl(imageUrl: string): Promise<string> {
+  if (!config.linkedin.authorUrn) {
+    throw new Error('LINKEDIN_AUTHOR_URN is not set.');
+  }
+  const register = await axios.post(
+    `${API}/assets?action=registerUpload`,
+    {
+      registerUploadRequest: {
+        recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+        owner: config.linkedin.authorUrn,
+        serviceRelationships: [
+          { relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' },
+        ],
+      },
+    },
+    { headers: headers() }
+  );
+
+  const uploadUrl: string =
+    register.data.value.uploadMechanism[
+      'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'
+    ].uploadUrl;
+  const asset: string = register.data.value.asset;
+
+  const imageRes = await fetch(imageUrl);
+  if (!imageRes.ok) throw new Error(`No pude descargar la imagen (${imageRes.status})`);
+  const buffer = Buffer.from(await imageRes.arrayBuffer());
+
+  await axios.put(uploadUrl, buffer, {
+    headers: {
+      Authorization: `Bearer ${config.linkedin.accessToken}`,
+      'Content-Type': imageRes.headers.get('content-type') || 'image/jpeg',
+    },
+  });
+
+  return asset;
+}
+
+export async function post(text: string, imageUrl?: string): Promise<{ id: string; url?: string }> {
   if (!config.linkedin.authorUrn) {
     throw new Error('LINKEDIN_AUTHOR_URN is not set (e.g. urn:li:person:XXXX).');
   }
+
+  const asset = imageUrl ? await uploadImageFromUrl(imageUrl) : null;
+
   const body = {
     author: config.linkedin.authorUrn,
     lifecycleState: 'PUBLISHED',
     specificContent: {
       'com.linkedin.ugc.ShareContent': {
         shareCommentary: { text },
-        shareMediaCategory: 'NONE',
+        shareMediaCategory: asset ? 'IMAGE' : 'NONE',
+        ...(asset
+          ? { media: [{ status: 'READY', media: asset }] }
+          : {}),
       },
     },
     visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
