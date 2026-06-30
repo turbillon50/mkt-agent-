@@ -2,51 +2,50 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  /* Refined dark palette — más sofisticado que el original */
-  --color-background: #07060d;
-  --color-background-elevated: #0b0a14;
-  --color-foreground: #f5f4fc;
-  --color-foreground-muted: #c3c0d8;
+  /* Goossip Signal — identidad propia, obsidian + senal viva.
+     Nada de purpura-rosa-naranja generico de plantilla AI. Cero dorado. */
+  --color-background: #08080c;
+  --color-background-elevated: #0c0c14;
+  --color-foreground: #f3f4f1;
+  --color-foreground-muted: #b9bcc4;
 
-  --color-card: #0f0d1c;
-  --color-card-elevated: #14122a;
-  --color-card-foreground: #f5f4fc;
+  --color-card: #0e0f16;
+  --color-card-elevated: #131521;
+  --color-card-foreground: #f3f4f1;
 
-  --color-muted: #1a1730;
-  --color-muted-foreground: #8b87a8;
+  --color-muted: #161924;
+  --color-muted-foreground: #868c98;
 
-  --color-border: #221f3a;
-  --color-border-strong: #2c2848;
+  --color-border: #1e2230;
+  --color-border-strong: #2a2f42;
 
-  --color-input: #1a1730;
-  --color-ring: #b48cff;
+  --color-input: #161924;
+  --color-ring: #2ee6a6;
 
-  --color-primary: #b48cff;
-  --color-primary-foreground: #0a0918;
+  --color-primary: #2ee6a6;
+  --color-primary-foreground: #04130d;
 
-  --color-secondary: #1a1730;
-  --color-secondary-foreground: #f5f4fc;
+  --color-secondary: #6c5ce7;
+  --color-secondary-foreground: #f3f4f1;
 
-  --color-accent: #251f3f;
-  --color-accent-foreground: #f5f4fc;
+  --color-accent: #1a1d2c;
+  --color-accent-foreground: #f3f4f1;
 
   --color-destructive: oklch(0.65 0.23 22);
-  --color-destructive-foreground: #f5f4fc;
+  --color-destructive-foreground: #f3f4f1;
 
-  --color-success: #34d399;
-  --color-warning: #fbbf24;
+  --color-success: #2ee6a6;
+  --color-warning: #ff6b5c;
 
-  /* Brand gradient stops — más profundos */
-  --color-brand-1: #a855f7;
-  --color-brand-2: #d946ef;
-  --color-brand-3: #ec4899;
-  --color-brand-4: #f97316;
+  /* Brand gradient — senal verde -> indigo profundo. Dos paradas, no arcoiris. */
+  --color-brand-1: #2ee6a6;
+  --color-brand-2: #4fd1c5;
+  --color-brand-3: #6c5ce7;
 
   --radius: 0.875rem;
   --radius-lg: 1.25rem;
   --radius-xl: 1.75rem;
 
-  /* Typography scales */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
 }
@@ -75,11 +74,9 @@ body {
   padding-right: env(safe-area-inset-right);
   overflow-x: hidden;
   overscroll-behavior-x: none;
-  /* Sutil tinte de fondo via gradient — sin pseudo-elementos para evitar
-     stacking context bugs en iOS Safari */
   background-image:
-    radial-gradient(at 0% 0%, rgba(168, 85, 247, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.04) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(46, 230, 166, 0.06) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(108, 92, 231, 0.07) 0px, transparent 50%);
   background-attachment: fixed;
 }
 
@@ -98,9 +95,8 @@ button, a { touch-action: manipulation; }
 .brand-gradient {
   background: linear-gradient(110deg,
     var(--color-brand-1) 0%,
-    var(--color-brand-2) 35%,
-    var(--color-brand-3) 70%,
-    var(--color-brand-4) 100%);
+    var(--color-brand-2) 50%,
+    var(--color-brand-3) 100%);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -115,27 +111,27 @@ button, a { touch-action: manipulation; }
 
 .btn-brand {
   position: relative;
-  background: linear-gradient(135deg, #9333ea 0%, #c026d3 50%, #db2777 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #2ee6a6 0%, #4fd1c5 55%, #6c5ce7 100%);
+  color: #04130d;
   isolation: isolate;
   transition: transform 200ms ease, box-shadow 200ms ease;
   box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.15) inset,
+    0 1px 0 0 rgba(255, 255, 255, 0.25) inset,
     0 -1px 0 0 rgba(0, 0, 0, 0.2) inset,
-    0 4px 20px -4px rgba(168, 85, 247, 0.5);
+    0 4px 20px -4px rgba(46, 230, 166, 0.4);
 }
 .btn-brand:hover {
   transform: translateY(-1px);
   box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.2) inset,
+    0 1px 0 0 rgba(255, 255, 255, 0.3) inset,
     0 -1px 0 0 rgba(0, 0, 0, 0.2) inset,
-    0 6px 28px -4px rgba(168, 85, 247, 0.6);
+    0 6px 28px -4px rgba(46, 230, 166, 0.5);
 }
 .btn-brand:active { transform: translateY(0); }
 
 .card-glow {
   background:
-    radial-gradient(140% 100% at 0% 0%, rgba(168, 114, 255, 0.07), transparent 55%),
+    radial-gradient(140% 100% at 0% 0%, rgba(46, 230, 166, 0.06), transparent 55%),
     var(--color-card);
   border: 1px solid var(--color-border);
   transition: border-color 200ms ease, background 200ms ease;
@@ -158,8 +154,8 @@ button, a { touch-action: manipulation; }
   padding: 1px;
   border-radius: inherit;
   background: linear-gradient(135deg,
-    rgba(168, 85, 247, 0.4) 0%,
-    rgba(236, 72, 153, 0.2) 50%,
+    rgba(46, 230, 166, 0.35) 0%,
+    rgba(108, 92, 231, 0.2) 50%,
     transparent 100%);
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -174,7 +170,7 @@ button, a { touch-action: manipulation; }
   height: 1px;
 }
 
-/* Animated gradient mesh background (para hero) */
+/* Animated mesh background (hero) — senal viva, no arcoiris */
 .mesh {
   position: absolute;
   inset: 0;
@@ -186,18 +182,18 @@ button, a { touch-action: manipulation; }
   content: '';
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.35;
+  filter: blur(90px);
+  opacity: 0.3;
   animation: mesh-drift 18s ease-in-out infinite;
 }
 .mesh::before {
   width: 520px; height: 520px;
-  background: radial-gradient(circle, #9333ea, transparent 70%);
+  background: radial-gradient(circle, #2ee6a6, transparent 70%);
   top: -120px; left: 15%;
 }
 .mesh::after {
   width: 480px; height: 480px;
-  background: radial-gradient(circle, #ec4899, transparent 70%);
+  background: radial-gradient(circle, #6c5ce7, transparent 70%);
   bottom: -100px; right: 10%;
   animation-delay: -9s;
 }
@@ -246,8 +242,6 @@ button, a { touch-action: manipulation; }
   100% { background-position: 100% 0; }
 }
 
-/* Subtle fade-in on mount — sin opacity en el from para no quedarse
-   invisible si la animación falla en algún browser. Sólo desplazamiento. */
 .fade-up {
   animation: fade-up 700ms cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -264,25 +258,22 @@ button, a { touch-action: manipulation; }
 
 /* Glass surface */
 .glass {
-  background: rgba(15, 13, 28, 0.65);
+  background: rgba(14, 15, 22, 0.65);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Headings refinement */
 h1, h2, h3, h4 {
   letter-spacing: -0.025em;
   font-weight: 600;
 }
 
-/* Selection */
 ::selection {
-  background: rgba(168, 85, 247, 0.35);
-  color: #fff;
+  background: rgba(46, 230, 166, 0.35);
+  color: #04130d;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
@@ -291,6 +282,3 @@ h1, h2, h3, h4 {
   border: 2px solid var(--color-background);
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-muted-foreground); }
-
-/* No extra stacking rules — el body ya no tiene pseudo-elementos en z-index 0
-   así que el flujo natural funciona. */
