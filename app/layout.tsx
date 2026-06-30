@@ -5,6 +5,7 @@ import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { isClerkConfigured } from '@/lib/clerk-config';
 import { PWABoot } from '@/components/pwa';
+import { ToastProvider } from '@/components/ui/toast-provider';
 
 export const metadata: Metadata = {
   title: 'Goossip — Tu agente social autónomo',
@@ -38,8 +39,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${GeistSans.variable} ${GeistMono.variable}`}
     >
       <body className="min-h-screen antialiased">
-        {children}
-        <PWABoot />
+        <ToastProvider>
+          {children}
+          <PWABoot />
+        </ToastProvider>
       </body>
     </html>
   );
