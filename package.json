@@ -21,6 +21,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.0",
     "@clerk/nextjs": "^7.3.3",
     "@composio/core": "^0.13.1",
     "@mastra/core": "^1.32.1",
