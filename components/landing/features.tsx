@@ -1,35 +1,35 @@
-import { Brain, Calendar, MessageSquare, Shield, Zap, Sparkles } from 'lucide-react';
+import { IconBrain, IconCalendar, IconBolt, IconChat, IconSignal, IconShield } from '@/components/icons';
 
 const features = [
   {
-    icon: Brain,
+    icon: IconBrain,
     title: 'Memoria de marca',
     body: 'Goossip aprende tu voz, tu producto, tus líneas rojas. Cada post se construye sobre lo que ya dijiste sin sonar a robot.',
   },
   {
-    icon: Calendar,
+    icon: IconCalendar,
     title: 'Plan semanal automático',
     body: 'Cada lunes diseña 7 días de contenido por red. Diversifica temas, ángulos y formato sin que tengas que pensar.',
   },
   {
-    icon: Zap,
+    icon: IconBolt,
     title: 'Publicación 24/7',
     body: 'Cron en Vercel ejecuta tu plan a las horas que tú elijas. Tweetea, postea en LinkedIn, responde WhatsApp — sin pausa.',
   },
   {
-    icon: MessageSquare,
+    icon: IconChat,
     title: 'WhatsApp con agente',
-    body: 'Conecta tu número vía Baileys. Goossip lee mensajes, los recuerda y opcionalmente responde con tu tono.',
+    body: 'Conecta tu número de WhatsApp Business. Goossip lee mensajes, los recuerda y opcionalmente responde con tu tono.',
   },
   {
-    icon: Sparkles,
+    icon: IconSignal,
     title: 'Modelos a la medida',
-    body: 'Claude Sonnet 4.5 donde importa, Gemini Flash para draft rápido, modelos free para replies. Pagas lo justo.',
+    body: 'Claude Sonnet donde importa, modelos rápidos para draft y replies. Pagas lo justo, sin caja negra.',
   },
   {
-    icon: Shield,
+    icon: IconShield,
     title: 'Tu data, tu control',
-    body: 'Postgres en Neon bajo tu cuenta. Cada draft pasa por tu approval si quieres. Cero dependencia de proveedores opacos.',
+    body: 'Postgres en Neon bajo tu cuenta. Cada draft pasa por tu aprobación si quieres. Cero dependencia de proveedores opacos.',
   },
 ];
 
@@ -52,10 +52,10 @@ export function Features() {
           {features.map(({ icon: Icon, title, body }) => (
             <div
               key={title}
-              className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/60 p-6 transition-colors hover:bg-[var(--color-card)]"
+              className="card-glow rounded-xl p-6 transition-colors"
             >
-              <div className="mb-3 grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-fuchsia-500/30 to-violet-500/30">
-                <Icon className="h-5 w-5 text-fuchsia-300" />
+              <div className="mb-3 grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-secondary)]/20">
+                <Icon className="h-5 w-5 text-[var(--color-primary)]" />
               </div>
               <h3 className="text-base font-semibold">{title}</h3>
               <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">{body}</p>
