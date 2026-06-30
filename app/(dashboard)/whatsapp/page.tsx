@@ -1,73 +1,54 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { WhatsAppConnection } from '@/components/whatsapp/connection';
-import { WhatsAppComposer } from '@/components/whatsapp/composer';
-import { ConversationsList } from '@/components/whatsapp/conversations-list';
-import { formatDate } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { IconWhatsApp, IconCheck } from '@/components/icons';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
-async function loadConversations() {
-  try {
-    const { listConversations } = await import('@/src/whatsapp/repo');
-    return await listConversations(50);
-  } catch {
-    return null;
-  }
-}
-
-export default async function WhatsAppPage() {
-  const convos = await loadConversations();
-
+export default function WhatsAppPage() {
   return (
     <div className="space-y-6">
-      <header className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">WhatsApp</h1>
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            Bridge Baileys persistente en Hetzner. Goossip recibe, recuerda y opcionalmente responde.
-          </p>
-        </div>
-        <Badge variant="outline">canal 1:1</Badge>
+      <header>
+        <h1 className="text-2xl font-semibold">WhatsApp</h1>
+        <p className="text-sm text-[var(--color-muted-foreground)]">
+          Desconectamos el bridge no oficial (Baileys) — nunca fue estable para producción.
+          Estamos preparando la integración correcta con WhatsApp Business Platform, la API
+          oficial de Meta.
+        </p>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-        <Card className="card-glow">
-          <CardHeader>
-            <CardTitle className="text-base">Conversaciones recientes</CardTitle>
-            <CardDescription>
-              Agrupadas por contacto. Click para ver historial (próximo).
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!convos ? (
-              <p className="text-sm text-[var(--color-muted-foreground)]">
-                Sin conexión a la base de datos.
-              </p>
-            ) : convos.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
-                Aún no hay mensajes. Conecta WhatsApp escaneando el QR a la derecha y manda algo a
-                este número.
-              </div>
-            ) : (
-              <ConversationsList
-                items={convos.map((c) => ({
-                  fromNumber: c.fromNumber,
-                  lastBody: c.lastBody,
-                  lastAt: formatDate(c.lastAt),
-                  messages: c.messages,
-                }))}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          <WhatsAppConnection />
-          <WhatsAppComposer />
-        </div>
-      </div>
+      <Card className="card-glow">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-lg bg-[var(--color-accent)] text-[var(--color-success)]">
+              <IconWhatsApp className="h-5 w-5" />
+            </span>
+            <CardTitle className="text-base">WhatsApp Business Platform (oficial)</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-[var(--color-muted-foreground)]">
+            A diferencia del bridge anterior, esta es la API oficial de Meta: sesión estable,
+            sin desconexiones aleatorias, y soporta múltiples números — uno por cliente de Goossip,
+            igual que ya hicimos con X, LinkedIn y Google Ads.
+          </p>
+          <ul className="space-y-2 text-sm">
+            {[
+              'Sin riesgo de baneo — es el canal sancionado por Meta',
+              'Cada cliente conecta su propio número de WhatsApp Business',
+              'Soporta plantillas, botones, catálogos y respuestas automáticas',
+              'Requiere una cuenta de Meta Business verificada',
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2">
+                <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-[var(--color-muted-foreground)]">
+            En construcción. Mientras tanto puedes seguir operando X, LinkedIn y Google Ads desde
+            Goossip.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
