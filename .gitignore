@@ -11,3 +11,4 @@ data/
 .vercel
 next-env.d.ts
 *.tsbuildinfo
+services/baileys/sessions-goossip/

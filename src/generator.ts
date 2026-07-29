@@ -3,6 +3,7 @@ import { config, type Platform } from './config';
 import { recall } from './memory/index';
 
 const PLATFORM_LIMITS = {
+  meta: { maxChars: 800, hashtags: 8, style: 'visual-first, warm, community-oriented, always closes with 5-10 niche hashtags' },
   twitter: { maxChars: 270, hashtags: 2, style: 'punchy, conversational, one idea per post' },
   linkedin: { maxChars: 1500, hashtags: 4, style: 'professional, insightful, 1-3 short paragraphs' },
 } as const;

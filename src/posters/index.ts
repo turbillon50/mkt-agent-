@@ -1,6 +1,7 @@
 import { config, type Platform } from '../config';
 import * as twitter from './twitter';
 import * as linkedin from './linkedin';
+import * as meta from './meta';
 
 export interface Poster {
   platform: Platform;
@@ -8,12 +9,13 @@ export interface Poster {
   check(): Promise<{ ok: boolean; user?: string }>;
 }
 
-const all: Record<Platform, Poster> = { twitter, linkedin };
+const all: Record<Platform, Poster> = { twitter, linkedin, meta };
 
 export function enabledPosters(): Poster[] {
   const list: Poster[] = [];
   if (config.twitter.enabled) list.push(twitter);
   if (config.linkedin.enabled) list.push(linkedin);
+  if (config.meta.enabled) list.push(meta);
   return list;
 }
 
@@ -23,4 +25,4 @@ export function getPoster(platform: Platform): Poster {
   return p;
 }
 
-export { twitter, linkedin };
+export { twitter, linkedin, meta };

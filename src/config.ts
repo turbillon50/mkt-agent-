@@ -79,6 +79,14 @@ export const config = {
     recallK: Number(process.env.MEMORY_RECALL_K ?? 5),
     minSimilarity: Number(process.env.MEMORY_MIN_SIMILARITY ?? 0.78),
   },
+  meta: {
+    enabled: truthy(process.env.META_ENABLED),
+    appId: process.env.META_APP_ID ?? '',
+    appSecret: process.env.META_APP_SECRET ?? '',
+    userToken: process.env.META_USER_TOKEN ?? '',
+    pageId: process.env.META_PAGE_ID ?? '',
+    igId: process.env.META_IG_ID ?? '',
+  },
   whatsapp: {
     enabled: truthy(process.env.WHATSAPP_ENABLED),
     autoReply: truthy(process.env.WHATSAPP_AUTO_REPLY),
@@ -88,4 +96,4 @@ export const config = {
   },
 } as const;
 
-export type Platform = 'twitter' | 'linkedin';
+export type Platform = 'twitter' | 'linkedin' | 'meta';
