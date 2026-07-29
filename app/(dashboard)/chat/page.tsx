@@ -176,7 +176,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-8.5rem)] flex-col gap-3 lg:h-[calc(100vh-4rem)]">
+    <div className="flex h-[calc(100svh-8.5rem)] flex-col gap-3 lg:h-[calc(100vh-4rem)]">
       <header>
         <h1 className="text-2xl font-semibold">Chat con Goossip</h1>
         <p className="text-sm text-[var(--color-muted-foreground)]">
