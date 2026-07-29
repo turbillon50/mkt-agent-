@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { IconPaperclip, IconSend, IconClose, IconX, IconLinkedIn, IconCheckCircle } from '@/components/icons';
+import { IconPaperclip, IconSend, IconClose, IconX, IconLinkedIn, IconCheckCircle, IconFacebook } from '@/components/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,7 +49,7 @@ async function fileToJpegDataUrl(file: File): Promise<string> {
   }
 }
 
-type DraftPost = { platform: 'twitter' | 'linkedin'; text: string; topic?: string };
+type DraftPost = { platform: 'twitter' | 'linkedin' | 'meta'; text: string; topic?: string; imageUrl?: string };
 type Msg = { role: 'user' | 'agent'; text: string; image?: string; draftPost?: DraftPost | null };
 
 const IS_IMAGE_COMMAND = /^\/imagen\s+/i;
@@ -156,14 +156,16 @@ export default function ChatPage() {
       const res = await fetch('/api/posts/publish-now', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform: draft.platform, text: draft.text, topic: draft.topic }),
+        body: JSON.stringify({ platform: draft.platform, text: draft.text, topic: draft.topic, imageUrl: draft.imageUrl }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudo publicar');
       setPublishedIdx((prev) => ({ ...prev, [idx]: data.externalUrl ?? '' }));
       push({
         variant: 'success',
-        title: `Publicado en ${draft.platform === 'twitter' ? 'X' : 'LinkedIn'}`,
+        title: `Publicado en ${
+          draft.platform === 'twitter' ? 'X' : draft.platform === 'linkedin' ? 'LinkedIn' : 'Facebook'
+        }`,
         description: data.externalUrl ? 'Ábrelo desde el link.' : undefined,
       });
     } catch (e) {
@@ -237,12 +239,20 @@ export default function ChatPage() {
                     >
                       {m.draftPost.platform === 'twitter' ? (
                         <IconX className="h-3 w-3" />
-                      ) : (
+                      ) : m.draftPost.platform === 'linkedin' ? (
                         <IconLinkedIn className="h-3.5 w-3.5" />
+                      ) : (
+                        <IconFacebook className="h-3.5 w-3.5" />
                       )}
                       {publishingIdx === i
                         ? 'Publicando…'
-                        : `Publicar en ${m.draftPost.platform === 'twitter' ? 'X' : 'LinkedIn'}`}
+                        : `Publicar en ${
+                            m.draftPost.platform === 'twitter'
+                              ? 'X'
+                              : m.draftPost.platform === 'linkedin'
+                                ? 'LinkedIn'
+                                : 'Facebook'
+                          }`}
                     </Button>
                   )}
                 </div>

@@ -23,9 +23,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const platform = body?.platform === 'linkedin' ? 'linkedin' : body?.platform === 'twitter' ? 'twitter' : null;
+  const platform = body?.platform === 'linkedin' ? 'linkedin' : body?.platform === 'twitter' ? 'twitter' : body?.platform === 'meta' ? 'meta' : null;
   const text = typeof body?.text === 'string' ? body.text.trim() : '';
   const topic = typeof body?.topic === 'string' ? body.topic : undefined;
+  const imageUrl = typeof body?.imageUrl === 'string' ? body.imageUrl : undefined;
 
   if (!platform) return NextResponse.json({ error: 'platform inválido' }, { status: 400 });
   if (!text) return NextResponse.json({ error: 'texto vacío' }, { status: 400 });
@@ -71,6 +72,22 @@ export async function POST(req: NextRequest) {
       } else {
         return NextResponse.json(
           { error: 'X todavía no soporta cuentas por usuario — contacta al admin.' },
+          { status: 400 },
+        );
+      }
+    } else if (platform === 'meta') {
+      // Meta (Facebook/Instagram) es una sola pagina de la casa via
+      // Graph API oficial (token de pagina, se refresca solo). Solo el
+      // owner puede publicar por ahora; el flujo por-usuario (cada quien
+      // conecta su propio Facebook) es trabajo futuro.
+      if (dbUser?.isAdmin) {
+        const { getPoster } = await import('@/src/posters/index');
+        const out = await getPoster('meta').post(text, imageUrl);
+        externalId = out.id;
+        externalUrl = out.url;
+      } else {
+        return NextResponse.json(
+          { error: 'Meta todavía no soporta cuentas por usuario — contacta al admin.' },
           { status: 400 },
         );
       }

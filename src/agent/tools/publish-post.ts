@@ -10,7 +10,7 @@ export const publishPostTool = createTool({
   description:
     'Publish a finished post to the given platform and persist it to the database + semantic memory. Use ONLY after the user (or another tool) has approved final text. Pass imageUrl when the post should include an image (e.g. one generated earlier in the conversation or supplied by the user).',
   inputSchema: z.object({
-    platform: z.enum(['twitter', 'linkedin']),
+    platform: z.enum(['twitter', 'linkedin', 'meta']),
     text: z.string().min(1),
     topic: z.string().optional(),
     angle: z.string().optional(),
