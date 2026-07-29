@@ -174,7 +174,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] flex-col gap-4 lg:h-[calc(100vh-4rem)]">
+    <div className="flex h-[calc(100dvh-8.5rem)] flex-col gap-3 lg:h-[calc(100vh-4rem)]">
       <header>
         <h1 className="text-2xl font-semibold">Chat con Goossip</h1>
         <p className="text-sm text-[var(--color-muted-foreground)]">
@@ -282,12 +282,12 @@ export default function ChatPage() {
         <p className="text-xs text-[var(--color-destructive)]">{imageError}</p>
       )}
 
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-2 rounded-[26px] border border-white/50 bg-white/80 p-1.5 shadow-[0_6px_24px_rgba(107,37,69,0.10)] backdrop-blur-xl">
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={loading}
           aria-label="Adjuntar imagen"
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-[var(--color-border)] text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]"
         >
           <IconPaperclip className="h-4 w-4" />
         </button>
@@ -311,13 +311,16 @@ export default function ChatPage() {
               send();
             }
           }}
-          placeholder={image ? 'Pregúntale algo sobre la imagen…' : 'Escribe a Goossip… (⌘+Enter)'}
-          className="min-h-[60px] flex-1"
+          placeholder={image ? 'Pregúntale algo sobre la imagen…' : 'Escribe a Goossip…'}
+          rows={1}
+          className="min-h-[40px] flex-1 resize-none rounded-full border-0 bg-transparent px-2 py-2.5 shadow-none focus-visible:ring-0"
         />
         <Button
           onClick={send}
           disabled={loading || (input.trim().length === 0 && !image)}
-          className="btn-brand h-10 px-4"
+          className={`grid h-10 w-10 shrink-0 place-items-center rounded-full p-0 transition-all ${
+            (input.trim().length > 0 || image) ? 'btn-brand scale-100' : 'scale-90 bg-[var(--color-muted)] text-[var(--color-muted-foreground)]'
+          }`}
         >
           <IconSend className="h-4 w-4" />
         </Button>

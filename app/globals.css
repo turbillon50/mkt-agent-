@@ -272,3 +272,11 @@ h1, h2, h3, h4 {
   border: 2px solid var(--color-background);
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-muted-foreground); }
+
+.header-safe {
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+
+.tabbar-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
