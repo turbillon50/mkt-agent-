@@ -9,7 +9,7 @@ export const listRecentPostsTool = createTool({
   description:
     'List the most recently published posts. Use to brief yourself on what we have already said before drafting new content.',
   inputSchema: z.object({
-    platform: z.enum(['twitter', 'linkedin', 'meta']).optional(),
+    platform: z.enum(['twitter', 'linkedin', 'meta', 'instagram']).optional(),
     limit: z.number().int().positive().max(50).optional(),
   }),
   outputSchema: z.object({

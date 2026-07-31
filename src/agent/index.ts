@@ -49,7 +49,7 @@ export const socialAgent = new Agent({
 
 export type ChatTurn = { role: 'user' | 'assistant'; content: string };
 
-export type DraftPost = { platform: 'twitter' | 'linkedin' | 'meta'; text: string; topic?: string };
+export type DraftPost = { platform: 'twitter' | 'linkedin' | 'meta' | 'instagram'; text: string; topic?: string; imageUrl?: string };
 
 export type AgentReply = { text: string; draftPost?: DraftPost };
 

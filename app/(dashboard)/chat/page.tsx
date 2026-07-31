@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { IconPaperclip, IconSend, IconClose, IconX, IconLinkedIn, IconCheckCircle, IconFacebook } from '@/components/icons';
+import { IconPaperclip, IconSend, IconClose, IconX, IconLinkedIn, IconCheckCircle, IconFacebook, IconInstagram } from '@/components/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,7 +49,7 @@ async function fileToJpegDataUrl(file: File): Promise<string> {
   }
 }
 
-type DraftPost = { platform: 'twitter' | 'linkedin' | 'meta'; text: string; topic?: string; imageUrl?: string };
+type DraftPost = { platform: 'twitter' | 'linkedin' | 'meta' | 'instagram'; text: string; topic?: string; imageUrl?: string };
 type Msg = { role: 'user' | 'agent'; text: string; image?: string; draftPost?: DraftPost | null };
 
 const IS_IMAGE_COMMAND = /^\/imagen\s+/i;
@@ -149,14 +149,25 @@ export default function ChatPage() {
     }
   }
 
-  async function publishDraft(idx: number, draft: DraftPost) {
+  async function publishDraft(idx: number, draft: DraftPost, sourceImage?: string) {
     if (publishingIdx !== null) return;
     setPublishingIdx(idx);
     try {
+      let imageUrl = draft.imageUrl;
+      if (!imageUrl && sourceImage) {
+        const up = await fetch('/api/upload-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataUrl: sourceImage }),
+        });
+        const upData = await up.json();
+        if (!up.ok) throw new Error(upData.error || 'No se pudo subir la imagen');
+        imageUrl = upData.url;
+      }
       const res = await fetch('/api/posts/publish-now', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform: draft.platform, text: draft.text, topic: draft.topic, imageUrl: draft.imageUrl }),
+        body: JSON.stringify({ platform: draft.platform, text: draft.text, topic: draft.topic, imageUrl }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'No se pudo publicar');
@@ -164,7 +175,8 @@ export default function ChatPage() {
       push({
         variant: 'success',
         title: `Publicado en ${
-          draft.platform === 'twitter' ? 'X' : draft.platform === 'linkedin' ? 'LinkedIn' : 'Facebook'
+          draft.platform === 'twitter' ? 'X' : draft.platform === 'linkedin' ? 'LinkedIn'
+          : draft.platform === 'instagram' ? 'Instagram' : 'Facebook'
         }`,
         description: data.externalUrl ? 'Ábrelo desde el link.' : undefined,
       });
@@ -232,28 +244,40 @@ export default function ChatPage() {
                       )}
                     </div>
                   ) : (
-                    <Button
-                      onClick={() => publishDraft(i, m.draftPost!)}
-                      disabled={publishingIdx === i}
-                      className="btn-brand h-8 gap-1.5 px-3 text-xs"
-                    >
-                      {m.draftPost.platform === 'twitter' ? (
-                        <IconX className="h-3 w-3" />
-                      ) : m.draftPost.platform === 'linkedin' ? (
-                        <IconLinkedIn className="h-3.5 w-3.5" />
+                    <>
+                      {m.draftPost.platform === 'instagram' && !m.image && !m.draftPost.imageUrl ? (
+                        <p className="text-xs text-[var(--color-muted-foreground)]">
+                          Instagram necesita una foto — adjunta una imagen antes de publicar.
+                        </p>
                       ) : (
-                        <IconFacebook className="h-3.5 w-3.5" />
+                        <Button
+                          onClick={() => publishDraft(i, m.draftPost!, m.image)}
+                          disabled={publishingIdx === i}
+                          className="btn-brand h-8 gap-1.5 px-3 text-xs"
+                        >
+                          {m.draftPost.platform === 'twitter' ? (
+                            <IconX className="h-3 w-3" />
+                          ) : m.draftPost.platform === 'linkedin' ? (
+                            <IconLinkedIn className="h-3.5 w-3.5" />
+                          ) : m.draftPost.platform === 'instagram' ? (
+                            <IconInstagram className="h-3.5 w-3.5" />
+                          ) : (
+                            <IconFacebook className="h-3.5 w-3.5" />
+                          )}
+                          {publishingIdx === i
+                            ? 'Publicando…'
+                            : `Publicar en ${
+                                m.draftPost.platform === 'twitter'
+                                  ? 'X'
+                                  : m.draftPost.platform === 'linkedin'
+                                    ? 'LinkedIn'
+                                    : m.draftPost.platform === 'instagram'
+                                      ? 'Instagram'
+                                      : 'Facebook'
+                              }`}
+                        </Button>
                       )}
-                      {publishingIdx === i
-                        ? 'Publicando…'
-                        : `Publicar en ${
-                            m.draftPost.platform === 'twitter'
-                              ? 'X'
-                              : m.draftPost.platform === 'linkedin'
-                                ? 'LinkedIn'
-                                : 'Facebook'
-                          }`}
-                    </Button>
+                    </>
                   )}
                 </div>
               )}

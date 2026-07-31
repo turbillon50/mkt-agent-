@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const platform = body?.platform === 'linkedin' ? 'linkedin' : body?.platform === 'twitter' ? 'twitter' : body?.platform === 'meta' ? 'meta' : null;
+  const platform = body?.platform === 'linkedin' ? 'linkedin' : body?.platform === 'twitter' ? 'twitter' : body?.platform === 'meta' ? 'meta' : body?.platform === 'instagram' ? 'instagram' : null;
   const text = typeof body?.text === 'string' ? body.text.trim() : '';
   const topic = typeof body?.topic === 'string' ? body.topic : undefined;
   const imageUrl = typeof body?.imageUrl === 'string' ? body.imageUrl : undefined;
@@ -88,6 +88,24 @@ export async function POST(req: NextRequest) {
       } else {
         return NextResponse.json(
           { error: 'Meta todavía no soporta cuentas por usuario — contacta al admin.' },
+          { status: 400 },
+        );
+      }
+    } else if (platform === 'instagram') {
+      if (!imageUrl) {
+        return NextResponse.json(
+          { error: 'Instagram necesita una imagen — sube una foto antes de publicar.' },
+          { status: 400 },
+        );
+      }
+      if (dbUser?.isAdmin) {
+        const { postInstagram } = await import('@/src/posters/meta');
+        const out = await postInstagram(imageUrl, text);
+        externalId = out.id;
+        externalUrl = 'https://instagram.com';
+      } else {
+        return NextResponse.json(
+          { error: 'Instagram todavía no soporta cuentas por usuario — contacta al admin.' },
           { status: 400 },
         );
       }

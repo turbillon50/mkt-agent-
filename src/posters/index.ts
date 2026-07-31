@@ -2,6 +2,7 @@ import { config, type Platform } from '../config';
 import * as twitter from './twitter';
 import * as linkedin from './linkedin';
 import * as meta from './meta';
+import { postInstagram } from './meta';
 
 export interface Poster {
   platform: Platform;
@@ -9,7 +10,19 @@ export interface Poster {
   check(): Promise<{ ok: boolean; user?: string }>;
 }
 
-const all: Record<Platform, Poster> = { twitter, linkedin, meta };
+const instagram: Poster = {
+  platform: 'instagram',
+  async post(text: string, imageUrl?: string) {
+    if (!imageUrl) throw new Error('Instagram requiere una imagen.');
+    const out = await postInstagram(imageUrl, text);
+    return { id: out.id, url: 'https://instagram.com' };
+  },
+  async check() {
+    return meta.check();
+  },
+};
+
+const all: Record<Platform, Poster> = { twitter, linkedin, meta, instagram };
 
 export function enabledPosters(): Poster[] {
   const list: Poster[] = [];

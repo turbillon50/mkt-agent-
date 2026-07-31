@@ -96,4 +96,4 @@ export const config = {
   },
 } as const;
 
-export type Platform = 'twitter' | 'linkedin' | 'meta';
+export type Platform = 'twitter' | 'linkedin' | 'meta' | 'instagram';
