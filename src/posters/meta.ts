@@ -10,6 +10,14 @@ async function freshPageToken(): Promise<string> {
   if (!appId || !appSecret || !userToken || !pageId) {
     throw new Error('Meta credentials are incomplete.');
   }
+  // Con System User token, pedir access_token directo del objeto Page es el
+  // metodo mas confiable (funciona con user token o system user por igual).
+  const direct = await fetch(
+    `https://graph.facebook.com/${pageId}?fields=access_token&access_token=${userToken}`
+  );
+  const directData = (await direct.json()) as { access_token?: string; error?: { message: string } };
+  if (directData.access_token) return directData.access_token;
+
   const res = await fetch(
     `https://graph.facebook.com/me/accounts?access_token=${userToken}`
   );
