@@ -39,3 +39,8 @@ capturas-c7/*
 capturas-c8/*
 !capturas-c8/resumen.json
 !capturas-c8/aceptacion.json
+
+# Y las de la INTEGRACIÓN de la 7 con la 8: la prueba de que conviven en la
+# misma pantalla. Mismo trato — se versiona la medición, no los 2.3 MB de PNG.
+capturas-integracion-c8/*
+!capturas-integracion-c8/resumen.json
