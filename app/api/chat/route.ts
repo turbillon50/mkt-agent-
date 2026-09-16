@@ -8,6 +8,20 @@ type Turn = { role: 'user' | 'assistant'; content: string };
 
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // ~6MB after base64 decode
 const IMAGE_COMMAND_RE = /^\/imagen\s+(.+)/is;
+// Lenguaje normal: "hazme una imagen de…", "genera una foto…", "quiero una pieza para…".
+// El agente de texto no tiene la herramienta de imagen; aquí se detecta la
+// intención y se manda directo a Gemini, sin que nadie tenga que saber /imagen.
+const IMAGE_INTENT_RE =
+  /\b(haz|hazme|hazle|gen[eé]ra(me|le)?|cr[eé]a(me)?|dise[ñn]a(me)?|dibuja(me)?|arma(me)?|dame|quiero|necesito|ocupo|p[oó]n(le)?|puedes?\s+(hacer|generar|crear|dise[ñn]ar))\b[^\n]{0,60}?\b(una?\s+)?(imagen|imágenes|imagenes|foto|fotos|pieza|piezas|ilustraci[oó]n|visual|portada|banner|flyer|cartel|thumbnail|miniatura|render)\b/i;
+function extractImagePrompt(text: string): string | null {
+  const cmd = text.match(IMAGE_COMMAND_RE);
+  if (cmd) return cmd[1]!.trim();
+  if (!IMAGE_INTENT_RE.test(text)) return null;
+  // Quita el verbo de arranque y deja la descripción tal cual la dio el usuario.
+  return text
+    .replace(/^\s*(por\s+favor\s+)?(haz|hazme|hazle|gen[eé]ra(me|le)?|cr[eé]a(me)?|dise[ñn]a(me)?|dibuja(me)?|arma(me)?|dame|quiero|necesito|ocupo|puedes?\s+(hacer|generar|crear|dise[ñn]ar))\s+/i, '')
+    .trim();
+}
 
 function sniffMime(dataUrl: string): string | null {
   const m = dataUrl.match(/^data:[^;]+;base64,(.+)$/);
@@ -73,9 +87,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Comando /imagen <prompt> — genera imagen real con Gemini, bypassa el agente de texto.
-  const imageCommand = prompt.match(IMAGE_COMMAND_RE);
-  if (imageCommand) {
-    const imgPrompt = imageCommand[1]!.trim();
+  const imgPromptDetected = extractImagePrompt(prompt);
+  if (imgPromptDetected) {
+    const imgPrompt = imgPromptDetected;
     try {
       const { generateImage } = await import('@/lib/gemini-image');
       const result = await generateImage(imgPrompt);
