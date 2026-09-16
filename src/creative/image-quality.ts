@@ -38,7 +38,7 @@ function normalizar(crudo: any): EvaluacionVisual {
 /**
  * Rechaza texto inventado, stock genérico, anatomía/objetos rotos y escenas
  * que no corresponden al negocio. Si la revisión no está disponible, falla
- * abierto para no apagar el producto; el motor deja constancia en metadata.
+ * cerrado: una imagen sin revisión no entra a la galería.
  */
 export async function evaluarImagenBase(input: {
   imagen: GeneratedImage;

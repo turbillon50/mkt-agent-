@@ -174,6 +174,7 @@ async function unaPieza(input: {
     guiaDeDiseno: guia,
     contexto: encargo.contexto,
   });
+  let promptFinal = p.prompt;
   let base = await generarBase(p);
   let calidad = await evaluarImagenBase({
     imagen: base,
@@ -193,6 +194,7 @@ async function unaPieza(input: {
       ...p,
       prompt: `${p.prompt}\n\nCORRECCIÓN OBLIGATORIA DEL CONTROL DE CALIDAD: ${calidad.correccion || calidad.razones.join('; ')}`,
     };
+    promptFinal = reintento.prompt;
     base = await generarBase(reintento);
     calidad = await evaluarImagenBase({
       imagen: base,
@@ -227,7 +229,7 @@ async function unaPieza(input: {
         alto: formato.alto,
         motor: 'canva',
         modelo: MODELO_IMAGEN,
-        prompt: p.prompt,
+        prompt: promptFinal,
         nota: null,
         calidad,
       };
@@ -254,7 +256,7 @@ async function unaPieza(input: {
     alto: compuesta.alto,
     motor: 'sharp',
     modelo: MODELO_IMAGEN,
-    prompt: p.prompt,
+    prompt: promptFinal,
     nota: faltas.length ? faltas.join(' y ') : null,
     calidad,
   };
