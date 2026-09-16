@@ -330,7 +330,33 @@ export async function finishComposioConnection(input: {
     },
   });
 
+  await resolverPaginaSiEsFacebook(input.project, c.slug);
+
   return { ok: true, status: account.status, handle, connectedAccountId: account.id };
+}
+
+/**
+ * Al conectar Facebook, resolver la PÁGINA y guardar su token.
+ *
+ * Aquí y no en la primera publicación a propósito: es el único momento en el que
+ * el usuario está mirando la pantalla. Si la cuenta no administra ninguna página
+ * —o no tiene permiso para publicar en ella— se entera ahora, no el día que
+ * programó un post para las 9 de la mañana.
+ *
+ * Nunca lanza: una página que no se pudo resolver deja la conexión conectada
+ * igual (leer sí se puede) y el token se vuelve a intentar en la publicación.
+ * El import es dinámico para no cerrar el círculo con `src/channels/base.ts`,
+ * que entra por aquí.
+ */
+async function resolverPaginaSiEsFacebook(project: Project, toolkit: string): Promise<void> {
+  if (toolkit !== 'facebook') return;
+  try {
+    const { fijarPaginaDeFacebook } = await import('../channels/facebook');
+    await fijarPaginaDeFacebook(project, null);
+  } catch {
+    // Se dirá en la tarjeta de Conexiones cuando se intente publicar. Tumbar el
+    // callback por esto dejaría al usuario creyendo que no conectó nada.
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -481,11 +507,30 @@ export async function reconciliarConComposio(project: Project): Promise<Reconcil
     return { ...out, error: e instanceof Error ? e.message : 'Composio no contestó.' };
   }
 
+  /**
+   * Las cuentas CAÍDAS que Composio sí conoce, por toolkit y con la más
+   * reciente ganando.
+   *
+   * Existe por los dos detalles menores del hallazgo D:
+   *   · la tarjeta de X decía *"El permiso venció"* mientras el API fresco decía
+   *     *"Te quedaste a medias en la pantalla de permisos"* — la pantalla pintaba
+   *     el `motivo` VIEJO guardado en la base y nadie lo refrescaba nunca,
+   *     porque el paso 2 de abajo se salta las filas que ya están caídas;
+   *   · la fila de `twitter` seguía apuntando a `ca_VtoO9hoJPxIC` cuando la
+   *     cuenta viva en Composio ya era `ca_wn_Qu-r40_Jd`. Con el id viejo,
+   *     verificar consulta una cuenta que ya no existe y el motivo nunca
+   *     mejora: se queda mintiendo para siempre.
+   */
+  const caidas = new Map<string, ConnectedAccount>();
   const activas = new Map<string, ConnectedAccount>();
   for (const cuenta of remotas) {
     const slug = cuenta.toolkit?.slug;
     if (!slug) continue;
-    if (cuenta.status !== 'ACTIVE') continue;
+    if (cuenta.status !== 'ACTIVE') {
+      const previa = caidas.get(slug);
+      if (!previa || (cuenta.created_at ?? '') > (previa.created_at ?? '')) caidas.set(slug, cuenta);
+      continue;
+    }
     if (!connectorBySlug(slug)) {
       // Una cuenta de un toolkit que Goossip no ofrece. No se inventa una
       // tarjeta para ella: se cuenta y se dice, que es distinto de esconderla.
@@ -528,22 +573,53 @@ export async function reconciliarConComposio(project: Project): Promise<Reconcil
         motivo_tecnico: null,
       },
     }).catch(() => undefined);
+    // Los proyectos que YA estaban conectados antes de la corrida 13 no tienen
+    // token de página guardado, y no se les va a pedir que reconecten Facebook
+    // para arreglar un bug nuestro. Se resuelve aquí, una sola vez: la función
+    // no hace nada si el token ya está.
+    if (slug === 'facebook' && !((fila?.metadata ?? {}) as { page_token?: string }).page_token) {
+      await resolverPaginaSiEsFacebook(project, slug);
+    }
     if (!yaEstaba) out.encendidos.push(slug);
   }
 
   // 2. Lo que aquí damos por conectado y allá ya no existe: se apaga con su
   //    motivo en español. Verde sin respaldo es la mentira que cuesta caro.
+  //
+  //    Y lo que YA estaba caído: se le refresca el motivo y el id de cuenta con
+  //    lo que Composio dice AHORA. Antes esta rama se saltaba esas filas, y por
+  //    eso la tarjeta de X se quedó meses diciendo "El permiso venció" cuando lo
+  //    que pasaba era que el usuario no había terminado la pantalla de permisos.
   for (const fila of locales) {
-    if (fila.status !== 'connected') continue;
     if (((fila.metadata ?? {}) as { via?: string }).via !== 'composio') continue;
     if (activas.has(fila.platform)) continue;
-    await markNeedsReconnect(
-      project.orgId,
-      project.id,
-      fila.platform as ConnectionChannel,
-      'Ya no existe el permiso. Vuelve a conectarla.',
-    ).catch(() => undefined);
-    out.apagados.push(fila.platform);
+
+    const remota = caidas.get(fila.platform) ?? null;
+    const motivo = remota
+      ? motivoEnEspanol(remota.status)
+      : 'Ya no existe el permiso. Vuelve a conectarla.';
+
+    const metaVieja = (fila.metadata ?? {}) as Record<string, unknown>;
+    const cambioElMotivo = metaVieja.motivo !== motivo;
+    const cambioLaCuenta = Boolean(remota && metaVieja.connected_account_id !== remota.id);
+    if (fila.status !== 'connected' && !cambioElMotivo && !cambioLaCuenta) continue;
+
+    await db
+      .update(socialAccounts)
+      .set({
+        status: 'needs_reconnect',
+        metadata: {
+          ...metaVieja,
+          ...(remota ? { connected_account_id: remota.id } : {}),
+          motivo,
+          motivo_tecnico: remota?.status_reason ?? remota?.status ?? 'sin cuenta en Composio',
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(socialAccounts.id, fila.id))
+      .catch(() => undefined);
+
+    if (fila.status === 'connected') out.apagados.push(fila.platform);
   }
 
   return out;

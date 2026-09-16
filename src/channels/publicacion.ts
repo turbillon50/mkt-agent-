@@ -29,22 +29,29 @@ export const facebook: ChannelAdapter = {
   toolkit: 'facebook',
   verify: (project) => verifyChannel(project, 'facebook'),
 
-  /** Publica en la página del proyecto. `target` es el id de la página. */
+  /**
+   * Publica en la página del proyecto, CON TOKEN DE PÁGINA.
+   *
+   * Esto era `FACEBOOK_CREATE_POST` a secas y no funcionaba: Composio firma esa
+   * tool con el token de USUARIO y `/{page}/feed` exige el de PÁGINA. Medido el
+   * 16-sep con la cuenta real: `403 (#200) OAuthException`, con
+   * `pages_manage_posts` concedido. Todo el arreglo vive en `./facebook.ts`.
+   */
   async publish(project: Project, input: PublishInput): Promise<PublishResult> {
-    const pageId = input.target ?? (await paginaPrincipal(project))?.id ?? null;
-    if (!pageId) throw new Error('Este proyecto todavía no tiene una página de Facebook elegida.');
-    const data = cuerpo<any>(await run<any>(project, 'facebook', 'FACEBOOK_CREATE_POST', {
-      page_id: pageId,
-      message: input.texto,
-      ...(input.link ? { link: input.link } : {}),
-    }));
-    const id = data?.id ?? data?.post_id ?? null;
-    return { toolkit: 'facebook', id, url: id ? `https://facebook.com/${id}` : null };
+    const { publicarEnPagina } = await import('./facebook');
+    const r = await publicarEnPagina(project, {
+      texto: input.texto,
+      media: input.media ?? null,
+      link: input.link ?? null,
+    });
+    return { toolkit: 'facebook', id: r.id, url: r.url };
   },
 
   /** Las páginas que administra la cuenta conectada. */
   async readCampaigns(project: Project) {
-    return run(project, 'facebook', 'FACEBOOK_GET_USER_PAGES', {});
+    return run(project, 'facebook', 'FACEBOOK_GET_USER_PAGES', {
+      fields: 'id,name,category,tasks',
+    });
   },
 
   /**
@@ -106,15 +113,6 @@ export async function listLeadForms(
   }));
 }
 
-async function paginaPrincipal(project: Project): Promise<{ id: string; name: string } | null> {
-  const data: any = cuerpo(
-    await run(project, 'facebook', 'FACEBOOK_GET_USER_PAGES', {}).catch(() => null),
-  );
-  const lista = data?.data ?? data?.pages ?? [];
-  const p = lista[0];
-  return p ? { id: String(p.id), name: p.name ?? String(p.id) } : null;
-}
-
 /**
  * Un lead de Meta, aplanado. Los nombres de los campos los pone quien armó el
  * formulario, así que se reconocen por varios alias y nunca se asume uno.
@@ -153,47 +151,21 @@ export const instagram: ChannelAdapter = {
   verify: (project) => verifyChannel(project, 'instagram'),
 
   /**
-   * Publicar en Instagram son DOS pasos en su API: primero se sube el
-   * contenedor con la imagen, después se publica. No hay atajo, y saltarse el
-   * primero deja un post vacío.
+   * Publicar en Instagram son TRES tiempos, no dos: contenedor, **esperar a que
+   * Meta diga FINISHED** y publicar.
+   *
+   * La QA se quedó en el primero y por eso el post nunca existió. El paso que
+   * faltaba, el carrusel y el reel viven en `./instagram.ts`.
    */
   async publish(project: Project, input: PublishInput): Promise<PublishResult> {
     if (!input.media) {
       throw new Error('Instagram necesita una imagen o un video para publicar.');
     }
-    const igUserId = input.target ?? (await cuentaInstagram(project));
-    if (!igUserId) {
-      throw new Error(
-        'No encontramos tu cuenta de Instagram. Necesita ser Business o Creator y estar ligada a una página de Facebook.',
-      );
-    }
-    const contenedor: any = cuerpo(
-      await run(project, 'instagram', 'INSTAGRAM_CREATE_MEDIA_CONTAINER', {
-        ig_user_id: igUserId,
-        image_url: input.media,
-        caption: input.texto,
-      }),
-    );
-    const creationId = contenedor?.id ?? contenedor?.creation_id;
-    if (!creationId) throw new Error('Instagram no aceptó la imagen.');
-    const data: any = cuerpo(
-      await run(project, 'instagram', 'INSTAGRAM_CREATE_POST', {
-        ig_user_id: igUserId,
-        creation_id: String(creationId),
-      }),
-    );
-    const id = data?.id ?? null;
-    return { toolkit: 'instagram', id, url: id ? `https://www.instagram.com/p/${id}` : null };
+    const { publicarEnInstagram } = await import('./instagram');
+    const r = await publicarEnInstagram(project, { texto: input.texto, media: input.media });
+    return { toolkit: 'instagram', id: r.id, url: r.url };
   },
 };
-
-async function cuentaInstagram(project: Project): Promise<string | null> {
-  const data: any = cuerpo(
-    await run(project, 'instagram', 'INSTAGRAM_GET_USER_INFO', {}).catch(() => null),
-  );
-  const id = data?.id ?? data?.ig_user_id ?? data?.user?.id ?? null;
-  return id ? String(id) : null;
-}
 
 // ---------------------------------------------------------------------------
 // LinkedIn
@@ -349,13 +321,158 @@ export const youtube: ChannelAdapter = {
     return { toolkit: 'youtube', id, url: id ? `https://youtu.be/${id}` : null };
   },
 
-  /** Los videos del canal, para ver qué se publicó y cómo le fue. */
+  /**
+   * Los videos del canal, para ver qué se publicó y cómo le fue.
+   *
+   * `channelId` ya NO es obligatorio: si no viene, se descubre. La QA del
+   * 16-sep midió que este adaptador existía y **nadie lo llamaba**, y que
+   * además pedía un `channelId` que Goossip no guardaba en ningún lado — hubo
+   * que sacarlo a mano con `/youtube/v3/channels?mine=true`. Un adaptador que
+   * exige un dato que la app no tiene es un adaptador apagado.
+   */
   async readCampaigns(project: Project, input: Record<string, unknown> = {}) {
-    const channelId = String(input.channelId ?? '');
-    if (!channelId) throw new Error('Falta el canal de YouTube.');
+    const channelId = String(input.channelId ?? '') || (await canalDeYoutube(project))?.id || '';
+    if (!channelId) {
+      throw new Error('No encontramos tu canal de YouTube. Vuelve a conectarlo en Conexiones.');
+    }
     return run(project, 'youtube', 'YOUTUBE_LIST_CHANNEL_VIDEOS', {
       channelId,
       maxResults: Number(input.maxResults ?? 10),
     });
   },
 };
+
+/**
+ * El canal de YouTube del proyecto, descubierto y guardado.
+ *
+ * `mine=true` es la única forma de saber cuál es el canal de quien autorizó: el
+ * toolkit de Composio no trae tool para esto (medido). Se guarda en la fila de
+ * la conexión para no volver a preguntar en cada carga de pantalla.
+ */
+export async function canalDeYoutube(
+  project: Project,
+): Promise<{ id: string; nombre: string; suscriptores: number | null; videos: number | null } | null> {
+  const { and, eq } = await import('drizzle-orm');
+  const { db } = await import('../db/client');
+  const { socialAccounts } = await import('../db/schema');
+
+  const filas = await db
+    .select()
+    .from(socialAccounts)
+    .where(
+      and(
+        eq(socialAccounts.orgId, project.orgId),
+        eq(socialAccounts.campaignId, project.id),
+        eq(socialAccounts.platform, 'youtube'),
+      ),
+    )
+    .limit(1);
+  const fila = filas[0] ?? null;
+  const meta = (fila?.metadata ?? {}) as { channel_id?: string; channel_title?: string };
+
+  if (meta.channel_id) {
+    return {
+      id: String(meta.channel_id),
+      nombre: String(meta.channel_title ?? meta.channel_id),
+      suscriptores: null,
+      videos: null,
+    };
+  }
+
+  const data = await proxy(project, 'youtube', {
+    endpoint: 'https://www.googleapis.com/youtube/v3/channels',
+    method: 'GET',
+    parameters: [
+      { name: 'part', value: 'id,snippet,statistics', type: 'query' },
+      { name: 'mine', value: 'true', type: 'query' },
+    ],
+  }).catch(() => null);
+
+  const canal = (data?.items ?? [])[0];
+  if (!canal?.id) return null;
+
+  const out = {
+    id: String(canal.id),
+    nombre: canal.snippet?.title ?? String(canal.id),
+    suscriptores: canal.statistics?.subscriberCount ? Number(canal.statistics.subscriberCount) : null,
+    videos: canal.statistics?.videoCount ? Number(canal.statistics.videoCount) : null,
+  };
+
+  if (fila) {
+    await db
+      .update(socialAccounts)
+      .set({
+        externalId: out.id,
+        metadata: { ...(fila.metadata ?? {}), channel_id: out.id, channel_title: out.nombre },
+        updatedAt: new Date(),
+      })
+      .where(eq(socialAccounts.id, fila.id))
+      .catch(() => undefined);
+  }
+  return out;
+}
+
+/** Los videos del canal, ya aplanados, con sus números. */
+export async function videosDeYoutube(
+  project: Project,
+  limite = 10,
+): Promise<{
+  canal: { id: string; nombre: string } | null;
+  videos: Array<{
+    id: string;
+    titulo: string;
+    url: string;
+    publicado: string | null;
+    vistas: number | null;
+    likes: number | null;
+    comentarios: number | null;
+  }>;
+}> {
+  const canal = await canalDeYoutube(project);
+  if (!canal) return { canal: null, videos: [] };
+
+  const data: any = cuerpo(
+    await run(project, 'youtube', 'YOUTUBE_LIST_CHANNEL_VIDEOS', {
+      channelId: canal.id,
+      maxResults: limite,
+    }),
+  );
+  const items = data?.items ?? data?.videos ?? [];
+  const ids = items
+    .map((v: any) => String(v?.id?.videoId ?? v?.id ?? v?.videoId ?? ''))
+    .filter(Boolean);
+
+  // Las estadísticas van en otra llamada: `search.list` no las trae. Sin esto,
+  // "métricas en Contenido" serían tres columnas vacías.
+  const stats = new Map<string, any>();
+  if (ids.length) {
+    const s = await proxy(project, 'youtube', {
+      endpoint: 'https://www.googleapis.com/youtube/v3/videos',
+      method: 'GET',
+      parameters: [
+        { name: 'part', value: 'statistics,snippet', type: 'query' },
+        { name: 'id', value: ids.join(','), type: 'query' },
+      ],
+    }).catch(() => null);
+    for (const v of s?.items ?? []) stats.set(String(v.id), v);
+  }
+
+  return {
+    canal: { id: canal.id, nombre: canal.nombre },
+    videos: items.map((v: any) => {
+      const id = String(v?.id?.videoId ?? v?.id ?? v?.videoId ?? '');
+      const detalle = stats.get(id);
+      const snippet = detalle?.snippet ?? v?.snippet ?? {};
+      const st = detalle?.statistics ?? {};
+      return {
+        id,
+        titulo: snippet.title ?? '(sin título)',
+        url: `https://youtu.be/${id}`,
+        publicado: snippet.publishedAt ?? null,
+        vistas: st.viewCount !== undefined ? Number(st.viewCount) : null,
+        likes: st.likeCount !== undefined ? Number(st.likeCount) : null,
+        comentarios: st.commentCount !== undefined ? Number(st.commentCount) : null,
+      };
+    }),
+  };
+}

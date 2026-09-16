@@ -5,7 +5,8 @@
     { "path": "/api/cron/plan", "schedule": "0 6 * * 1" },
     { "path": "/api/cron/queue", "schedule": "* * * * *" },
     { "path": "/api/cron/conexiones", "schedule": "0 5 * * *" },
-    { "path": "/api/cron/leads", "schedule": "*/5 * * * *" }
+    { "path": "/api/cron/leads", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/inbox", "schedule": "*/2 * * * *" }
   ],
   "functions": {
     "app/api/chat/route.ts": { "maxDuration": 60 },
@@ -14,6 +15,7 @@
     "app/api/cron/queue/route.ts": { "maxDuration": 60 },
     "app/api/cron/conexiones/route.ts": { "maxDuration": 300 },
     "app/api/cron/leads/route.ts": { "maxDuration": 120 },
+    "app/api/cron/inbox/route.ts": { "maxDuration": 120 },
     "app/api/webhooks/meta/leadgen/route.ts": { "maxDuration": 60 },
     "app/api/webhooks/whatsapp/route.ts": { "maxDuration": 60 }
   }

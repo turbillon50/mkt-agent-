@@ -160,6 +160,9 @@ export const PROJECT_EVENT_TYPES = [
   'prospeccion_busqueda',
   'prospecto_convertido',
   'autonomia_cambiada',
+  // Corrida 13: la bandeja social y la pauta de Google por proyecto.
+  'conversacion_respondida',
+  'campana_google_cambiada',
 ] as const;
 export type ProjectEventType = (typeof PROJECT_EVENT_TYPES)[number];
 
@@ -183,6 +186,8 @@ export const PROJECT_EVENT_LABEL: Record<ProjectEventType, string> = {
   prospeccion_busqueda: 'Búsqueda en el mapa',
   prospecto_convertido: 'Prospecto convertido a lead',
   autonomia_cambiada: 'Nivel de autonomía cambiado',
+  conversacion_respondida: 'Respuesta en una conversación',
+  campana_google_cambiada: 'Campaña de Google prendida o pausada',
 };
 
 // ---------------------------------------------------------------------------

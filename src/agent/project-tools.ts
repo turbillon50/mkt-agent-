@@ -71,8 +71,19 @@ export function toolsParaProyecto(ctx: AgentContext) {
   // -------------------------------------------------------------- contenido
   const generarTextoDePost = createTool({
     id: 'generar-texto-de-post',
+    /**
+     * Esta descripción decía "ofrécesela al usuario con esas palabras ANTES de
+     * publicar nada". Eso convertía cada publicación en tres turnos —la QA lo
+     * midió: 8.8 s pidiendo permiso, 16.7 s enseñando piezas, 6.3 s
+     * publicando— aunque el usuario hubiera escrito "hazlo ya, sin preguntarme
+     * nada más".
+     *
+     * La oferta sigue existiendo porque un post sin imagen rinde la mitad. Lo
+     * que se va es la ORDEN de esperar: quien ya dijo que no quiere que le
+     * pregunten, no quiere que le pregunten.
+     */
     description:
-      'Escribe el texto de UNA publicación para una red, con la voz de la marca de este proyecto. Devuelve el texto y, SIEMPRE, la oferta de hacerle la imagen: ofrécesela al usuario con esas palabras antes de publicar nada.',
+      'Escribe el texto de UNA publicación para una red, con la voz de la marca de este proyecto. Devuelve el texto y, aparte, una oferta de hacerle la imagen. Ofrécela cuando el usuario no haya dicho ya que quiere publicar de una vez; si pidió publicar ya, publica y menciona la imagen después.',
     inputSchema: z.object({
       red: REDES_PUBLICABLES,
       tema: z.string().min(3).describe('De qué va la publicación.'),
@@ -219,7 +230,22 @@ export function toolsParaProyecto(ctx: AgentContext) {
       tema: z.string().optional(),
       piezaId: z.string().optional().describe('Id de la pieza que el usuario eligió, si eligió una.'),
     }),
+    /**
+     * `publicado` y `externalUrl` son la REGLA DURA del issue #47.
+     *
+     * La QA midió al Asistente publicando de verdad
+     * (`urn:li:share:7505967549709213696`, fila `9ec7abe3` en `posts`) y
+     * contestándole al usuario que había fallado por contenido duplicado. Quien
+     * lee esa respuesta vuelve a publicar y sale doble.
+     *
+     * Con estos dos campos el resultado de la tool ya no se puede interpretar:
+     * `publicado:true` significa que hay un post allá afuera, y
+     * `src/agent/project-agent.ts` reescribe la respuesta final si el modelo se
+     * atreve a decir lo contrario.
+     */
     outputSchema: z.object({
+      publicado: z.boolean(),
+      externalUrl: z.string().nullable(),
       url: z.string().nullable(),
       cuenta: z.string(),
       conImagen: z.boolean(),
@@ -278,6 +304,10 @@ export function toolsParaProyecto(ctx: AgentContext) {
       }).catch(() => undefined);
 
       return {
+        // Si llegamos aquí, `publishTo` no lanzó y la fila ya está en `posts`:
+        // el post EXISTE. Cualquier otra lectura de este turno es una mentira.
+        publicado: true,
+        externalUrl: out.url,
         url: out.url,
         cuenta: `la cuenta de ${RED_LABEL[input.red as never] ?? input.red} de ${project.name}`,
         conImagen: Boolean(pieza?.url),
@@ -500,6 +530,143 @@ export function toolsParaProyecto(ctx: AgentContext) {
     },
   });
 
+  // ------------------------------------------------------------- correo
+  /**
+   * Gmail existía por Composio desde la corrida 5 y **la app no lo usaba**: la
+   * QA mandó un correo real por abajo (`1a0aa34f567ccf84`) mientras Goossip
+   * contestaba `{"configured":false}`. Esta es la mitad que faltaba del lado
+   * del Asistente.
+   */
+  const mandarCorreo = createTool({
+    id: 'mandar-correo',
+    description:
+      'Manda un correo DESDE la cuenta de Gmail de este proyecto: seguimiento a un lead, confirmar una cita, mandar la información que pidieron. Úsala cuando el usuario diga "mándale un correo", "escríbele", "hazle seguimiento por mail". El texto se lo enseñas antes si el usuario no dijo que lo mandes ya.',
+    inputSchema: z.object({
+      a: z.string().email().describe('El correo de destino.'),
+      asunto: z.string().min(3).max(140),
+      mensaje: z.string().min(10),
+    }),
+    outputSchema: z.object({
+      enviado: z.boolean(),
+      a: z.string(),
+      cuenta: z.string(),
+    }),
+    execute: async (input) => {
+      soloOperadores(ctx, 'mandar correos');
+      const { gmail } = await import('../channels/operacion');
+      await gmail.sendEmail!(project, {
+        to: input.a,
+        subject: input.asunto,
+        body: input.mensaje,
+      });
+      return {
+        // Igual que `publicar-post`: si no lanzó, salió. No se narra otra cosa.
+        enviado: true,
+        a: input.a,
+        cuenta: `el Gmail de ${project.name}`,
+      };
+    },
+  });
+
+  // ------------------------------------------------------------ YouTube
+  const videosDelCanal = createTool({
+    id: 'videos-del-canal',
+    description:
+      'Los videos del canal de YouTube de este proyecto, con sus vistas, likes y comentarios. Úsala cuando pregunten "¿cómo van mis videos?", "qué he subido a YouTube" o "cuál video jaló más".',
+    inputSchema: z.object({ cuantos: z.number().int().min(1).max(25).optional() }),
+    outputSchema: z.object({
+      canal: z.string().nullable(),
+      videos: z.array(
+        z.object({
+          titulo: z.string(),
+          url: z.string(),
+          vistas: z.number().nullable(),
+          likes: z.number().nullable(),
+          publicado: z.string().nullable(),
+        }),
+      ),
+    }),
+    execute: async (input) => {
+      const { videosDeYoutube } = await import('../channels/publicacion');
+      const r = await videosDeYoutube(project, input.cuantos ?? 10);
+      return {
+        canal: r.canal?.nombre ?? null,
+        videos: r.videos.map((v) => ({
+          titulo: v.titulo,
+          url: v.url,
+          vistas: v.vistas,
+          likes: v.likes,
+          publicado: v.publicado,
+        })),
+      };
+    },
+  });
+
+  // ---------------------------------------------------- bandeja social
+  const conversacionesPendientes = createTool({
+    id: 'conversaciones-pendientes',
+    description:
+      'Los hilos de Messenger, DMs de Instagram y WhatsApp de este proyecto: quién escribió, qué dijo y cuáles están sin leer. Úsala cuando pregunten "¿quién me escribió?", "¿tengo mensajes?", "qué hay en el Instagram".',
+    inputSchema: z.object({ soloSinLeer: z.boolean().optional() }),
+    outputSchema: z.object({
+      hilos: z.array(
+        z.object({
+          id: z.string(),
+          canal: z.string(),
+          quien: z.string(),
+          ultimoTexto: z.string().nullable(),
+          sinLeer: z.number(),
+          tePuedeContestar: z.boolean(),
+        }),
+      ),
+    }),
+    execute: async (input) => {
+      const { hilosDelProyecto } = await import('../projects/bandeja-social');
+      const todos = await hilosDelProyecto(orgId, project.id, 40);
+      const hilos = input.soloSinLeer ? todos.filter((h) => h.sinLeer > 0) : todos;
+      return {
+        hilos: hilos.map((h) => ({
+          id: h.id,
+          canal: h.canal,
+          quien: h.quien,
+          ultimoTexto: h.ultimoTexto,
+          sinLeer: h.sinLeer,
+          tePuedeContestar: h.respondible,
+        })),
+      };
+    },
+  });
+
+  const contestarConversacion = createTool({
+    id: 'contestar-conversacion',
+    description:
+      'Contesta un hilo de Messenger o de un DM de Instagram, con la cuenta de este proyecto. Úsala solo cuando el usuario ya aprobó el texto. El id del hilo sale de conversaciones-pendientes.',
+    inputSchema: z.object({
+      hiloId: z.string().min(8),
+      mensaje: z.string().min(1),
+    }),
+    outputSchema: z.object({ enviado: z.boolean(), canal: z.string() }),
+    execute: async (input) => {
+      soloOperadores(ctx, 'contestar mensajes');
+      const { hilosDelProyecto, responderEnHilo } = await import('../projects/bandeja-social');
+      const hilo = (await hilosDelProyecto(orgId, project.id, 200)).find(
+        (h) => h.id === input.hiloId,
+      );
+      if (!hilo) throw new Error('Ese hilo no es de este proyecto.');
+
+      const r = await responderEnHilo({
+        project,
+        conversacionId: input.hiloId,
+        texto: input.mensaje,
+        // Quién contestó queda en el mensaje guardado. Sin nombre, "Goossip":
+        // el hilo tiene que decir quién habló, aunque haya sido el agente.
+        quien: ctx.quien ?? 'Goossip',
+      });
+      if (!r.ok) throw new Error(r.motivo ?? 'No se pudo mandar.');
+      return { enviado: true, canal: String(hilo.canal) };
+    },
+  });
+
   // -------------------------------------------------------- prospección
   const buscarNegocios = createTool({
     id: 'buscar-negocios',
@@ -607,6 +774,10 @@ export function toolsParaProyecto(ctx: AgentContext) {
     guardarConocimiento,
     postsRecientes,
     estadoDelProyecto,
+    mandarCorreo,
+    videosDelCanal,
+    conversacionesPendientes,
+    contestarConversacion,
     // Con la bandera abajo, WhatsApp ni siquiera entra al menú del modelo. Una
     // herramienta que va a tronar en cuanto se llame no es una salvaguarda: es
     // una promesa que el Asistente le hace al usuario y después rompe.
