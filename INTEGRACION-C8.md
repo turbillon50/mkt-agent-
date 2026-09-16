@@ -236,17 +236,64 @@ en el servidor: 2.3 MB, y lo que se versiona es la medición.
 
 ## 6. Preview
 
-Rama empujada: `feat/asistente-3col-compose-c8` (force-with-lease, es un rebase).
+Rama empujada a `origin/feat/asistente-3col-compose-c8` con `--force-with-lease`
+(es un rebase, la rama se reescribió). **`main` no se tocó.**
 
-**Preview:** _(ver §7)_
+    https://goossip-hz9k2wt42-luis-projects-48b011f9.vercel.app
+
+Inspector: `https://vercel.com/luis-projects-48b011f9/goossip/DJHgB4TqH1Q5qsAJsxuqqvmAsiCs`
+· build de 45 s, `status ● Ready`, 38 rutas.
+
+### `/sign-in` ≠ 500
+
+    $ vercel curl <preview>/sign-in -- -s -o /dev/null -w '%{http_code}'
+    200
+
+Y el cuerpo es la app, no una pantalla de Vercel: 10 apariciones de "Goossip" y
+cero de `sso-api`. Las demás públicas, igual: `/` 200, `/sign-up` 200,
+`/terminos` 200, `/privacidad` 200.
+
+**Ojo con cómo se mide esto.** Un `curl -L` a pelo contra el preview da 200 y
+parece bueno, y es **mentira**: el preview trae Deployment Protection, el 302
+lleva a `vercel.com/sso-api` y lo que contesta 200 es el muro de Vercel, no
+Goossip. La primera medición mía cayó ahí. Lo que vale es `vercel curl`, que
+pasa el candado con el token. Queda escrito porque la trampa se ve exactamente
+igual que el éxito.
+
+### Y una cosa que el preview no puede probar, y hay que decirla
+
+En el preview `/api/projects` da **500**; en producción la misma ruta da **307**.
+No es de este merge:
+
+    $ vercel env ls preview | grep -i clerk
+    NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL   …
+
+Es el único. **El entorno Preview del proyecto `goossip` no tiene
+`CLERK_SECRET_KEY` ni `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`.** Sin ellas el
+middleware de Clerk no corre, las rutas con sesión truenan y `/sign-in` se pinta
+por el camino de `isClerkConfigured() === false`. Es un hueco de configuración
+del proyecto, anterior a esta rama, y **no lo tapé**: inyectar ahí las llaves de
+producción tampoco arreglaría nada, porque esa instancia de Clerk es de
+producción y su único dominio es `vliving.life` — desde un `*.vercel.app` el
+handshake entra en el bucle de 307 que ya está documentado desde la corrida 2.
+Por eso las capturas del §5 se sacaron contra el build de esta rama corriendo en
+el servidor, que es donde sí hay sesión de Clerk de verdad.
 
 ---
 
-## 7. Lo que queda anotado
+## 7. Lo que queda anotado y NO toqué
 
-* `test/projects.test.ts` — el proyecto huérfano en la base compartida. Viene de
-  antes de esta rama, no lo toqué.
-* El `.env.local` de este worktree tiene la llave de Composio redactada. Las
-  pruebas de la 7 que dependen de Composio solo pasan exportando la de
-  `/root/.env`. No lo cambié en el archivo: es un `.env.local` y no se versiona,
-  pero conviene saberlo antes de la próxima corrida aquí.
+Tres cosas que encontré, que están fuera de lo que pide la misión, y que
+prefiero dejar escritas antes que arreglar por mi cuenta:
+
+1. **`test/projects.test.ts` — `proyectos sin dueño: esperaba 0, llegó 1`.** Un
+   proyecto huérfano que ya vive en la base compartida. Idéntico en un worktree
+   limpio de `origin/main`. Borrar filas de una base que usan otros worktrees sin
+   que Luis lo pida es como se rompen cosas ajenas.
+2. **El entorno Preview de Vercel no tiene llaves de Clerk** (arriba). Decisión
+   de Luis si se le da una instancia de Clerk de desarrollo al preview o si los
+   previews se siguen probando en el servidor.
+3. **`.env.local` de este worktree trae `COMPOSIO_API_KEY="[SENSITIVE]"`.** No es
+   una llave, es el marcador de redacción. Las dos pruebas de Composio de la
+   corrida 7 solo pasan exportando la de `/root/.env`. No lo edité: `.env.local`
+   no se versiona y sobrescribirle el archivo a otro agente no es mi llamada.
