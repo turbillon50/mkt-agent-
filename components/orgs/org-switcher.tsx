@@ -18,7 +18,7 @@ export function OrgSwitcher({ compact = false }: { compact?: boolean }) {
   if (!isClerkConfiguredClient) {
     return (
       <div className="rounded-xl border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
-        Clerk sin configurar
+        Sin organizaciones
       </div>
     );
   }

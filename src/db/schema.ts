@@ -4,6 +4,7 @@ import {
   text,
   timestamp,
   integer,
+  numeric,
   boolean,
   jsonb,
   index,
@@ -30,6 +31,7 @@ import type {
   ProjectMemberStatus,
   ProjectRole,
 } from '../projects/types';
+import type { CampaignMetaRefs, CampaignObjective, CampaignStatus } from '../marketing/types';
 
 // ---------------------------------------------------------------------------
 // Organizaciones (Clerk). La org ES el tenant: todo dato de app lleva org_id.
@@ -458,6 +460,13 @@ export const salesLeads = pgTable('sales_leads', {
   orgId: text('org_id').notNull(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   campaignId: uuid('campaign_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  /**
+   * De qué CAMPAÑA vino (0015). Nullable a propósito: un lead del formulario
+   * del sitio no viene de ninguna pauta, y colgarlo de una campaña inventada
+   * sería mentir en el reporte. La declaración va por referencia perezosa
+   * porque `marketingCampaigns` se define más abajo en este mismo archivo.
+   */
+  marketingCampaignId: uuid('marketing_campaign_id'),
   phone: text('phone'),
   email: text('email'),
   fullName: text('full_name'),
@@ -561,6 +570,39 @@ export const actionQueue = pgTable('action_queue', {
   runnerIdx: index('action_queue_runner_idx').on(t.status, t.scheduledFor, t.priority),
   leadIdx: index('action_queue_lead_idx').on(t.leadId),
 }));
+
+// ---------------------------------------------------------------------------
+// Campañas de marketing (migración 0015). Un proyecto tiene MUCHAS.
+//
+// Ojo con los dos nombres, que se parecen y no son lo mismo:
+//   `campaigns`            → el PROYECTO (por historia del repo, ver 0012)
+//   `marketing_campaigns`  → la CAMPAÑA: la pauta que trae gente
+// ---------------------------------------------------------------------------
+
+export const marketingCampaigns = pgTable('marketing_campaigns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  objective: text('objective').$type<CampaignObjective>().notNull().default('leads'),
+  status: text('status').$type<CampaignStatus>().notNull().default('borrador'),
+  channels: jsonb('channels').$type<ConnectionChannel[]>().notNull().default([]),
+  /** numeric llega como string desde pg: el dinero no se redondea solo. */
+  budget: numeric('budget', { precision: 12, scale: 2 }),
+  metaRefs: jsonb('meta_refs').$type<CampaignMetaRefs>().notNull().default({}),
+  startsAt: timestamp('starts_at', { withTimezone: true }),
+  endsAt: timestamp('ends_at', { withTimezone: true }),
+  createdBy: text('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('marketing_campaigns_project_idx').on(t.projectId, t.createdAt),
+  orgIdx: index('marketing_campaigns_org_idx').on(t.orgId),
+  statusIdx: index('marketing_campaigns_status_idx').on(t.projectId, t.status),
+}));
+
+export type MarketingCampaign = typeof marketingCampaigns.$inferSelect;
+export type NewMarketingCampaign = typeof marketingCampaigns.$inferInsert;
 
 export type SalesLead = typeof salesLeads.$inferSelect;
 export type NewSalesLead = typeof salesLeads.$inferInsert;

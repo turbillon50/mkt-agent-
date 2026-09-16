@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast-provider';
 import { IconPhone, IconWhatsApp, IconSend } from '@/components/icons';
-import { LEAD_STAGES, type LeadGrade, type LeadStage } from '@/src/sales/types';
+import { LEAD_STAGE_LABEL, LEAD_STAGES, type LeadGrade, type LeadStage } from '@/src/sales/types';
 
 interface PipelineLead {
   id: string;
@@ -44,16 +44,7 @@ interface TimelineMessage {
   createdAt: string;
 }
 
-const STAGE_LABEL: Record<LeadStage, string> = {
-  nuevo: 'Nuevos',
-  contactado: 'Contactados',
-  interesado: 'Interesados',
-  cita_agendada: 'Cita agendada',
-  visita_hecha: 'Visita hecha',
-  apartado: 'Apartado',
-  cerrado: 'Cerrado',
-  perdido: 'Perdido',
-};
+const STAGE_LABEL = LEAD_STAGE_LABEL;
 
 const GRADE_STYLE: Record<LeadGrade, string> = {
   A: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30',

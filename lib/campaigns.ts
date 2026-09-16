@@ -23,40 +23,16 @@ export async function getCampaign(orgId: string, id: string): Promise<Campaign |
   return rows[0] ?? null;
 }
 
-export async function createCampaign(
-  orgId: string,
-  userId: string,
-  input: {
-    name: string;
-    description?: string;
-    brandName?: string;
-    brandVoice?: string;
-    brandTopics?: string;
-    brandLanguage?: string;
-    audience?: string;
-    manifesto?: string;
-  },
-): Promise<Campaign> {
-  const slug = await uniqueSlug(orgId, input.name);
-  const [row] = await db
-    .insert(campaigns)
-    .values({
-      orgId,
-      userId,
-      name: input.name,
-      slug,
-      description: input.description,
-      brandName: input.brandName,
-      brandVoice: input.brandVoice,
-      brandTopics: input.brandTopics,
-      brandLanguage: input.brandLanguage ?? 'es',
-      audience: input.audience,
-      manifesto: input.manifesto,
-    })
-    .returning();
-  if (!row) throw new Error('Failed to create campaign.');
-  return row;
-}
+/**
+ * Aquí VIVÍA un `createCampaign` que insertaba la fila del proyecto y nada más:
+ * sin dueño en `project_members` y sin evento en la bitácora. Era un segundo
+ * camino de alta que se fue separando del bueno (`createProject`), y en la base
+ * quedó la prueba: el proyecto "goossip", creado el 16-sep a las 07:13 por esta
+ * ruta, con **0 miembros y 0 eventos**.
+ *
+ * Se borró en la corrida 4 en vez de arreglarlo: dos funciones que dan de alta
+ * lo mismo vuelven a separarse siempre. El único camino es `createProject`.
+ */
 
 export async function updateCampaign(
   orgId: string,

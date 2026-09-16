@@ -2,12 +2,17 @@ import Link from 'next/link';
 import { IconArrowLeft, IconCheck, IconLogoMark } from '@/components/icons';
 import { isClerkConfigured } from '@/lib/clerk-config';
 
+/**
+ * Lo que se lleva quien se da de alta, dicho en su idioma. Antes decía "Tu DB
+ * Neon · sin lock-in" y "Cron 24/7 en Vercel": con qué está hecho por dentro no
+ * es asunto de quien vende departamentos, y además estaba en inglés.
+ */
 const perks = [
-  'Plan semanal automático',
-  'Voz de marca con memoria',
-  'X + LinkedIn + WhatsApp',
-  'Tu DB Neon · sin lock-in',
-  'Cron 24/7 en Vercel',
+  'Tu plan de la semana, armado solo',
+  'Habla como tu marca, y se acuerda',
+  'Facebook, Instagram, WhatsApp y LinkedIn',
+  'Tus datos son tuyos y te los llevas',
+  'Trabaja las 24 horas, todos los días',
 ];
 
 export default async function Page() {
@@ -38,14 +43,14 @@ export default async function Page() {
         <div className="grid w-full max-w-5xl items-center gap-12 lg:grid-cols-2">
           <div className="hidden lg:block">
             <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-primary)]/30 bg-[var(--color-accent)] px-3 py-1 text-xs text-[var(--color-primary)]">
-              Early access · gratis
+              Acceso anticipado · gratis
             </span>
             <h1 className="mt-4 text-balance text-3xl font-semibold leading-tight">
               Empieza a operar tus redes <span className="brand-gradient">en automático</span>
             </h1>
             <p className="mt-3 text-balance text-[var(--color-muted-foreground)]">
               Crea tu cuenta y en 10 minutos Goossip está planeando, redactando y publicando por ti.
-              Sin tarjeta. Sin lock-in.
+              Sin tarjeta, y te puedes ir cuando quieras.
             </p>
             <ul className="mt-6 space-y-2 text-sm">
               {perks.map((p) => (
@@ -72,13 +77,13 @@ async function renderForm() {
       <div className="card-glow rounded-2xl p-8 text-center">
         <h2 className="text-lg font-semibold">Modo demo</h2>
         <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-          Clerk no está configurado. Entra directo al dashboard de muestra.
+          Aquí todavía no se pueden crear cuentas. Entra directo al panel de muestra.
         </p>
         <Link
           href="/dashboard"
           className="btn-brand mt-6 inline-flex w-full items-center justify-center rounded-md px-4 py-2 text-sm font-medium"
         >
-          Entrar al dashboard
+          Entrar al panel
         </Link>
       </div>
     );
@@ -115,7 +120,7 @@ async function renderForm() {
           className="underline hover:text-[var(--color-foreground)]"
           rel="noreferrer"
         >
-          Usa la página directa de Clerk
+          Entra por aquí
         </a>
         .
       </p>

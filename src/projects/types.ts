@@ -137,6 +137,11 @@ export const PROJECT_EVENT_TYPES = [
   'link_created',
   'link_used',
   'link_revoked',
+  // Campañas del proyecto (0015). `project_events.type` es texto libre en la
+  // base, así que sumarlos no pide migración.
+  'campaign_created',
+  'campaign_updated',
+  'campaign_deleted',
 ] as const;
 export type ProjectEventType = (typeof PROJECT_EVENT_TYPES)[number];
 
@@ -152,6 +157,9 @@ export const PROJECT_EVENT_LABEL: Record<ProjectEventType, string> = {
   link_created: 'Enlace de conexión creado',
   link_used: 'Enlace de conexión usado',
   link_revoked: 'Enlace de conexión cancelado',
+  campaign_created: 'Campaña creada',
+  campaign_updated: 'Campaña editada',
+  campaign_deleted: 'Campaña borrada',
 };
 
 // ---------------------------------------------------------------------------

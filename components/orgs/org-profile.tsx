@@ -11,7 +11,7 @@ export function OrgProfile() {
   if (!isClerkConfiguredClient) {
     return (
       <p className="p-4 text-sm text-[var(--color-muted-foreground)]">
-        Clerk no está configurado en este entorno.
+        Aquí todavía no se puede administrar la organización.
       </p>
     );
   }

@@ -71,16 +71,24 @@ async function main() {
     return;
   }
 
-  const project = await createProject(orgId, owner.id, {
-    name: 'V&LIVING',
-    kind: 'real_estate',
-    description: 'Departamentos en el Caribe mexicano. Campaña Caribe.',
-    audience: 'Compradores e inversionistas mexicanos y de EE. UU., 30-60 años.',
-    sellerPersona: PERSONA,
-    channels: CHANNELS,
-    rules,
-    mcpSources: [],
-  });
+  const project = await createProject(
+    orgId,
+    owner.id,
+    {
+      name: 'V&LIVING',
+      kind: 'real_estate',
+      description: 'Departamentos en el Caribe mexicano. Campaña Caribe.',
+      audience: 'Compradores e inversionistas mexicanos y de EE. UU., 30-60 años.',
+      sellerPersona: PERSONA,
+      channels: CHANNELS,
+      rules,
+      mcpSources: [],
+    },
+    // Sin este cuarto argumento el proyecto nace SIN dueño en
+    // `project_members`: funciona mientras quien lo creó mande en la
+    // organización, y deja de funcionar el día que no.
+    { clerkUserId: owner.clerkId, email: owner.email },
+  );
   await setActiveProject(orgId, owner.clerkId, project.id);
   console.log(`creado: ${project.name} (${project.slug}) id=${project.id} — proyecto activo de ${email}`);
 }
