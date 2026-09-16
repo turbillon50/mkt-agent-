@@ -420,10 +420,15 @@ async function pruebaDelBoton(browser: Browser, e: Escenario): Promise<{
     const body = await res.json().catch(() => null);
     if (body?.redirectUrl) redirectUrl = body.redirectUrl;
   });
-  await tarjeta.getByRole('button', { name: 'Conectar' }).click({ timeout: 20_000 });
-  await page.waitForURL(/composio\.dev|slack\.com/, { timeout: 45_000 }).catch(() => undefined);
+  // La ventana de permisos se abre APARTE (así quedó en main): la pestaña con
+  // la prueba es la HIJA, no esta. Se espera a que nazca.
+  const [hija] = await Promise.all([
+    context.waitForEvent('page', { timeout: 45_000 }).catch(() => null),
+    tarjeta.getByRole('button', { name: 'Conectar' }).click({ timeout: 20_000 }),
+  ]);
+  await hija?.waitForLoadState('networkidle', { timeout: 45_000 }).catch(() => undefined);
   await page.waitForTimeout(3500);
-  const url = page.url();
+  const url = hija?.url() ?? page.url();
 
   /**
    * Dos formas válidas de acabar, y las dos son la buena:
@@ -443,9 +448,16 @@ async function pruebaDelBoton(browser: Browser, e: Escenario): Promise<{
   console.log(`  ${pasoPorComposio ? '✓' : '✗'} la app manda al Connect Link: ${redirectUrl || 'no contestó'}`);
   console.log(`  ${conRedireccionDeComposio ? '✓' : '·'} y acabó en la pantalla de permisos con el redirect_uri de Composio`);
   console.log(`  destino: ${url.slice(0, 120)}…`);
-  await page.screenshot({ path: path.join(SALIDA, '03-connect-link-composio.png'), fullPage: true });
+  // La foto es de la ventana de permisos, que es donde está la prueba.
+  await (hija ?? page)
+    .screenshot({ path: path.join(SALIDA, '03-connect-link-composio.png'), fullPage: true })
+    .catch(() => undefined);
+  // Y la pantalla de Goossip detrás, esperando a que la persona termine.
+  await page
+    .screenshot({ path: path.join(SALIDA, '03b-esperando-en-goossip.png'), fullPage: false })
+    .catch(() => undefined);
   await context.close();
-  return { ok, url, ...lectura };
+  return { ok, url, redirectUrl, ...lectura };
 }
 
 async function limpiar(e: Escenario | null): Promise<void> {

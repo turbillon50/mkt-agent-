@@ -5,8 +5,9 @@
   "pantallasConErroresDeJs": 0,
   "pantallasConNotasInternas": 0,
   "connectLink": {
-    "ok": false,
-    "url": "http://127.0.0.1:3100/projects/90fc75d5-67c6-4810-8e57-2a89f8d9c755/conexiones",
+    "ok": true,
+    "url": "https://slack.com/workspace-signin?redir=%2Foauth%3Fclient_id%3D5240334389459.9465301853457%26scope%3D%26user_scope%3Dcalls%253Aread%2Bcalls%253Awrite%2Bchannels%253Ahistory%2Bchannels%253Aread%2Bchannels%253Awrite%2Bchat%253Awrite%2Bdnd%253Aread%2Bdnd%253Awrite%2Bemoji%253Aread%2Bfiles%253Aread%2Bfiles%253Awrite%2Bgroups%253Ahistory%2Bgroups%253Aread%2Bgroups%253Awrite%2Bim%253Ahistory%2Bim%253Aread%2Bim%253Awrite%2Blinks%253Aread%2Blinks%253Awrite%2Blists%253Aread%2Blists%253Awrite%2Bmpim%253Ahistory%2Bmpim%253Aread%2Bmpim%253Awrite%2Bpins%253Aread%2Bpins%253Awrite%2Breactions%253Aread%2Breactions%253Awrite%2Breminders%253Aread%2Breminders%253Awrite%2Bremote_files%253Aread%2Bremote_files%253Ashare%2Bsearch%253Aread%2Bsearch%253Aread.files%2Bsearch%253Aread.im%2Bsearch%253Aread.mpim%2Bsearch%253Aread.private%2Bsearch%253Aread.public%2Bsearch%253Aread.users%2Bteam%253Aread%2Busergroups%253Aread%2Busergroups%253Awrite%2Busers.profile%253Aread%2Busers.profile%253Awrite%2Busers%253Aread%2Busers%253Aread.email%2Busers%253Awrite%26redirect_uri%3Dhttps%253A%252F%252Fbackend.composio.dev%252Fapi%252Fv1%252Fauth-apps%252Fadd%26state%3Dproduction_ID%253AfxqIc0r7gBz4_apollo%26granular_bot_scope%3D1%26single_channel%3D0%26install_redirect%3D%26tracked%3D1%26user_default%3D0%26response_type%3Dcode%26team%3D%26original_team%3D",
+    "redirectUrl": "https://connect.composio.dev/link/lk_Vyy11qFPSLSZ",
     "grupos": [
       "Publicidad y publicación",
       "Fuentes de conocimiento y verdad",
@@ -23,7 +24,7 @@
   "detalle": [
     {
       "pantalla": "01-conexiones",
-      "ruta": "/projects/90fc75d5-67c6-4810-8e57-2a89f8d9c755/conexiones",
+      "ruta": "/projects/36d8dc61-097d-4a40-990a-8c23bb975563/conexiones",
       "tamano": "escritorio",
       "status": 200,
       "erroresJs": [],
@@ -32,7 +33,7 @@
     },
     {
       "pantalla": "01-conexiones",
-      "ruta": "/projects/90fc75d5-67c6-4810-8e57-2a89f8d9c755/conexiones",
+      "ruta": "/projects/36d8dc61-097d-4a40-990a-8c23bb975563/conexiones",
       "tamano": "movil",
       "status": 200,
       "erroresJs": [],
@@ -41,7 +42,7 @@
     },
     {
       "pantalla": "02-conexiones-abajo",
-      "ruta": "/projects/90fc75d5-67c6-4810-8e57-2a89f8d9c755/conexiones",
+      "ruta": "/projects/36d8dc61-097d-4a40-990a-8c23bb975563/conexiones",
       "tamano": "escritorio",
       "status": 200,
       "erroresJs": [],
@@ -50,7 +51,7 @@
     },
     {
       "pantalla": "02-conexiones-abajo",
-      "ruta": "/projects/90fc75d5-67c6-4810-8e57-2a89f8d9c755/conexiones",
+      "ruta": "/projects/36d8dc61-097d-4a40-990a-8c23bb975563/conexiones",
       "tamano": "movil",
       "status": 200,
       "erroresJs": [],
@@ -59,7 +60,7 @@
     },
     {
       "pantalla": "04-conocimiento",
-      "ruta": "/projects/90fc75d5-67c6-4810-8e57-2a89f8d9c755/conocimiento",
+      "ruta": "/projects/36d8dc61-097d-4a40-990a-8c23bb975563/conocimiento",
       "tamano": "escritorio",
       "status": 200,
       "erroresJs": [],
@@ -68,7 +69,7 @@
     },
     {
       "pantalla": "04-conocimiento",
-      "ruta": "/projects/90fc75d5-67c6-4810-8e57-2a89f8d9c755/conocimiento",
+      "ruta": "/projects/36d8dc61-097d-4a40-990a-8c23bb975563/conocimiento",
       "tamano": "movil",
       "status": 200,
       "erroresJs": [],
