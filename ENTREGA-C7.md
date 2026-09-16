@@ -6,7 +6,7 @@ Competencia y Marca dentro del proyecto: OK · auditoría de marca midiendo píx
 Prospección Maps: negocios 20 · convertidos 3 (+1 a la cola) · costo 1 búsqueda de 50 del mes
 Visor por red: formatos 9 (6 redes) · aprobación: OK (7 estados, transiciones validadas en el servidor) · publicado real: pendiente de Luis, ver Bloqueos
 Autonomía: niveles 4 · compuertas duras 4 (ningún nivel las abre) · lecciones guardadas: solo con corrección humana
-Deploy preview: READY — https://goossip-6191yu2kl-luis-projects-48b011f9.vercel.app · PR: #42
+Deploy preview: READY — https://goossip-6191yu2kl-luis-projects-48b011f9.vercel.app · PR: #44
 Bloqueos de Luis: [GOOGLE_MAPS_API_KEY tiene que entrar al entorno de Vercel o Prospección queda apagada en producción | Meta no deja leer la página de un rival sin "Page Public Content Access": es revisión de app del lado de Composio, no nuestra | correr `npm run db:migrate` al mergear (0019) | siguen los bloqueos viejos: CLERK_SECRET_KEY y NEXT_PUBLIC_CLERK_* fuera del entorno Preview, HIGGSFIELD_ACCESS_TOKEN, Canva en MOMENTUM, WABA en Business Manager]
 ```
 
