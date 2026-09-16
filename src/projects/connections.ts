@@ -68,7 +68,15 @@ function env(name: string): string | null {
  */
 export function channelAvailable(id: string): boolean {
   const c = connectorOrThrow(id);
-  if (c.via === 'composio') return c.managed && composioReady();
+  if (c.via === 'composio') {
+    // Con app propia dada de alta en Composio (auth config custom) el conector
+    // también se puede conectar: se declara por env, separado por comas.
+    const propias = (env('COMPOSIO_CUSTOM_AUTH_TOOLKITS') ?? '')
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean);
+    return (c.managed || propias.includes(c.slug)) && composioReady();
+  }
   switch (id) {
     case 'meta':
       return metaOwnAppEnabled() && Boolean(env('META_APP_ID') && env('META_APP_SECRET'));
