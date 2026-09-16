@@ -7,17 +7,28 @@ import { Sidebar } from './sidebar';
 import { BottomTabBar } from './bottom-tab-bar';
 import { ProjectsProvider } from './projects-provider';
 import { AssistantDrawer } from './assistant/assistant-drawer';
+import { AssistantPanel } from './assistant/assistant-panel';
+import { panelBoot, PANEL_DEFAULT } from './assistant/panel-prefs';
 import { SIDEBAR_BOOT } from './sidebar-prefs';
 import { cn } from '@/lib/utils';
+
+/** Lo que el servidor sabe del panel antes de que el navegador diga nada. */
+export interface PanelInicial {
+  ancho: number;
+  plegado: boolean;
+  autonomia: 'propone' | 'publica';
+}
 
 export function AppShell({
   children,
   isAdmin = false,
   orgName,
+  panel,
 }: {
   children: React.ReactNode;
   isAdmin?: boolean;
   orgName?: string;
+  panel?: PanelInicial;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -47,6 +58,20 @@ export function AppShell({
         264 px abierto y saltaría al estado guardado en cada navegación.
       */}
       <script dangerouslySetInnerHTML={{ __html: SIDEBAR_BOOT }} />
+      {/*
+        Lo mismo para el panel de Goossip, con una diferencia: aquí el valor de
+        respaldo lo manda el SERVIDOR (`users.settings`). `localStorage` no
+        existe la primera vez que alguien entra desde otra máquina, y ahí es
+        donde el panel tiene que nacer como lo dejó, no en 360 px.
+      */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: panelBoot({
+            ancho: panel?.ancho ?? PANEL_DEFAULT,
+            plegado: panel?.plegado ?? false,
+          }),
+        }}
+      />
       <div className="flex min-h-screen flex-col lg:flex-row">
         {/* Barra superior en móvil — respeta el notch/isla dinámica de verdad */}
         <header className="header-safe sticky top-0 z-30 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-background)]/90 backdrop-blur-xl lg:hidden">
@@ -113,11 +138,20 @@ export function AppShell({
         <BottomTabBar onMore={() => setOpen(true)} />
 
         {/*
-          El Asistente vive AQUÍ, en el shell, y no en una sección: por eso está
-          en las diez pantallas y por eso se abre con ⌘K sin perder de vista lo
-          que estabas mirando. Va dentro del `ProjectsProvider` porque siempre
-          es el Asistente de un proyecto — el activo.
+          Goossip vive AQUÍ, en el shell, y no en una sección: por eso está en
+          las diez pantallas. Va dentro del `ProjectsProvider` porque siempre es
+          el Goossip de un proyecto — el activo.
+
+          Son DOS montajes y uno solo se ve a la vez, lo decide CSS:
+          · `AssistantPanel` es la tercera columna, de 1280 px para arriba. Es
+            hermano de `<main>` en el mismo `flex`, que es lo que hace que el
+            contenido se REACOMODE en vez de quedar tapado.
+          · `AssistantDrawer` es el cajón de celular de siempre, intacto.
+
+          Decidirlo con CSS y no con un `useMediaQuery` es a propósito: un hook
+          pinta primero uno, luego el otro, y ese salto se ve en cada carga.
         */}
+        <AssistantPanel inicialAutonomia={panel?.autonomia} />
         <AssistantDrawer />
       </div>
     </ProjectsProvider>
