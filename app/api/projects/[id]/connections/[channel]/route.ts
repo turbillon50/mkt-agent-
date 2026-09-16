@@ -173,12 +173,22 @@ export async function DELETE(
   // dejaría al cliente con un permiso vivo en Facebook que Goossip ya no
   // enseña: lo peor de los dos mundos.
   let borradaEnComposio = false;
-  if (connectorBySlug(channel)?.via === 'composio') {
-    ({ borradaEnComposio } = await revokeComposioConnection(project, channel).catch(() => ({
-      borradaEnComposio: false,
-    })));
-  } else {
-    await revokeConnection(orgId, id, channel);
+  try {
+    if (connectorBySlug(channel)?.via === 'composio') {
+      ({ borradaEnComposio } = await revokeComposioConnection(project, channel));
+    } else {
+      await revokeConnection(orgId, id, channel);
+    }
+  } catch {
+    // No se contesta éxito si el proveedor conservó el permiso: la siguiente
+    // reconciliación lo volvería a pintar conectado y "Quitar" parecería no
+    // hacer nada. La fila local se conserva hasta confirmar la revocación.
+    return NextResponse.json(
+      {
+        error: `No pudimos retirar ${connectorBySlug(channel)?.label ?? channel} del proveedor. No se cambió la conexión; inténtalo otra vez.`,
+      },
+      { status: 502 },
+    );
   }
 
   // Los ids públicos que vivían en el proyecto también se van: dejarlos haría

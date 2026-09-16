@@ -23,6 +23,7 @@ import {
   type ConnectorGroup,
 } from '@/src/projects/types';
 import { ConnectionBadge } from './connection-badge';
+import { normalizeXHandle } from '@/src/projects/account-selection';
 
 /**
  * Las conexiones del proyecto, en tres grupos.
@@ -90,6 +91,8 @@ export function ConnectionsBoard({
   const [loading, setLoading] = useState(true);
   const [abierta, setAbierta] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState<string | null>(null);
+  const [cambioX, setCambioX] = useState<{ card: Card; replace: boolean } | null>(null);
+  const [xHandle, setXHandle] = useState('');
 
   const cargar = useCallback(async () => {
     try {
@@ -154,11 +157,20 @@ export function ConnectionsBoard({
     if (r) push({ title: `${label} desconectado`, variant: 'success' });
   }
 
-  async function conectarConComposio(canal: string, replace = false) {
-    if (replace) {
+  function prepararConexionX(card: Card, replace: boolean) {
+    setXHandle(String(card.data.expectedHandle ?? ''));
+    setCambioX({ card, replace });
+  }
+
+  async function conectarConComposio(
+    canal: string,
+    replace = false,
+    expectedHandle?: string | null,
+  ) {
+    if (replace && canal !== 'twitter') {
       const card = cards.find((c) => c.id === canal);
       const ok = window.confirm(
-        `¿Cambiar la cuenta de ${card?.label ?? canal}? La cuenta actual dejará de usarse y el proveedor te pedirá elegir otra.`,
+        `¿Cambiar la cuenta de ${card?.label ?? canal}? La cuenta actual dejará de usarse.`,
       );
       if (!ok) return;
     }
@@ -167,7 +179,7 @@ export function ConnectionsBoard({
       const res = await fetch('/api/connections/composio/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: projectId, toolkit: canal, replace }),
+        body: JSON.stringify({ project: projectId, toolkit: canal, replace, expectedHandle }),
       });
       const data = await res.json();
       if (res.ok && data.alreadyConnected) {
@@ -209,6 +221,19 @@ export function ConnectionsBoard({
             { cache: 'no-store' },
           );
           const s = await r.json();
+          if (s.terminal) {
+            window.clearInterval(cada);
+            try {
+              ventana.close();
+            } catch {
+              // La identidad ya fue rechazada del lado del servidor.
+            }
+            setTrabajando(null);
+            push({ title: s.error ?? 'X abrió una cuenta distinta.', variant: 'error' });
+            void cargar();
+            router.refresh();
+            return;
+          }
           if (s.connected) {
             window.clearInterval(cada);
             try {
@@ -308,6 +333,26 @@ export function ConnectionsBoard({
 
   return (
     <div className="space-y-6">
+      {cambioX && (
+        <XAccountSwitchDialog
+          currentHandle={cambioX.card.detail}
+          expectedHandle={xHandle}
+          busy={trabajando === 'twitter'}
+          onExpectedHandleChange={setXHandle}
+          onCancel={() => setCambioX(null)}
+          onContinue={() => {
+            const expected = normalizeXHandle(xHandle);
+            if (!expected) {
+              push({ title: 'Escribe el @usuario exacto que quieres conectar.', variant: 'error' });
+              return;
+            }
+            const intent = cambioX;
+            setCambioX(null);
+            void conectarConComposio('twitter', intent.replace, expected);
+          }}
+        />
+      )}
+
       {/* Una sola vez, arriba, y sin explicar la maquinaria. Meta Ads se dice
           aparte porque de verdad se ve distinto: la pantalla es de Facebook. */}
       <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/40 px-4 py-3 text-xs text-[var(--color-muted-foreground)]">
@@ -338,8 +383,20 @@ export function ConnectionsBoard({
                   trabajando={trabajando === card.id}
                   onAbrir={() => setAbierta(abierta === card.id ? null : card.id)}
                   onCerrar={() => setAbierta(null)}
-                  onConectarComposio={() => void conectarConComposio(card.id)}
-                  onCambiarCuenta={() => void conectarConComposio(card.id, true)}
+                  onConectarComposio={() => {
+                    if (card.id === 'twitter') {
+                      prepararConexionX(card, card.state !== 'sin_conectar');
+                      return;
+                    }
+                    void conectarConComposio(card.id);
+                  }}
+                  onCambiarCuenta={() => {
+                    if (card.id === 'twitter') {
+                      prepararConexionX(card, true);
+                      return;
+                    }
+                    void conectarConComposio(card.id, true);
+                  }}
                   onConectarMetaAds={() => void conectarConMetaAds()}
                   onDesconectar={() => void desconectar(card.id, card.label)}
                   onPedir={pedir}
@@ -370,6 +427,97 @@ export function ConnectionsBoard({
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Cambio seguro de cuenta en X
+// ---------------------------------------------------------------------------
+
+function XAccountSwitchDialog({
+  currentHandle,
+  expectedHandle,
+  busy,
+  onExpectedHandleChange,
+  onCancel,
+  onContinue,
+}: {
+  currentHandle: string | null;
+  expectedHandle: string;
+  busy: boolean;
+  onExpectedHandleChange: (value: string) => void;
+  onCancel: () => void;
+  onContinue: () => void;
+}) {
+  const normalized = normalizeXHandle(expectedHandle);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/55 p-3 backdrop-blur-sm sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="x-account-title"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target && !busy) onCancel();
+      }}
+    >
+      <div className="w-full max-w-md space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-2xl">
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
+            Cuenta exacta
+          </p>
+          <h2 id="x-account-title" className="text-lg font-semibold">
+            Cambiar la cuenta de X
+          </h2>
+          <p className="text-sm text-[var(--color-muted-foreground)]">
+            X reutiliza la sesión abierta y no muestra un selector. Primero cambia la sesión; después Goossip comprobará el @ antes de aceptarlo.
+          </p>
+        </div>
+
+        {currentHandle && (
+          <p className="rounded-xl border border-[var(--color-border)] px-3 py-2 text-xs">
+            Cuenta anterior: <span className="font-semibold">{currentHandle}</span>
+          </p>
+        )}
+
+        <label className="block space-y-1.5 text-xs font-medium" htmlFor="x-expected-handle">
+          @usuario que sí quieres conectar
+          <Input
+            id="x-expected-handle"
+            autoFocus
+            autoComplete="off"
+            spellCheck={false}
+            value={expectedHandle}
+            placeholder="@usuario"
+            onChange={(event) => onExpectedHandleChange(event.target.value)}
+          />
+        </label>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => {
+              window.open('https://x.com/logout', 'goossip-cambiar-cuenta-x', 'width=720,height=820,noopener=no');
+            }}
+          >
+            1. Cambiar sesión en X
+          </Button>
+          <Button type="button" className="btn-brand" disabled={busy || !normalized} onClick={onContinue}>
+            2. Conectar {normalized ?? 'esa cuenta'}
+          </Button>
+        </div>
+
+        <p className="text-[11px] text-[var(--color-muted-foreground)]">
+          Si X devuelve otro @, Goossip lo rechazará y lo desconectará automáticamente.
+        </p>
+
+        <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={onCancel}>
+          Cancelar
+        </Button>
+      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { logProjectEvent } from '@/src/projects/events';
 import { resolveConnectionLink } from '@/src/projects/links';
 import { connectorBySlug } from '@/src/projects/catalog';
 import { appOrigin } from '../../meta/start/route';
+import { normalizeXHandle } from '@/src/projects/account-selection';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   const projectId = String(body?.project ?? '');
   // `canal` es como lo llamaba la corrida 3; se acepta para no romper nada.
   const toolkit = String(body?.toolkit ?? body?.canal ?? '');
-  const replace = body?.replace === true;
+  let replace = body?.replace === true;
 
   const connector = connectorBySlug(toolkit);
   if (!connector || connector.via !== 'composio') {
@@ -40,6 +41,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const expectedHandle = toolkit === 'twitter' ? normalizeXHandle(body?.expectedHandle) : null;
+  if (toolkit === 'twitter' && !expectedHandle) {
+    return NextResponse.json(
+      { error: 'Escribe el @usuario exacto de X que quieres conectar.' },
+      { status: 400 },
+    );
+  }
+  // X OAuth 2 reutiliza la sesión abierta del navegador y no ofrece un selector
+  // de cuenta. Cada intento se trata como reemplazo y se valida el @ al volver.
+  if (toolkit === 'twitter') replace = true;
+
   const gate = await apiProject(projectId, { section: 'conexiones', capability: 'conectar' });
   if (!gate.ok) return gate.res;
 
@@ -51,6 +63,7 @@ export async function POST(req: NextRequest) {
       userId: gate.ctx.user.id,
       baseUrl: appOrigin(req),
       replace,
+      expectedHandle,
     });
 
     await logProjectEvent({

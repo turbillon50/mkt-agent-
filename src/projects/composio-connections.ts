@@ -22,10 +22,13 @@ import {
   composioReady,
   createConnectLink,
   deleteConnectedAccount,
+  executeTool,
   getConnectedAccount,
   listConnectedAccounts,
   type ConnectedAccount,
 } from '../composio/client';
+import { TWITTER_TOOL_VERSION, twitterIdentityArguments } from '../channels/twitter-contract';
+import { normalizeXHandle, xHandlesMatch } from './account-selection';
 import { connectorBySlug, connectorOrThrow, type Connector } from './catalog';
 import {
   channelAvailable,
@@ -93,6 +96,65 @@ export function handleDeCuenta(account: ConnectedAccount): string | null {
   return null;
 }
 
+function cuerpoDeTool(input: any): any {
+  const data = input?.data ?? input;
+  return data?.response_data ?? data?.response_dict ?? data;
+}
+
+/**
+ * Pregunta a X quién autorizó, usando la cuenta recién creada de forma
+ * explícita. No depende de la sesión del navegador ni del nombre genérico que
+ * Composio pueda traer en `account.data`.
+ */
+async function twitterHandleDeCuenta(project: Project, accountId: string): Promise<string> {
+  const result = await executeTool<any>('TWITTER_USER_LOOKUP_ME', {
+    userId: composioUserId(project.id),
+    connectedAccountId: accountId,
+    arguments: twitterIdentityArguments(),
+    version: TWITTER_TOOL_VERSION,
+  });
+  if (result.successful === false) throw new Error('X no confirmó la identidad autorizada.');
+  const body = cuerpoDeTool(result);
+  const data = body?.data ?? body?.user ?? body;
+  const handle = normalizeXHandle(data?.username);
+  if (!handle) throw new Error('X no devolvió el @usuario de la cuenta autorizada.');
+  return handle;
+}
+
+function expectedTwitterHandle(account: SocialAccount | null): string | null {
+  const meta = (account?.metadata ?? {}) as { expected_handle?: unknown };
+  return normalizeXHandle(meta.expected_handle);
+}
+
+async function rechazarCuentaTwitter(input: {
+  project: Project;
+  account: ConnectedAccount;
+  expected: string;
+  actual?: string | null;
+  connectedBy: string;
+  userId?: string | null;
+}): Promise<string> {
+  await deleteConnectedAccount(input.account.id);
+  const motivo = input.actual
+    ? `X abrió ${input.actual}, no ${input.expected}. La cuenta equivocada fue retirada; cambia la sesión de X e inténtalo otra vez.`
+    : `No pudimos confirmar que X abrió ${input.expected}. No dejamos ninguna cuenta conectada; inténtalo otra vez.`;
+  await stageConnection({
+    orgId: input.project.orgId,
+    projectId: input.project.id,
+    channel: 'twitter',
+    connectedBy: input.connectedBy,
+    userId: input.userId ?? null,
+    status: 'needs_reconnect',
+    resetIdentity: true,
+    metadata: {
+      expected_handle: input.expected,
+      via: 'composio',
+      motivo,
+    },
+  });
+  return motivo;
+}
+
 function connectorComposio(slug: string): Connector {
   const c = connectorOrThrow(slug);
   if (c.via !== 'composio') throw new Error(`${c.label} no se conecta por Composio.`);
@@ -120,6 +182,8 @@ export interface StartInput {
   linkToken?: string | null;
   /** Revoca la cuenta actual y abre OAuth para elegir otra. Solo tras confirmación explícita. */
   replace?: boolean;
+  /** En X, la cuenta exacta que debe regresar del permiso. Nunca se acepta otra. */
+  expectedHandle?: string | null;
 }
 
 export interface StartResult {
@@ -144,6 +208,7 @@ export function callbackUrlFor(
 
 export async function startComposioConnection(input: StartInput): Promise<StartResult> {
   const c = connectorComposio(input.toolkit);
+  const expectedHandle = c.slug === 'twitter' ? normalizeXHandle(input.expectedHandle) : null;
   if (!channelAvailable(c.slug as ConnectionChannel)) {
     throw new Error(`${c.label} no está disponible por ahora.`);
   }
@@ -160,7 +225,7 @@ export async function startComposioConnection(input: StartInput): Promise<StartR
   const previas = await listConnectedAccounts({
     userId: composioUserId(input.project.id),
     toolkitSlug: c.slug,
-  }).catch(() => [] as ConnectedAccount[]);
+  });
   const activa = previas.find((a) => a.status === 'ACTIVE');
   if (activa && !input.replace) {
     await saveConnection({
@@ -178,12 +243,13 @@ export async function startComposioConnection(input: StartInput): Promise<StartR
         via: 'composio',
         motivo: null,
         motivo_tecnico: null,
+        ...(expectedHandle ? { expected_handle: expectedHandle } : {}),
       },
     });
     return { redirectUrl: '', connectedAccountId: activa.id, authConfigId: auth.authConfigId, alreadyConnected: true };
   }
   for (const acc of previas) {
-    await deleteConnectedAccount(acc.id).catch(() => false);
+    await deleteConnectedAccount(acc.id);
   }
 
   const link = await createConnectLink({
@@ -200,11 +266,12 @@ export async function startComposioConnection(input: StartInput): Promise<StartR
     connectedBy: input.connectedBy,
     userId: input.userId ?? null,
     status: 'connecting',
-    resetIdentity: input.replace === true,
+    resetIdentity: input.replace === true || Boolean(expectedHandle),
     metadata: {
       connected_account_id: link.connected_account_id,
       auth_config_id: auth.authConfigId,
       via: 'composio',
+      ...(expectedHandle ? { expected_handle: expectedHandle } : {}),
     },
   });
 
@@ -314,14 +381,53 @@ export async function finishComposioConnection(input: {
     return { ok: false, status: account.status, motivo, connectedAccountId: account.id };
   }
 
-  const handle = handleDeCuenta(account);
+  const expectedHandle = c.slug === 'twitter' ? expectedTwitterHandle(fila) : null;
+  let providerHandle: string | null = null;
+  if (expectedHandle) {
+    try {
+      providerHandle = await twitterHandleDeCuenta(input.project, account.id);
+    } catch {
+      const motivo = await rechazarCuentaTwitter({
+        project: input.project,
+        account,
+        expected: expectedHandle,
+        connectedBy: input.connectedBy,
+        userId: input.userId,
+      });
+      return {
+        ok: false,
+        status: 'IDENTIDAD_NO_CONFIRMADA',
+        motivo,
+        connectedAccountId: account.id,
+      };
+    }
+    if (!xHandlesMatch(expectedHandle, providerHandle)) {
+      const motivo = await rechazarCuentaTwitter({
+        project: input.project,
+        account,
+        expected: expectedHandle,
+        actual: providerHandle,
+        connectedBy: input.connectedBy,
+        userId: input.userId,
+      });
+      return {
+        ok: false,
+        status: 'CUENTA_EQUIVOCADA',
+        motivo,
+        handle: providerHandle,
+        connectedAccountId: account.id,
+      };
+    }
+  }
+
+  const handle = providerHandle ?? handleDeCuenta(account);
   await saveConnection({
     orgId: input.project.orgId,
     projectId: input.project.id,
     channel: c.slug as ConnectionChannel,
     connectedBy: input.connectedBy,
     userId: input.userId ?? null,
-    label: handle ?? c.label,
+    label: handleDeCuenta(account) ?? handle ?? c.label,
     externalHandle: handle,
     verifiedAt: new Date(),
     metadata: {
@@ -330,6 +436,7 @@ export async function finishComposioConnection(input: {
       via: 'composio',
       motivo: null,
       motivo_tecnico: null,
+      ...(expectedHandle ? { expected_handle: expectedHandle } : {}),
     },
   });
 
@@ -549,14 +656,50 @@ export async function reconciliarConComposio(project: Project): Promise<Reconcil
 
   const locales = await listProjectAccounts(project.orgId, project.id);
   const porToolkit = new Map(locales.map((l) => [l.platform, l]));
+  const rechazadas = new Set<string>();
 
   // 1. Lo que está vivo allá: se enciende aquí, con la hora de AHORA. Acabamos
   //    de preguntar, así que este verde sí está respaldado.
   const ahora = new Date();
   for (const [slug, cuenta] of activas) {
     const fila = porToolkit.get(slug) ?? null;
+    const expectedHandle = slug === 'twitter' ? expectedTwitterHandle(fila) : null;
+    let providerHandle: string | null = null;
+    if (expectedHandle) {
+      try {
+        providerHandle = await twitterHandleDeCuenta(project, cuenta.id);
+      } catch {
+        await rechazarCuentaTwitter({
+          project,
+          account: cuenta,
+          expected: expectedHandle,
+          connectedBy: fila?.connectedBy ?? 'composio',
+          userId: fila?.userId ?? null,
+        });
+        rechazadas.add(slug);
+        activas.delete(slug);
+        out.enComposio = Math.max(0, out.enComposio - 1);
+        if (fila?.status === 'connected') out.apagados.push(slug);
+        continue;
+      }
+      if (!xHandlesMatch(expectedHandle, providerHandle)) {
+        await rechazarCuentaTwitter({
+          project,
+          account: cuenta,
+          expected: expectedHandle,
+          actual: providerHandle,
+          connectedBy: fila?.connectedBy ?? 'composio',
+          userId: fila?.userId ?? null,
+        });
+        rechazadas.add(slug);
+        activas.delete(slug);
+        out.enComposio = Math.max(0, out.enComposio - 1);
+        if (fila?.status === 'connected') out.apagados.push(slug);
+        continue;
+      }
+    }
     const yaEstaba = fila?.status === 'connected' && verificacionFresca(fila.verifiedAt, ahora);
-    const handle = handleDeCuenta(cuenta);
+    const handle = providerHandle ?? handleDeCuenta(cuenta);
     await saveConnection({
       orgId: project.orgId,
       projectId: project.id,
@@ -574,6 +717,7 @@ export async function reconciliarConComposio(project: Project): Promise<Reconcil
         via: 'composio',
         motivo: null,
         motivo_tecnico: null,
+        ...(expectedHandle ? { expected_handle: expectedHandle } : {}),
       },
     }).catch(() => undefined);
     // Los proyectos que YA estaban conectados antes de la corrida 13 no tienen
@@ -595,6 +739,7 @@ export async function reconciliarConComposio(project: Project): Promise<Reconcil
   //    que pasaba era que el usuario no había terminado la pantalla de permisos.
   for (const fila of locales) {
     if (((fila.metadata ?? {}) as { via?: string }).via !== 'composio') continue;
+    if (rechazadas.has(fila.platform)) continue;
     if (activas.has(fila.platform)) continue;
 
     const remota = caidas.get(fila.platform) ?? null;
@@ -678,15 +823,29 @@ export async function verifyAllProjects(limit = 500): Promise<{
 export async function revokeComposioConnection(
   project: Project,
   toolkit: string,
-): Promise<{ borradaEnComposio: boolean }> {
+): Promise<{ borradaEnComposio: boolean; borradasEnComposio: number }> {
   const fila = await filaDe(project.orgId, project.id, toolkit);
   const id = connectedAccountIdDe(fila);
-  let borradaEnComposio = false;
-  if (id) {
-    borradaEnComposio = await deleteConnectedAccount(id).catch(() => false);
+  // No alcanza con el id local: un intento abandonado puede haber dejado otra
+  // cuenta remota del mismo toolkit. Si una sobrevive, la reconciliación la
+  // volverá a encender y el botón "Quitar" parecerá roto.
+  const remotas = await listConnectedAccounts({
+    userId: composioUserId(project.id),
+    toolkitSlug: toolkit,
+  });
+  const ids = new Set(remotas.map((account) => account.id));
+  if (id) ids.add(id);
+
+  let borradasEnComposio = 0;
+  for (const accountId of ids) {
+    await deleteConnectedAccount(accountId);
+    borradasEnComposio += 1;
   }
   await revokeConnection(project.orgId, project.id, toolkit as ConnectionChannel);
-  return { borradaEnComposio };
+  return {
+    borradaEnComposio: borradasEnComposio > 0,
+    borradasEnComposio,
+  };
 }
 
 /**
