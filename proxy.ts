@@ -24,6 +24,9 @@ const isPublicRoute = createRouteMatcher([
   // ahi significa revision rechazada.
   '/terminos',
   '/privacidad',
+  // Archivo de firma con el que TikTok comprueba que el dominio es nuestro.
+  // Lo pide sin sesion; si contesta redirect, la app no se puede verificar.
+  '/tiktok(.*)',
   '/api/cron/(.*)',
   // Mantenimiento con CRON_SECRET, no sesión. Se listan uno por uno: el
   // comodín dejaba abierto todo lo nuevo bajo /api/admin, que ahora es el
@@ -93,7 +96,7 @@ export default function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|txt|docx?|xlsx?|zip|webmanifest)).*)',
     '/(api|trpc)(.*)',
   ],
 };
