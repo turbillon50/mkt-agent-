@@ -3,7 +3,6 @@
   "version": "0.2.0",
   "description": "Autonomous social media agent. OpenRouter LLM + Neon/pgvector semantic memory.",
   "private": true,
-  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "dev": "next dev",
