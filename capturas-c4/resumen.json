@@ -1,0 +1,965 @@
+{
+  "base": "http://127.0.0.1:3100",
+  "capturas": 24,
+  "http200": 24,
+  "pantallasConErroresDeJs": 0,
+  "pantallasConIngles": 0,
+  "menu": {
+    "1440x900": {
+      "abierto": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "ancho320": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 320,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "ancho200": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 200,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "anchoMedio": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 288,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "guardadoAncho": "288",
+      "trasRecarga": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 288,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "plegado": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 64,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 755,
+        "navContenido": 755,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 0,
+        "badges": [
+          "4"
+        ],
+        "plegado": true
+      },
+      "guardadoPlegado": "1",
+      "plegadoTrasRecarga": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 64,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 755,
+        "navContenido": 755,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 0,
+        "badges": [
+          "4"
+        ],
+        "plegado": true
+      },
+      "reabierto": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 288,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "erroresJs": []
+    },
+    "1280x720": {
+      "abierto": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "ancho320": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 320,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "ancho200": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 200,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "anchoMedio": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 288,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "guardadoAncho": "288",
+      "trasRecarga": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 288,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "plegado": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 64,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 575,
+        "navContenido": 575,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 0,
+        "badges": [
+          "4"
+        ],
+        "plegado": true
+      },
+      "guardadoPlegado": "1",
+      "plegadoTrasRecarga": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 64,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 575,
+        "navContenido": 575,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 0,
+        "badges": [
+          "4"
+        ],
+        "plegado": true
+      },
+      "reabierto": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 288,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "erroresJs": []
+    }
+  },
+  "movil": {
+    "barraVisible": true,
+    "botones": 5,
+    "menuFueraDePantalla": true,
+    "anchoMenuCajon": 288,
+    "cajon": {
+      "altoVentana": 844,
+      "altoMenu": 844,
+      "anchoMenu": 288,
+      "cajasConScroll": 1,
+      "quienScrollea": "nav",
+      "navAlto": 631,
+      "navContenido": 656,
+      "navScrollea": true,
+      "navScrollMaximo": 25,
+      "secciones": 15,
+      "etiquetasVisibles": 15,
+      "badges": [
+        "4"
+      ],
+      "plegado": false
+    },
+    "erroresJs": []
+  },
+  "detalle": [
+    {
+      "pantalla": "01-inicio-proyecto",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00",
+      "tamano": "1440x900",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/01-inicio-proyecto-abierto-1440x900.png"
+    },
+    {
+      "pantalla": "01-inicio-proyecto",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00",
+      "tamano": "1280x720",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/01-inicio-proyecto-abierto-1280x720.png"
+    },
+    {
+      "pantalla": "02-campanas",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/campanas",
+      "tamano": "1440x900",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/02-campanas-abierto-1440x900.png"
+    },
+    {
+      "pantalla": "02-campanas",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/campanas",
+      "tamano": "1280x720",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/02-campanas-abierto-1280x720.png"
+    },
+    {
+      "pantalla": "03-campana-detalle",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/campanas/732ebf0b-0d70-4364-91d0-4681c16fdc98",
+      "tamano": "1440x900",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/03-campana-detalle-abierto-1440x900.png"
+    },
+    {
+      "pantalla": "03-campana-detalle",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/campanas/732ebf0b-0d70-4364-91d0-4681c16fdc98",
+      "tamano": "1280x720",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/03-campana-detalle-abierto-1280x720.png"
+    },
+    {
+      "pantalla": "04-leads",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/leads",
+      "tamano": "1440x900",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/04-leads-abierto-1440x900.png"
+    },
+    {
+      "pantalla": "04-leads",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/leads",
+      "tamano": "1280x720",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/04-leads-abierto-1280x720.png"
+    },
+    {
+      "pantalla": "05-conexiones",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/conexiones",
+      "tamano": "1440x900",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/05-conexiones-abierto-1440x900.png"
+    },
+    {
+      "pantalla": "05-conexiones",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/conexiones",
+      "tamano": "1280x720",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/05-conexiones-abierto-1280x720.png"
+    },
+    {
+      "pantalla": "06-equipo",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/equipo",
+      "tamano": "1440x900",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/06-equipo-abierto-1440x900.png"
+    },
+    {
+      "pantalla": "06-equipo",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/equipo",
+      "tamano": "1280x720",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/06-equipo-abierto-1280x720.png"
+    },
+    {
+      "pantalla": "07-conocimiento",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/conocimiento",
+      "tamano": "1440x900",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/07-conocimiento-abierto-1440x900.png"
+    },
+    {
+      "pantalla": "07-conocimiento",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/conocimiento",
+      "tamano": "1280x720",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/07-conocimiento-abierto-1280x720.png"
+    },
+    {
+      "pantalla": "08-ajustes",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/ajustes",
+      "tamano": "1440x900",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/08-ajustes-abierto-1440x900.png"
+    },
+    {
+      "pantalla": "08-ajustes",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00/ajustes",
+      "tamano": "1280x720",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/08-ajustes-abierto-1280x720.png"
+    },
+    {
+      "pantalla": "09-proyectos",
+      "ruta": "/projects",
+      "tamano": "1440x900",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/09-proyectos-abierto-1440x900.png"
+    },
+    {
+      "pantalla": "09-proyectos",
+      "ruta": "/projects",
+      "tamano": "1280x720",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/09-proyectos-abierto-1280x720.png"
+    },
+    {
+      "pantalla": "10-asistente",
+      "ruta": "/chat",
+      "tamano": "1440x900",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/10-asistente-abierto-1440x900.png"
+    },
+    {
+      "pantalla": "10-asistente",
+      "ruta": "/chat",
+      "tamano": "1280x720",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/10-asistente-abierto-1280x720.png"
+    },
+    {
+      "pantalla": "11-admin",
+      "ruta": "/admin",
+      "tamano": "1440x900",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/11-admin-abierto-1440x900.png"
+    },
+    {
+      "pantalla": "11-admin",
+      "ruta": "/admin",
+      "tamano": "1280x720",
+      "estado": "abierto",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/11-admin-abierto-1280x720.png"
+    },
+    {
+      "pantalla": "12-selector-proyecto",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00",
+      "tamano": "1440x900",
+      "estado": "desplegado",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 900,
+        "altoMenu": 900,
+        "anchoMenu": 264,
+        "cajasConScroll": 0,
+        "quienScrollea": null,
+        "navAlto": 687,
+        "navContenido": 687,
+        "navScrollea": false,
+        "navScrollMaximo": 0,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/12-selector-proyecto-desplegado-1440x900.png"
+    },
+    {
+      "pantalla": "12-selector-proyecto",
+      "ruta": "/projects/05fa5a6d-7409-445d-99ed-c65771902a00",
+      "tamano": "1280x720",
+      "estado": "desplegado",
+      "status": 200,
+      "erroresJs": [],
+      "ingles": [],
+      "menu": {
+        "altoVentana": 720,
+        "altoMenu": 720,
+        "anchoMenu": 264,
+        "cajasConScroll": 1,
+        "quienScrollea": "nav",
+        "navAlto": 507,
+        "navContenido": 656,
+        "navScrollea": true,
+        "navScrollMaximo": 149,
+        "secciones": 15,
+        "etiquetasVisibles": 15,
+        "badges": [
+          "4"
+        ],
+        "plegado": false
+      },
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c4/12-selector-proyecto-desplegado-1280x720.png"
+    }
+  ]
+}

@@ -17,6 +17,11 @@ export interface IngestInput {
   email: string | null;
   source: LeadSource;
   sourceRef: string | null;
+  /**
+   * De qué CAMPAÑA vino (0015). Nulo cuando ninguna campaña reclama el
+   * formulario: el lead se queda en el proyecto sin campaña, que es la verdad.
+   */
+  marketingCampaignId?: string | null;
   /** Fecha original del lead (Meta), no la de importación. */
   createdAt: Date;
   raw?: Record<string, unknown>;
@@ -64,6 +69,7 @@ export async function ingestLead(input: IngestInput): Promise<IngestResult> {
     orgId: project.orgId,
     userId: project.userId,
     campaignId: project.id,
+    marketingCampaignId: input.marketingCampaignId ?? null,
     phone,
     email: input.email,
     fullName: input.fullName,

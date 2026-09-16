@@ -33,13 +33,13 @@ export default async function Page() {
               Bienvenido a <span className="brand-gradient">Goossip</span>
             </h1>
             <p className="mt-3 text-balance text-[var(--color-muted-foreground)]">
-              Tu agente social autónomo. Inicia sesión para volver a tu dashboard, tu plan de
-              contenido y tus conversaciones de WhatsApp.
+              Tu vendedor que no duerme. Entra para volver a tus leads, a tu plan de contenido
+              y a tus conversaciones de WhatsApp.
             </p>
             <ul className="mt-6 space-y-2 text-sm text-[var(--color-muted-foreground)]">
-              <li>• Plan semanal automático para X y LinkedIn</li>
-              <li>• WhatsApp con auto-reply opcional</li>
-              <li>• Tu propia base de datos en Neon</li>
+              <li>• Tu plan de la semana, armado solo</li>
+              <li>• WhatsApp que contesta por ti, si tú quieres</li>
+              <li>• Todos tus leads y sus conversaciones en un solo lugar</li>
             </ul>
           </div>
 
@@ -58,13 +58,13 @@ async function renderForm() {
       <div className="card-glow rounded-2xl p-8 text-center">
         <h2 className="text-lg font-semibold">Modo demo</h2>
         <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-          La autenticación con Clerk no está configurada. Entra directo al dashboard de muestra.
+          Aquí todavía no se puede iniciar sesión. Entra directo al panel de muestra.
         </p>
         <Link
           href="/dashboard"
           className="btn-brand mt-6 inline-flex w-full items-center justify-center rounded-md px-4 py-2 text-sm font-medium"
         >
-          Entrar al dashboard
+          Entrar al panel
         </Link>
       </div>
     );
@@ -94,6 +94,11 @@ async function renderForm() {
           }}
         />
       </div>
+      {/*
+        Salida de emergencia cuando el formulario de arriba no monta. No dice de
+        quién es la pantalla: el nombre de nuestro proveedor de contraseñas no
+        le resuelve nada a quien solo quiere entrar.
+      */}
       <p className="text-center text-xs text-[var(--color-muted-foreground)]">
         ¿No carga el formulario?{' '}
         <a
@@ -101,7 +106,7 @@ async function renderForm() {
           className="underline hover:text-[var(--color-foreground)]"
           rel="noreferrer"
         >
-          Usa la página directa de Clerk
+          Entra por aquí
         </a>
         .
       </p>

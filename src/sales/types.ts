@@ -30,6 +30,35 @@ export const LEAD_STAGES = [
 ] as const;
 export type LeadStage = (typeof LEAD_STAGES)[number];
 
+/**
+ * Un solo diccionario para las etapas. Vivía dentro del pipeline; en cuanto una
+ * segunda pantalla (el detalle de campaña) necesitó las mismas palabras, se
+ * subió aquí — dos listas de etiquetas para lo mismo es como empiezan a decir
+ * cosas distintas.
+ */
+export const LEAD_STAGE_LABEL: Record<LeadStage, string> = {
+  nuevo: 'Nuevos',
+  contactado: 'Contactados',
+  interesado: 'Interesados',
+  cita_agendada: 'Cita agendada',
+  visita_hecha: 'Visita hecha',
+  apartado: 'Apartado',
+  cerrado: 'Cerrado',
+  perdido: 'Perdido',
+};
+
+/**
+ * El mismo estado, hablando de UNA persona. El de arriba titula la columna del
+ * pipeline ("Nuevos", 12); este etiqueta a Ana Ramírez, y decirle "Nuevos" a
+ * una sola persona se lee como un error de la app.
+ */
+export const LEAD_STAGE_LABEL_ONE: Record<LeadStage, string> = {
+  ...LEAD_STAGE_LABEL,
+  nuevo: 'Nuevo',
+  contactado: 'Contactado',
+  interesado: 'Interesado',
+};
+
 export const LEAD_SOURCES = ['meta_leadgen', 'site', 'manual', 'import'] as const;
 export type LeadSource = (typeof LEAD_SOURCES)[number];
 

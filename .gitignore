@@ -17,3 +17,6 @@ services/baileys/sessions-goossip/
 # El resumen medido sí se versiona.
 capturas-c3/*
 !capturas-c3/resumen.json
+capturas-c4/*
+!capturas-c4/resumen.json
+!capturas-c4/barrido-clerk.json

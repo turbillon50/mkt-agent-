@@ -18,7 +18,7 @@ export function CreateOrgStep() {
   if (!isClerkConfiguredClient) {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Clerk no está configurado en este entorno.
+        Aquí todavía no se pueden crear organizaciones.
       </p>
     );
   }

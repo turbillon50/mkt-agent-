@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchLeadgen, parseLeadgenWebhook, verifyChallenge, verifySignature } from '@/lib/meta-graph';
 import { resolveProjectByMeta } from '@/lib/projects';
 import { ingestLead } from '@/src/sales/ingest';
+import { campaignForForm } from '@/src/marketing/campaigns';
 import { metaPageToken } from '@/src/projects/connections';
 import { logWebhook } from '@/src/orgs/repo';
 
@@ -55,6 +56,14 @@ export async function POST(req: NextRequest) {
       // El token del OAuth del proyecto gana sobre el de env. Ver `metaPageToken`.
       const pageToken = await metaPageToken(project).catch(() => null);
       const fields = await fetchLeadgen(project.slug, change.leadgenId, pageToken);
+      // De qué campaña vino: la que tenga ESE formulario entre sus `meta_refs`.
+      // Si ninguna lo reclama entra `null` y el lead se queda en el proyecto
+      // sin campaña — inventarle una arruinaría el reporte de la campaña.
+      const marketingCampaignId = await campaignForForm(
+        project.orgId,
+        project.id,
+        fields.formId ?? change.formId,
+      ).catch(() => null);
       const r = await ingestLead({
         project,
         fullName: fields.fullName || null,
@@ -62,6 +71,7 @@ export async function POST(req: NextRequest) {
         email: fields.email,
         source: 'meta_leadgen',
         sourceRef: change.leadgenId,
+        marketingCampaignId,
         createdAt: fields.createdAt,
         raw: { ...fields.raw, form_id: fields.formId ?? change.formId, page_id: change.pageId },
       });
@@ -69,6 +79,7 @@ export async function POST(req: NextRequest) {
         leadgen_id: change.leadgenId,
         project: project.slug,
         lead_id: r.lead.id,
+        campana: marketingCampaignId,
         creado: r.created,
         grado: r.lead.grade,
         puntaje: r.lead.score,

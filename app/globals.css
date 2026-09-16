@@ -280,3 +280,125 @@ h1, h2, h3, h4 {
 .tabbar-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* ---------------------------------------------------------------------------
+   Menú lateral (corrida 4)
+
+   Tres cosas viven aquí y no en Tailwind, por razones distintas:
+
+   1. El ANCHO es una variable del `<html>` que escribe un script que corre
+      antes del primer pintado. Si fuera estado de React, cada carga pintaría
+      264 px y luego saltaría al ancho guardado.
+   2. El PLEGADO es CSS mirando `html[data-sidebar]`. Por lo mismo: sin
+      parpadeo y sin desacuerdo entre el HTML del servidor y el del cliente.
+   3. Todo lo de plegado vive DENTRO de `min-width: 1024px`. Abajo de eso el
+      menú es el cajón de siempre y esta corrida no lo toca.
+--------------------------------------------------------------------------- */
+
+/* El item activo se marca con FONDO, no con una barrita de color al borde.
+   La barrita obligaba a `position:relative` en cada fila y, plegado, quedaba
+   pegada al ícono como un defecto de pintura. */
+.fill-ghost-selected {
+  background: linear-gradient(
+    100deg,
+    color-mix(in oklab, var(--color-primary) 14%, transparent),
+    color-mix(in oklab, var(--color-primary) 7%, transparent)
+  );
+  color: var(--color-foreground);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-primary) 16%, transparent);
+}
+
+/* El tirador del borde derecho. 6 px de ancho, invisible hasta que lo tocas:
+   una línea permanente en el borde se lee como un error de alineación. */
+.sidebar-grip {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  touch-action: none;
+  z-index: 20;
+}
+.sidebar-grip::after {
+  content: '';
+  position: absolute;
+  inset: 0 2px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.sidebar-grip:hover::after,
+.sidebar-grip[data-arrastrando='si']::after {
+  opacity: 0.55;
+}
+/* Mientras se arrastra, el cursor manda en toda la ventana y nada se
+   selecciona: si no, a la tercera pasada el puntero agarra el texto del menú. */
+html[data-sidebar-drag='si'],
+html[data-sidebar-drag='si'] * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+/* Plegar y desplegar se anima; arrastrar NO — una transición de 160 ms sobre el
+   ancho hace que el borde vaya siempre atrás del dedo. La de `transform` es la
+   del cajón de celular y se conserva: esta regla gana sobre la utilidad de
+   Tailwind por orden de cascada, así que tiene que declarar las dos. */
+.sidebar-aside {
+  transition: width 160ms ease, transform 200ms ease-out;
+}
+html[data-sidebar-drag='si'] .sidebar-aside {
+  transition: transform 200ms ease-out;
+}
+
+@media (min-width: 1024px) {
+  html[data-sidebar='plegado'] .sidebar-label,
+  html[data-sidebar='plegado'] .sidebar-solo-abierto {
+    display: none;
+  }
+
+  html[data-sidebar='plegado'] .sidebar-fila {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* El badge se vuelve punto: el número no cabe en 64 px, pero la señal de
+     "aquí hay algo que atender" no se puede perder al plegar. */
+  html[data-sidebar='plegado'] .sidebar-badge {
+    position: absolute;
+    top: 6px;
+    right: 12px;
+    min-width: 0;
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border-radius: 999px;
+    font-size: 0;
+    line-height: 0;
+    overflow: hidden;
+  }
+
+  /* El nombre al pasar el ratón lo pinta el navegador con el `title` de cada
+     renglón, no un globito de CSS: la zona de navegación scrollea y eso obliga
+     a recortar también en horizontal, así que un globito propio salía cortado
+     por el borde derecho (se vio en la captura de la primera vuelta). */
+
+  html[data-sidebar='plegado'] .sidebar-grip {
+    cursor: default;
+  }
+  html[data-sidebar='plegado'] .sidebar-grip::after {
+    opacity: 0;
+  }
+}
+
+/* El selector de organización de Clerk, vestido como un control de la casa.
+   Plegado se queda solo el ícono: el nombre de la org no cabe en 64 px. */
+@media (min-width: 1024px) {
+  html[data-sidebar='plegado'] .org-switcher .cl-organizationSwitcherTrigger__organizationName,
+  html[data-sidebar='plegado'] .org-switcher .cl-organizationSwitcherTriggerIcon {
+    display: none;
+  }
+}

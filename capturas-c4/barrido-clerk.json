@@ -1,0 +1,63 @@
+{
+  "branding": {
+    "brandedAntes": true,
+    "intentos": [
+      {
+        "campo": "branded",
+        "status": 204
+      },
+      {
+        "campo": "clerk_branding",
+        "status": 204
+      },
+      {
+        "campo": "show_clerk_branding",
+        "status": 204
+      }
+    ],
+    "brandedDespues": true,
+    "sePudoQuitar": false
+  },
+  "medidas": [
+    {
+      "url": "https://vliving.life/sign-in",
+      "status": 200,
+      "nodosDeClerk": 45,
+      "montoElWidget": true,
+      "ingles": [
+        "secured by"
+      ],
+      "secured": true,
+      "muestra": "goossip Volver Bienvenido a Goossip Tu agente social autónomo. Inicia sesión para volver a tu dashboard, tu plan de contenido y tus conversaciones de WhatsApp. • Plan semanal automático para X y LinkedIn • WhatsApp con auto-reply opcional • Tu propia base de datos en Neon Iniciar sesión para continuar con goossip Correo electrónico o nombre de usuario Continuar ¿No tiene cuenta? Registrarse Secure"
+    },
+    {
+      "url": "https://vliving.life/sign-up",
+      "status": 200,
+      "nodosDeClerk": 54,
+      "montoElWidget": false,
+      "ingles": [
+        "secured by"
+      ],
+      "secured": true,
+      "muestra": "goossip Volver Early access · gratis Empieza a operar tus redes en automático Crea tu cuenta y en 10 minutos Goossip está planeando, redactando y publicando por ti. Sin tarjeta. Sin lock-in. Plan semanal automático Voz de marca con memoria X + LinkedIn + WhatsApp Tu DB Neon · sin lock-in Cron 24/7 en Vercel Crea tu cuenta para continuar con goossip Nombre de usuario Correo electrónico Contraseña C"
+    },
+    {
+      "url": "http://127.0.0.1:3100/sign-in",
+      "status": 200,
+      "nodosDeClerk": 0,
+      "montoElWidget": false,
+      "ingles": [],
+      "secured": false,
+      "muestra": "goossip Volver Bienvenido a Goossip Tu vendedor que no duerme. Entra para volver a tus leads, a tu plan de contenido y a tus conversaciones de WhatsApp. • Tu plan de la semana, armado solo • WhatsApp que contesta por ti, si tú quieres • Todos tus leads y sus conversaciones en un solo lugar ¿No carga el formulario? Entra por aquí."
+    },
+    {
+      "url": "http://127.0.0.1:3100/",
+      "status": 200,
+      "nodosDeClerk": 0,
+      "montoElWidget": false,
+      "ingles": [],
+      "secured": false,
+      "muestra": "goossip Funciones Cómo funciona Precio Entrar Empezar gratis Tu vendedor, contestando · 24/7 Tus leads, atendidos, antes de que se enfríen Goossip recibe a la gente de tus anuncios, la califica, le contesta con tu tono y te avisa cuando alguien está listo para comprar. Un proyecto, sus canales y su equipo. Empezar gratis Ya tengo cuenta Sin tarjeta · Facebook e Instagram · WhatsApp · Tu voz, tus p"
+    }
+  ]
+}
