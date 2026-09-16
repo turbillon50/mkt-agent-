@@ -1,9 +1,7 @@
-import { ComingSoon } from '@/components/coming-soon';
+import { ProjectsBoard } from '@/components/projects/projects-board';
+
+export const dynamic = 'force-dynamic';
+
 export default function Page() {
-  return (
-    <ComingSoon
-      title="Proyectos"
-      description="Cada proyecto agrupará un plan, su voz, su audiencia y su backlog."
-    />
-  );
+  return <ProjectsBoard />;
 }

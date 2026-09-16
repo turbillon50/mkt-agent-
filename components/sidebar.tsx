@@ -17,6 +17,7 @@ import {
   IconPlug,
   IconPhone,
   IconTarget,
+  IconShield,
 } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { ActiveCampaignChip } from './active-campaign-chip';
@@ -35,19 +36,24 @@ type Item = {
 const items: Item[] = [
   { href: '/dashboard', label: 'Inicio', Icon: IconHome },
   { href: '/chat', label: 'Chats', Icon: IconChat },
+  { href: '/projects', label: 'Proyectos', Icon: IconFolder },
+  { href: '/leads', label: 'Pipeline', Icon: IconTarget },
+  { href: '/automations', label: 'Automatizaciones', Icon: IconBolt },
   { href: '/whatsapp', label: 'WhatsApp', Icon: IconPhone, soon: true },
   { href: '/knowledge', label: 'Memoria', Icon: IconBrain },
   { href: '/campaigns', label: 'Campañas', Icon: IconFolder },
   { href: '/ads', label: 'Google Ads', Icon: IconTarget },
-  { href: '/leads', label: 'Prospectos', Icon: IconUsers },
+  { href: '/prospectos', label: 'Prospección', Icon: IconUsers },
   { href: '/competencia', label: 'Competencia', Icon: IconBarChart },
   { href: '/posts', label: 'Contenido', Icon: IconFile },
   { href: '/plan', label: 'Calendario', Icon: IconCalendar },
   { href: '/analytics', label: 'Analítica', Icon: IconBarChart, soon: true },
   { href: '/audience', label: 'Audiencias', Icon: IconUsers, soon: true },
-  { href: '/automations', label: 'Automatizaciones', Icon: IconBolt, soon: true },
   { href: '/integrations', label: 'Integraciones', Icon: IconPlug },
 ];
+
+/** Solo para `users.is_admin`: el nivel por encima de los tenants. */
+const adminItems: Item[] = [{ href: '/agency', label: 'Agencia', Icon: IconShield }];
 
 const networks = [
   { name: 'WhatsApp', dot: '#2ba87a', enabled: false },
@@ -59,8 +65,9 @@ const networks = [
   { name: 'TikTok', dot: '#d6336c', enabled: false },
 ];
 
-export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function Sidebar({ onNavigate, isAdmin = false }: { onNavigate?: () => void; isAdmin?: boolean }) {
   const pathname = usePathname();
+  const navItems = isAdmin ? [...adminItems, ...items] : items;
   return (
     <div className="glass flex h-full w-full flex-col gap-4 p-4">
       <div className="flex items-center gap-2.5 px-2 pt-2">
@@ -96,7 +103,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <ActiveCampaignChip onNavigate={onNavigate} />
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
-        {items.map(({ href, label, Icon, soon }) => {
+        {navItems.map(({ href, label, Icon, soon }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
           return (
             <Link

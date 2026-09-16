@@ -2,11 +2,15 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     { "path": "/api/cron/run", "schedule": "0 9,15,21 * * *" },
-    { "path": "/api/cron/plan", "schedule": "0 6 * * 1" }
+    { "path": "/api/cron/plan", "schedule": "0 6 * * 1" },
+    { "path": "/api/cron/queue", "schedule": "* * * * *" }
   ],
   "functions": {
     "app/api/chat/route.ts": { "maxDuration": 60 },
     "app/api/cron/run/route.ts": { "maxDuration": 300 },
-    "app/api/cron/plan/route.ts": { "maxDuration": 120 }
+    "app/api/cron/plan/route.ts": { "maxDuration": 120 },
+    "app/api/cron/queue/route.ts": { "maxDuration": 60 },
+    "app/api/webhooks/meta/leadgen/route.ts": { "maxDuration": 60 },
+    "app/api/webhooks/whatsapp/route.ts": { "maxDuration": 60 }
   }
 }

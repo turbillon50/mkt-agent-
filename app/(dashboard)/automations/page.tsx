@@ -1,9 +1,7 @@
-import { ComingSoon } from '@/components/coming-soon';
+import { QueueBoard } from '@/components/sales/queue-board';
+
+export const dynamic = 'force-dynamic';
+
 export default function Page() {
-  return (
-    <ComingSoon
-      title="Automatizaciones"
-      description="Disparadores, reglas y workflows; el cron 24/7 ya corre desde Vercel."
-    />
-  );
+  return <QueueBoard />;
 }

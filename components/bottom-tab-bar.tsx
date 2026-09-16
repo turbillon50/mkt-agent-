@@ -1,14 +1,14 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { IconHome, IconChat, IconFile, IconUsers, IconMenu } from '@/components/icons';
+import { IconHome, IconChat, IconBolt, IconTarget, IconMenu } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
 const TABS = [
   { href: '/dashboard', label: 'Inicio', Icon: IconHome },
   { href: '/chat', label: 'Chat', Icon: IconChat },
-  { href: '/posts', label: 'Contenido', Icon: IconFile },
-  { href: '/leads', label: 'Prospectos', Icon: IconUsers },
+  { href: '/leads', label: 'Pipeline', Icon: IconTarget },
+  { href: '/automations', label: 'Cola', Icon: IconBolt },
 ];
 
 export function BottomTabBar({ onMore }: { onMore: () => void }) {
