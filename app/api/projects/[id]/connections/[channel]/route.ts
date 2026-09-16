@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiProject } from '@/lib/project-access';
 import { updateProject } from '@/lib/projects';
 import {
+  olvidarTokenMetaAds,
   projectConnections,
   revokeConnection,
   saveConnection,
@@ -195,6 +196,11 @@ export async function DELETE(
     await updateProject(orgId, id, {
       channels: sanitizeChannels({ ...(project.channels ?? {}), waba_phone_id: '' }),
     });
+  }
+  // Meta Ads va con la app propia (corrida 11): no hay nada que borrar en
+  // Composio, pero sí un permiso del cliente guardado de nuestro lado. Se va.
+  if (channel === 'metaads') {
+    await olvidarTokenMetaAds(orgId, id);
   }
   if (channel === 'mcp') {
     await updateProject(orgId, id, { mcpSources: [] });

@@ -415,21 +415,41 @@ export function toolsParaProyecto(ctx: AgentContext) {
   const estadoDelProyecto = createTool({
     id: 'estado-del-proyecto',
     description:
-      'Cómo está este proyecto ahora: qué canales tiene conectados, si ya cargó su marca y cuántos leads trae sin contactar. Úsalo cuando pregunten "¿cómo vamos?" o antes de prometer algo que necesite una conexión.',
+      'Cómo está este proyecto ahora: qué canales tiene conectados, si ya cargó su marca, cuántos leads trae sin contactar y cómo va la pauta de Meta (gasto y costo por lead). Úsalo cuando pregunten "¿cómo vamos?", "¿cuánto llevo gastado?" o antes de prometer algo que necesite una conexión.',
     inputSchema: z.object({}),
     outputSchema: z.object({ resumen: z.string() }),
     execute: async () => {
       const { pendientesDelProyecto } = await import('../assistant/guia');
       const g = await pendientesDelProyecto({ orgId, project, kit: ctx.kit });
+
+      // Corrida 11. El gasto de la pauta es la pregunta que Luis hace cada
+      // mañana, y hasta hoy el Asistente no la podía contestar: leía canales y
+      // leads, nunca dinero. Va aquí y no en una herramienta aparte porque
+      // "¿cómo vamos?" y "¿cuánto llevo gastado?" son la misma pregunta.
+      //
+      // Si Meta Ads no está conectado o Facebook no contesta, esto NO rompe el
+      // resumen: se calla esa línea y las demás salen igual.
+      let pauta = '';
+      try {
+        const { resumenAnunciosMeta, resumenEnUnaLinea } = await import('../channels/metaads');
+        const r = await resumenAnunciosMeta(project);
+        if (r.conectado) pauta = resumenEnUnaLinea(r);
+      } catch {
+        pauta = '';
+      }
+
       return {
         resumen: [
           `Canales conectados: ${g.conectados.length ? g.conectados.join(', ') : 'ninguno todavía'}.`,
           g.kitCompleto ? 'La marca ya está cargada.' : 'Todavía no hay kit de marca.',
           `Leads sin contactar: ${g.leadsSinContactar}.`,
+          pauta,
           g.sugerencias.length
             ? `Lo que yo haría ahora: ${g.sugerencias.map((s) => s.texto).join(' · ')}`
             : 'No hay nada urgente.',
-        ].join(' '),
+        ]
+          .filter(Boolean)
+          .join(' '),
       };
     },
   });

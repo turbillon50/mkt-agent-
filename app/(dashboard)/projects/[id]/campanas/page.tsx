@@ -5,7 +5,8 @@ import { ProjectHeader } from '@/components/projects/project-header';
 import { guardProject } from '@/components/projects/project-guard';
 import { CampaignsBoard } from '@/components/marketing/campaigns-board';
 import { AdsCampaigns } from '@/components/ads/campaigns';
-import { googleAdsAvailable, projectConnections } from '@/src/projects/connections';
+import { MetaAds } from '@/components/ads/meta-ads';
+import { channelAvailable, googleAdsAvailable, projectConnections } from '@/src/projects/connections';
 import type { ConnectionChannel } from '@/src/projects/types';
 
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,7 @@ export default async function CampanasPage({ params }: { params: Promise<{ id: s
     leadsCount?: number;
   }>;
   const googleListo = googleAdsAvailable();
+  const metaAdsListo = channelAvailable('metaads');
 
   return (
     <div className="space-y-6">
@@ -73,6 +75,26 @@ export default async function CampanasPage({ params }: { params: Promise<{ id: s
         canalesConectados={conectados}
         formulariosMeta={disponibles}
       />
+
+      {/*
+        Corrida 11. Los anuncios de Meta van ANTES que los de Google porque es
+        donde está la pauta de los clientes de hoy, y por lo mismo que los de
+        Google: son de la cuenta del cliente, se leen de allá y se administran
+        allá. Goossip aquí solo contesta "¿cuánto llevo gastado y cuánto me está
+        costando cada lead?", que es la pregunta de cada mañana.
+      */}
+      {metaAdsListo && (
+        <section className="space-y-3 border-t border-[var(--color-border)] pt-6">
+          <div>
+            <h2 className="text-lg font-semibold">Anuncios de Meta</h2>
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Lo que está corriendo en tu cuenta de Meta Ads, lo que llevas gastado y cuánto te
+              cuesta cada lead.
+            </p>
+          </div>
+          <MetaAds projectId={id} />
+        </section>
+      )}
 
       {/*
         Los anuncios de Google son de la CUENTA de Google Ads, no de Goossip: se

@@ -39,7 +39,7 @@ import { ConnectionBadge } from './connection-badge';
 interface Card {
   id: string;
   slug: string;
-  via: 'composio' | 'goossip';
+  via: 'composio' | 'goossip' | 'meta_own_app';
   group: ConnectorGroup;
   label: string;
   blurb: string;
@@ -118,6 +118,9 @@ export function ConnectionsBoard({
     const conectado = search.get('conectado');
     if (conectado) push({ title: 'Cuenta conectada', variant: 'success' });
     if (search.get('meta') === 'elegir') setAbierta('meta');
+    // Meta Ads vuelve del permiso con la lista de cuentas publicitarias y falta
+    // que el usuario elija la de este proyecto: se le abre el panel solo.
+    if (search.get('metaads') === 'elegir') setAbierta('metaads');
   }, [search, push]);
 
   const aplicar = (data: { cards?: Card[] }) => {
@@ -221,6 +224,75 @@ export function ConnectionsBoard({
     }
   }
 
+  /**
+   * Meta Ads. Misma coreografía que Composio —ventana aparte y preguntar al
+   * servidor, no creerle al navegador— con un paso más: cuando la ventana
+   * vuelve, la conexión TODAVÍA no está hecha. Falta que la persona elija cuál
+   * de sus cuentas publicitarias es la de este proyecto, y esa pregunta se
+   * contesta aquí, no en Facebook. Por eso se cierra la ventana en `volvio` y
+   * se abre el panel de la tarjeta.
+   */
+  async function conectarConMetaAds() {
+    setTrabajando('metaads');
+    try {
+      const res = await fetch('/api/connections/metaads/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: projectId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.redirectUrl) throw new Error(data.error ?? 'No se pudo.');
+
+      const ventana = window.open(
+        data.redirectUrl,
+        'goossip-conexion-metaads',
+        'width=640,height=780,noopener=no',
+      );
+      if (!ventana) {
+        // Con el bloqueador de ventanas encendido no hay a dónde abrir.
+        window.location.href = data.redirectUrl;
+        return;
+      }
+
+      const inicio = Date.now();
+      const cada = window.setInterval(async () => {
+        if (Date.now() - inicio > 5 * 60 * 1000) {
+          window.clearInterval(cada);
+          setTrabajando(null);
+          push({ title: 'No se completó la conexión. Inténtalo otra vez.', variant: 'error' });
+          return;
+        }
+        try {
+          const r = await fetch(`/api/connections/metaads/status?project=${projectId}`, {
+            cache: 'no-store',
+          });
+          const s = await r.json();
+          if (!s.volvio) return;
+          window.clearInterval(cada);
+          try {
+            ventana.close();
+          } catch {
+            // Si el navegador no deja cerrarla, no pasa nada: el permiso ya está.
+          }
+          setTrabajando(null);
+          if (s.connected) {
+            push({ title: 'Cuenta conectada', variant: 'success' });
+          } else {
+            push({ title: 'Elige qué cuenta publicitaria usa este proyecto.', variant: 'info' });
+            setAbierta('metaads');
+          }
+          await cargar();
+          router.refresh();
+        } catch {
+          // Un tropiezo de red no cancela la espera: se vuelve a preguntar.
+        }
+      }, 3000);
+    } catch (e) {
+      push({ title: e instanceof Error ? e.message : 'Error', variant: 'error' });
+      setTrabajando(null);
+    }
+  }
+
   if (loading) {
     return <p className="text-sm text-[var(--color-muted-foreground)]">Cargando tus conexiones…</p>;
   }
@@ -229,10 +301,13 @@ export function ConnectionsBoard({
 
   return (
     <div className="space-y-6">
-      {/* Una sola vez, arriba, y sin explicar la maquinaria. */}
+      {/* Una sola vez, arriba, y sin explicar la maquinaria. Meta Ads se dice
+          aparte porque de verdad se ve distinto: la pantalla es de Facebook. */}
       <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/40 px-4 py-3 text-xs text-[var(--color-muted-foreground)]">
         Al conectar verás una pantalla de permisos de Composio, nuestro proveedor de conexiones
         seguras.
+        {cards.some((c) => c.via === 'meta_own_app' && c.state !== 'proximamente') &&
+          ' Meta Ads es la excepción: ahí la pantalla es de Facebook, y solo pedimos leer.'}
       </p>
 
       {grupos.map((grupo) => (
@@ -257,6 +332,7 @@ export function ConnectionsBoard({
                   onAbrir={() => setAbierta(abierta === card.id ? null : card.id)}
                   onCerrar={() => setAbierta(null)}
                   onConectarComposio={() => void conectarConComposio(card.id)}
+                  onConectarMetaAds={() => void conectarConMetaAds()}
                   onDesconectar={() => void desconectar(card.id, card.label)}
                   onPedir={pedir}
                 />
@@ -303,6 +379,7 @@ function Tarjeta({
   onAbrir,
   onCerrar,
   onConectarComposio,
+  onConectarMetaAds,
   onDesconectar,
   onPedir,
 }: {
@@ -314,6 +391,7 @@ function Tarjeta({
   onAbrir: () => void;
   onCerrar: () => void;
   onConectarComposio: () => void;
+  onConectarMetaAds: () => void;
   onDesconectar: () => void;
   onPedir: (canal: string, url: string, init: RequestInit) => Promise<any>;
 }) {
@@ -325,11 +403,13 @@ function Tarjeta({
           <div className="flex min-w-0 items-start gap-3">
             <span
               className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl ${
-                card.via === 'composio' ? 'bg-white' : 'bg-[var(--color-accent)]'
+                card.via === 'goossip' ? 'bg-[var(--color-accent)]' : 'bg-white'
               }`}
             >
-              {card.via === 'composio' ? (
+              {card.via !== 'goossip' ? (
                 // El logo viene del catálogo de Composio (`toolkit.meta.logo`).
+                // Meta Ads no se conecta por allá desde la corrida 11, pero su
+                // logo sigue siendo el bueno y está medido: 200, SVG.
                 <img src={card.logo} alt="" className="h-6 w-6 object-contain" />
               ) : (
                 <IconoPropio slug={card.id} />
@@ -388,6 +468,12 @@ function Tarjeta({
                 disabled={trabajando}
                 onClick={() => {
                   if (card.via === 'composio') return onConectarComposio();
+                  // Meta Ads con las cuentas ya traídas: no hay que volver a
+                  // Facebook, falta elegir. Se abre el panel y ya.
+                  if (card.via === 'meta_own_app') {
+                    if (card.data.candidates?.length) return onAbrir();
+                    return onConectarMetaAds();
+                  }
                   if (card.id === 'meta' && !card.data.candidates?.length) {
                     window.location.href = `/api/connections/meta/start?project=${projectId}`;
                     return;
@@ -405,9 +491,11 @@ function Tarjeta({
               >
                 {trabajando
                   ? 'Esperando a que termines en la otra ventana…'
-                  : card.state === 'reconectar'
-                    ? 'Reconectar'
-                    : 'Conectar'}
+                  : card.via === 'meta_own_app' && card.data.candidates?.length
+                    ? 'Elegir cuenta'
+                    : card.state === 'reconectar'
+                      ? 'Reconectar'
+                      : 'Conectar'}
               </Button>
             )}
           </div>
@@ -462,6 +550,67 @@ function Detalle({
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+
+  /**
+   * Meta Ads: cuál de tus cuentas publicitarias es la de ESTE proyecto.
+   *
+   * Es la pregunta que no se puede adivinar. Una agencia administra varias
+   * cuentas con el mismo usuario de Facebook, y elegir la primera de la lista
+   * sería reportarle a un cliente el gasto de otro. Se enseña el negocio y la
+   * moneda porque son lo que distingue dos cuentas que se llaman casi igual.
+   */
+  if (card.id === 'metaads') {
+    const cuentas: Array<{
+      id: string;
+      accountId: string;
+      name: string;
+      business: string | null;
+      currency: string | null;
+    }> = card.data.candidates ?? [];
+
+    if (cuentas.length === 0) {
+      return (
+        <p className="text-[11px] text-[var(--color-muted-foreground)]">
+          Aprieta Conectar y autoriza en Facebook para ver tus cuentas publicitarias.
+        </p>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <p className="text-xs font-medium">¿Qué cuenta publicitaria usa este proyecto?</p>
+        <div className="space-y-1.5">
+          {cuentas.map((c) => (
+            <button
+              key={c.id}
+              disabled={trabajando}
+              onClick={async () => {
+                const r = await onPedir(
+                  'metaads',
+                  `/api/projects/${projectId}/metaads`,
+                  json({ accion: 'cuenta', accountId: c.id }),
+                );
+                if (r) {
+                  push({ title: `${c.name} conectada`, variant: 'success' });
+                  onCerrar();
+                }
+              }}
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 text-left text-xs hover:bg-[var(--color-accent)]/60 disabled:opacity-60"
+            >
+              <span className="min-w-0 truncate">
+                {c.name}
+                <span className="text-[var(--color-muted-foreground)]">
+                  {c.business ? ` · ${c.business}` : ''}
+                  {c.currency ? ` · ${c.currency}` : ''}
+                </span>
+              </span>
+              <span className="shrink-0 text-[var(--color-primary)]">Elegir</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (card.id === 'meta') {
     const candidatas: Array<{ id: string; name: string; instagram: string | null }> =

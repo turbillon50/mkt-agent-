@@ -33,3 +33,7 @@ capturas-c6/*
 # MEDICIÓN: cuántas pantallas, con qué código y qué contó la máquina.
 capturas-c7/*
 !capturas-c7/resumen.json
+
+# Igual para las de la corrida 11. Lo que se versiona es la MEDICIÓN.
+capturas-c11/*
+!capturas-c11/resumen.json
