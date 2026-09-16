@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiOrg } from '@/lib/org';
+import { requireProjectCapability } from '@/lib/project-access';
 import { ownedAction } from '@/lib/sales';
 import { setStatus } from '@/src/sales/queue';
 import { recordEvent } from '@/src/sales/repo';
@@ -16,6 +17,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const owned = await ownedAction(orgId, id);
   if (!owned) return NextResponse.json({ error: 'not found' }, { status: 404 });
+
+  // Aprobar manda un mensaje de verdad a un cliente de verdad. Pide 'operar'.
+  const negado = await requireProjectCapability(owned.project.id, 'operar');
+  if (negado) return negado;
 
   const body = await req.json().catch(() => ({}));
   const decision = String(body?.decision ?? '');

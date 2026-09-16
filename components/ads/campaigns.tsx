@@ -20,6 +20,25 @@ function formatMoney(micros: string | null): string {
   return `$${n.toLocaleString('es-MX', { maximumFractionDigits: 2 })}/día`;
 }
 
+/**
+ * Lo que sale de Google Ads cuando algo falla es un JSON con códigos, slugs y
+ * un `request_id`. Eso es para nosotros, no para quien vende departamentos.
+ *
+ * Si el mensaje trae jerga o llaves, se cambia por una frase que la persona
+ * pueda leer y actuar; si es un mensaje limpio y corto, se deja pasar tal cual.
+ */
+function enCristiano(crudo: string): string {
+  const s = crudo.trim();
+  const esJerga =
+    /[{}[\]"]|api[_ ]?key|status["' ]*:|request_id|slug|unauthorized|forbidden|\b40[0-9]\b|\b50[0-9]\b/i.test(
+      s,
+    );
+  if (esJerga || s.length > 140) {
+    return 'No pudimos hablar con Google Ads ahora mismo. Inténtalo otra vez en un minuto.';
+  }
+  return s;
+}
+
 export function AdsCampaigns() {
   const [loading, setLoading] = React.useState(true);
   const [connected, setConnected] = React.useState(false);
@@ -41,7 +60,7 @@ export function AdsCampaigns() {
       setCustomerId(data.customerId ?? '');
       setCampaigns(data.campaigns ?? []);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error desconocido');
+      setError(enCristiano(e instanceof Error ? e.message : ''));
     } finally {
       setLoading(false);
     }
@@ -65,7 +84,7 @@ export function AdsCampaigns() {
       if (!res.ok || !data.redirectUrl) throw new Error(data.error || 'No se pudo iniciar la conexión');
       window.location.href = data.redirectUrl;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error desconocido');
+      setError(enCristiano(e instanceof Error ? e.message : ''));
       setConnecting(false);
     }
   }
@@ -85,7 +104,7 @@ export function AdsCampaigns() {
       }
       await refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error desconocido');
+      setError(enCristiano(e instanceof Error ? e.message : ''));
     } finally {
       setToggling(null);
     }

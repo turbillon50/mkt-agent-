@@ -5,45 +5,45 @@ const tiers = [
   {
     name: 'Solo',
     price: 'Gratis',
-    cadence: 'durante early access',
+    cadence: 'mientras estamos empezando',
     cta: 'Empezar gratis',
     href: '/sign-up',
     features: [
-      'X + LinkedIn + WhatsApp',
-      'Plan semanal automático',
-      'Memoria de marca',
-      'Chat ilimitado con tu agente',
-      'Tu propia DB Neon',
+      'Un proyecto con todos sus canales',
+      'Facebook, Instagram y tu sitio web',
+      'Tu vendedor contestando',
+      'Tus leads calificados y ordenados',
+      'Invita a tu equipo',
     ],
     featured: true,
   },
   {
     name: 'Pro',
     price: '$29',
-    cadence: '/ mes · próximamente',
+    cadence: '/ mes · pronto',
     cta: 'Avísame cuando esté',
     href: '/sign-up',
     features: [
       'Todo lo de Solo',
-      'Generación de imágenes',
-      'Análisis de menciones',
-      'Métricas y reporting semanal',
-      'Múltiples brand voices',
+      'Varios proyectos a la vez',
+      'WhatsApp y Google',
+      'Reporte semanal de cómo vas',
+      'Un vendedor distinto por proyecto',
     ],
     featured: false,
   },
   {
     name: 'Team',
     price: '$99',
-    cadence: '/ mes · próximamente',
+    cadence: '/ mes · pronto',
     cta: 'Lista de espera',
     href: '/sign-up',
     features: [
       'Todo lo de Pro',
-      'Hasta 5 miembros',
-      'Approval workflows',
-      'Brand kit compartido',
-      'Soporte prioritario',
+      'Hasta 5 personas en tu equipo',
+      'Aprobaciones antes de que salga nada',
+      'Tu marca en todos los proyectos',
+      'Te contestamos primero',
     ],
     featured: false,
   },
@@ -58,8 +58,7 @@ export function Pricing() {
             Plan simple, <span className="brand-gradient">honesto</span>
           </h2>
           <p className="mt-4 text-base text-[var(--color-muted-foreground)]">
-            Goossip está en early access. Mientras tanto, gratis para quien lo quiera usar — sólo
-            pagas tus consumos de modelo y base de datos, que son centavos al mes.
+            Goossip apenas está empezando. Mientras tanto es gratis para quien lo quiera usar.
           </p>
         </div>
 
@@ -77,7 +76,7 @@ export function Pricing() {
                 <h3 className="text-lg font-semibold">{t.name}</h3>
                 {t.featured && (
                   <span className="rounded-md bg-[var(--color-primary)]/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--color-primary)]">
-                    Early access
+                    Gratis
                   </span>
                 )}
               </div>

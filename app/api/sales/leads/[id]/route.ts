@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiOrg } from '@/lib/org';
+import { requireProjectCapability } from '@/lib/project-access';
 import { leadTimeline, ownedLead } from '@/lib/sales';
 import { moveStage, recordEvent } from '@/src/sales/repo';
 import { LEAD_STAGES, type LeadStage } from '@/src/sales/types';
@@ -25,6 +26,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const owned = await ownedLead(orgId, id);
   if (!owned) return NextResponse.json({ error: 'not found' }, { status: 404 });
+
+  // Mover una etapa, dejar una nota o registrar una llamada es OPERAR: el
+  // lector mira y el conector solo engancha canales.
+  const negado = await requireProjectCapability(owned.project.id, 'operar');
+  if (negado) return negado;
 
   const body = await req.json().catch(() => ({}));
   let lead = owned.lead;

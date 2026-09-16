@@ -31,9 +31,19 @@ const isPublicRoute = createRouteMatcher([
   '/api/whatsapp/inbound',
 ]);
 
-/** Rutas con sesión pero SIN org: es donde se elige o se crea la organización. */
+/**
+ * Rutas con sesión pero SIN org: donde se elige o se crea la organización, y
+ * — desde la corrida 3 — donde alguien de fuera quema un enlace de conexión.
+ *
+ * El community manager del cliente NO pertenece a la organización y no tiene
+ * por qué: su permiso es el enlace de un solo uso, y cada ruta de aquí lo
+ * verifica por su cuenta. Exigirle `orgId` sería mandarlo a crear una
+ * organización que no quiere para conectar una página que no es suya.
+ */
 const isOrglessRoute = createRouteMatcher([
   '/onboarding(.*)',
+  '/conectar(.*)',
+  '/api/connections/(.*)',
   '/api/orgs(.*)',
   '/api/me(.*)',
 ]);

@@ -1,0 +1,333 @@
+{
+  "base": "http://127.0.0.1:3100",
+  "capturas": 36,
+  "http200": 36,
+  "pantallasConErroresDeJs": 0,
+  "pantallasConNotasInternas": 0,
+  "detalle": [
+    {
+      "pantalla": "01-landing",
+      "ruta": "/",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/01-landing-movil.png"
+    },
+    {
+      "pantalla": "01-landing",
+      "ruta": "/",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/01-landing-escritorio.png"
+    },
+    {
+      "pantalla": "02-proyectos",
+      "ruta": "/projects",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/02-proyectos-movil.png"
+    },
+    {
+      "pantalla": "02-proyectos",
+      "ruta": "/projects",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/02-proyectos-escritorio.png"
+    },
+    {
+      "pantalla": "03-alta-proyecto",
+      "ruta": "/projects/new",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/03-alta-proyecto-movil.png"
+    },
+    {
+      "pantalla": "03-alta-proyecto",
+      "ruta": "/projects/new",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/03-alta-proyecto-escritorio.png"
+    },
+    {
+      "pantalla": "04-inicio-proyecto",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/04-inicio-proyecto-movil.png"
+    },
+    {
+      "pantalla": "04-inicio-proyecto",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/04-inicio-proyecto-escritorio.png"
+    },
+    {
+      "pantalla": "05-conexiones",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/conexiones",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/05-conexiones-movil.png"
+    },
+    {
+      "pantalla": "05-conexiones",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/conexiones",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/05-conexiones-escritorio.png"
+    },
+    {
+      "pantalla": "06-equipo",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/equipo",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/06-equipo-movil.png"
+    },
+    {
+      "pantalla": "06-equipo",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/equipo",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/06-equipo-escritorio.png"
+    },
+    {
+      "pantalla": "07-leads",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/leads",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/07-leads-movil.png"
+    },
+    {
+      "pantalla": "07-leads",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/leads",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/07-leads-escritorio.png"
+    },
+    {
+      "pantalla": "08-conversaciones",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/conversaciones",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/08-conversaciones-movil.png"
+    },
+    {
+      "pantalla": "08-conversaciones",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/conversaciones",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/08-conversaciones-escritorio.png"
+    },
+    {
+      "pantalla": "09-campanas",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/campanas",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/09-campanas-movil.png"
+    },
+    {
+      "pantalla": "09-campanas",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/campanas",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/09-campanas-escritorio.png"
+    },
+    {
+      "pantalla": "10-contenido",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/contenido",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/10-contenido-movil.png"
+    },
+    {
+      "pantalla": "10-contenido",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/contenido",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/10-contenido-escritorio.png"
+    },
+    {
+      "pantalla": "11-conocimiento",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/conocimiento",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/11-conocimiento-movil.png"
+    },
+    {
+      "pantalla": "11-conocimiento",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/conocimiento",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/11-conocimiento-escritorio.png"
+    },
+    {
+      "pantalla": "12-ajustes",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/ajustes",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/12-ajustes-movil.png"
+    },
+    {
+      "pantalla": "12-ajustes",
+      "ruta": "/projects/2593c184-2b27-4bf8-ab9c-b0242f4c9dc3/ajustes",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/12-ajustes-escritorio.png"
+    },
+    {
+      "pantalla": "13-enlace-conexion",
+      "ruta": "/conectar/0EpYEo2KnIi4zWPDPL8ARQy-2HJYW5MOJ6blL01NyWc",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/13-enlace-conexion-movil.png"
+    },
+    {
+      "pantalla": "13-enlace-conexion",
+      "ruta": "/conectar/0EpYEo2KnIi4zWPDPL8ARQy-2HJYW5MOJ6blL01NyWc",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/13-enlace-conexion-escritorio.png"
+    },
+    {
+      "pantalla": "14-enlace-caducado",
+      "ruta": "/conectar/token-que-no-existe",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/14-enlace-caducado-movil.png"
+    },
+    {
+      "pantalla": "14-enlace-caducado",
+      "ruta": "/conectar/token-que-no-existe",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/14-enlace-caducado-escritorio.png"
+    },
+    {
+      "pantalla": "15-organizacion",
+      "ruta": "/organizacion",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/15-organizacion-movil.png"
+    },
+    {
+      "pantalla": "15-organizacion",
+      "ruta": "/organizacion",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/15-organizacion-escritorio.png"
+    },
+    {
+      "pantalla": "16-prospeccion",
+      "ruta": "/prospectos",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/16-prospeccion-movil.png"
+    },
+    {
+      "pantalla": "16-prospeccion",
+      "ruta": "/prospectos",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/16-prospeccion-escritorio.png"
+    },
+    {
+      "pantalla": "17-competencia",
+      "ruta": "/competencia",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/17-competencia-movil.png"
+    },
+    {
+      "pantalla": "17-competencia",
+      "ruta": "/competencia",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/17-competencia-escritorio.png"
+    },
+    {
+      "pantalla": "18-calendario",
+      "ruta": "/plan",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/18-calendario-movil.png"
+    },
+    {
+      "pantalla": "18-calendario",
+      "ruta": "/plan",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c3/18-calendario-escritorio.png"
+    }
+  ]
+}

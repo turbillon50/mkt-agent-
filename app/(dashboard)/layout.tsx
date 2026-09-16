@@ -22,11 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <AppShell
-      isAdmin={resolution.ctx.user.isAdmin}
-      orgName={resolution.ctx.org.name}
-      role={resolution.ctx.role}
-    >
+    <AppShell isAdmin={resolution.ctx.user.isAdmin} orgName={resolution.ctx.org.name}>
       {children}
     </AppShell>
   );

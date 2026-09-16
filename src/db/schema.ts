@@ -24,6 +24,12 @@ import type {
   ProjectRules,
 } from '../sales/types';
 import type { OrgPlan, OrgRole, OrgStatus, WebhookSource } from '../orgs/types';
+import type {
+  ConnectionChannel,
+  ProjectEventType,
+  ProjectMemberStatus,
+  ProjectRole,
+} from '../projects/types';
 
 // ---------------------------------------------------------------------------
 // Organizaciones (Clerk). La org ES el tenant: todo dato de app lleva org_id.
@@ -216,6 +222,10 @@ export const campaigns = pgTable('campaigns', {
   status: text('status').notNull().default('active'),
   // --- proyecto (super vendedor). La tabla se queda; en UI es "proyecto". ---
   kind: text('kind').$type<ProjectKind>().notNull().default('servicios'),
+  /** Perfil del negocio (paso 1 del alta). Describen al negocio, no a un canal. */
+  website: text('website'),
+  city: text('city'),
+  country: text('country'),
   channels: jsonb('channels').$type<ProjectChannels>().notNull().default({}),
   sellerPersona: text('seller_persona'),
   rules: jsonb('rules').$type<ProjectRules>().notNull().default({}),
@@ -228,19 +238,93 @@ export const campaigns = pgTable('campaigns', {
   userSlugUniq: index('campaigns_user_slug_uniq').on(t.userId, t.slug),
 }));
 
+/**
+ * Cuentas conectadas. Desde la 0014 cuelgan del PROYECTO (`campaignId`), no del
+ * usuario: si quien conectó se va de la agencia, el canal del cliente se queda.
+ * `userId` quedó opcional por lo mismo — un invitado con enlace de conexión
+ * puede engancharla sin ser parte de la org.
+ */
 export const socialAccounts = pgTable('social_accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
   orgId: text('org_id').notNull(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
   platform: text('platform').notNull(),
   status: text('status').notNull().default('disconnected'),
   externalHandle: text('external_handle'),
+  externalId: text('external_id'),
+  label: text('label'),
+  connectedBy: text('connected_by'),
+  connectedAt: timestamp('connected_at', { withTimezone: true }),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => ({
   userPlatformIdx: index('social_accounts_user_platform_idx').on(t.userId, t.platform),
+  projectIdx: index('social_accounts_project_idx').on(t.campaignId),
 }));
+
+// ---------------------------------------------------------------------------
+// El proyecto como unidad central (migración 0014): su gente, sus enlaces de
+// conexión y su bitácora.
+// ---------------------------------------------------------------------------
+
+export const projectMembers = pgTable('project_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  /** Nulo mientras la invitación no se acepta: todavía no hay usuario. */
+  clerkUserId: text('clerk_user_id'),
+  email: text('email'),
+  role: text('role').$type<ProjectRole>().notNull().default('lector'),
+  status: text('status').$type<ProjectMemberStatus>().notNull().default('invitado'),
+  invitationId: text('invitation_id'),
+  invitedBy: text('invited_by'),
+  joinedAt: timestamp('joined_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('project_members_user_idx').on(t.clerkUserId),
+  orgIdx: index('project_members_org_idx').on(t.orgId, t.projectId),
+  inviteIdx: index('project_members_invite_idx').on(t.invitationId),
+}));
+
+/** Del token solo vive el hash: robarse la tabla no da ningún enlace usable. */
+export const connectionLinks = pgTable('connection_links', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  channel: text('channel').$type<ConnectionChannel>().notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  createdBy: text('created_by').notNull(),
+  note: text('note'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  usedBy: text('used_by'),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('connection_links_project_idx').on(t.projectId, t.createdAt),
+}));
+
+export const projectEvents = pgTable('project_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  type: text('type').$type<ProjectEventType>().notNull(),
+  actor: text('actor'),
+  actorEmail: text('actor_email'),
+  payload: jsonb('payload').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('project_events_project_idx').on(t.projectId, t.createdAt),
+  typeIdx: index('project_events_type_idx').on(t.projectId, t.type),
+}));
+
+export type ProjectMember = typeof projectMembers.$inferSelect;
+export type NewProjectMember = typeof projectMembers.$inferInsert;
+export type ConnectionLink = typeof connectionLinks.$inferSelect;
+export type ProjectEvent = typeof projectEvents.$inferSelect;
 
 export const chatMessages = pgTable('chat_messages', {
   id: uuid('id').primaryKey().defaultRandom(),

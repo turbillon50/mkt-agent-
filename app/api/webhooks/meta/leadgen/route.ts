@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchLeadgen, parseLeadgenWebhook, verifyChallenge, verifySignature } from '@/lib/meta-graph';
 import { resolveProjectByMeta } from '@/lib/projects';
 import { ingestLead } from '@/src/sales/ingest';
+import { metaPageToken } from '@/src/projects/connections';
 import { logWebhook } from '@/src/orgs/repo';
 
 export const runtime = 'nodejs';
@@ -51,7 +52,9 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const fields = await fetchLeadgen(project.slug, change.leadgenId);
+      // El token del OAuth del proyecto gana sobre el de env. Ver `metaPageToken`.
+      const pageToken = await metaPageToken(project).catch(() => null);
+      const fields = await fetchLeadgen(project.slug, change.leadgenId, pageToken);
       const r = await ingestLead({
         project,
         fullName: fields.fullName || null,

@@ -1,54 +1,21 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { IconWhatsApp, IconCheck } from '@/components/icons';
+import { redirect } from 'next/navigation';
+import { orgContextOrNull } from '@/lib/org';
+import { visibleProjects } from '@/lib/project-access';
 
 export const dynamic = 'force-dynamic';
 
-export default function WhatsAppPage() {
-  return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">WhatsApp</h1>
-        <p className="text-sm text-[var(--color-muted-foreground)]">
-          Desconectamos el bridge no oficial (Baileys) — nunca fue estable para producción.
-          Estamos preparando la integración correcta con WhatsApp Business Platform, la API
-          oficial de Meta.
-        </p>
-      </header>
-
-      <Card className="card-glow">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-lg bg-[var(--color-accent)] text-[var(--color-success)]">
-              <IconWhatsApp className="h-5 w-5" />
-            </span>
-            <CardTitle className="text-base">WhatsApp Business Platform (oficial)</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            A diferencia del bridge anterior, esta es la API oficial de Meta: sesión estable,
-            sin desconexiones aleatorias, y soporta múltiples números — uno por cliente de Goossip,
-            igual que ya hicimos con X, LinkedIn y Google Ads.
-          </p>
-          <ul className="space-y-2 text-sm">
-            {[
-              'Sin riesgo de baneo — es el canal sancionado por Meta',
-              'Cada cliente conecta su propio número de WhatsApp Business',
-              'Soporta plantillas, botones, catálogos y respuestas automáticas',
-              'Requiere una cuenta de Meta Business verificada',
-            ].map((item) => (
-              <li key={item} className="flex items-start gap-2">
-                <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-primary)]" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-xs text-[var(--color-muted-foreground)]">
-            En construcción. Mientras tanto puedes seguir operando X, LinkedIn y Google Ads desde
-            Goossip.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+/**
+ * WhatsApp es un canal más del proyecto.
+ *
+ * Desde la corrida 3 esta sección vive DENTRO del proyecto. La ruta vieja se
+ * queda como desvío: hay enlaces guardados, correos y marcadores apuntando aquí
+ * y romperlos no le arregla nada a nadie.
+ */
+export default async function Page() {
+  const ctx = await orgContextOrNull();
+  if (!ctx) redirect('/onboarding');
+  const visible = await visibleProjects(ctx);
+  if (visible.length === 0) redirect('/projects/new');
+  const activo = visible.find((v) => v.project.id === ctx.activeProjectId) ?? visible[0];
+  redirect(`/projects/${activo.project.id}/conexiones`);
 }
