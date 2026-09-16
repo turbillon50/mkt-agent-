@@ -265,7 +265,12 @@ export interface ToolResult<T = any> {
  */
 export async function executeTool<T = any>(
   slug: string,
-  input: { userId: string; arguments?: Record<string, unknown>; connectedAccountId?: string },
+  input: {
+    userId: string;
+    arguments?: Record<string, unknown>;
+    connectedAccountId?: string;
+    version?: string;
+  },
 ): Promise<ToolResult<T>> {
   const res = await call<ToolResult<T>>(`/tools/execute/${slug}`, {
     method: 'POST',
@@ -273,6 +278,7 @@ export async function executeTool<T = any>(
       user_id: input.userId,
       arguments: input.arguments ?? {},
       ...(input.connectedAccountId ? { connected_account_id: input.connectedAccountId } : {}),
+      ...(input.version ? { version: input.version } : {}),
     },
   });
   if (res?.successful === false) {
