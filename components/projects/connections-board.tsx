@@ -12,48 +12,60 @@ import {
   IconCopy,
   IconFacebook,
   IconGlobe,
-  IconGoogle,
-  IconLinkedIn,
-  IconTikTok,
   IconWhatsApp,
-  IconX,
 } from '@/components/icons';
-import { PROJECT_EVENT_LABEL, type ConnectionChannel, type ConnectionState } from '@/src/projects/types';
+import {
+  CONNECTOR_GROUPS,
+  CONNECTOR_GROUP_BLURB,
+  CONNECTOR_GROUP_LABEL,
+  PROJECT_EVENT_LABEL,
+  type ConnectionState,
+  type ConnectorGroup,
+} from '@/src/projects/types';
 import { ConnectionBadge } from './connection-badge';
 
 /**
- * Las conexiones del proyecto.
+ * Las conexiones del proyecto, en tres grupos.
  *
- * Orden por VALOR para quien vende — lo decide el servidor, no esta pantalla.
- * Aquí solo se pinta lo que llega y se disparan las acciones.
+ * Todo lo que se conecta pasa por Composio con su app administrada: el usuario
+ * aprieta "Conectar", ve la pantalla de permisos del proveedor y vuelve. No hay
+ * app de developer de Goossip de por medio, ni tokens que nadie copie a mano.
  *
- * Regla de la corrida 3: cero notas internas. Si un canal no está listo, dice
- * "Próximamente" y ya. Nada de explicarle al cliente qué nos falta registrar.
+ * El orden y el estado los decide el SERVIDOR. Aquí solo se pinta lo que llega
+ * y se disparan las acciones. Cero notas internas: si algo no está listo dice
+ * "Próximamente" y ya.
  */
 
-const ICONO: Record<ConnectionChannel, React.ElementType> = {
-  meta: IconFacebook,
-  whatsapp: IconWhatsApp,
-  google: IconGoogle,
-  linkedin: IconLinkedIn,
-  x: IconX,
-  tiktok: IconTikTok,
-  sitio: IconGlobe,
-  mcp: IconBox,
-};
-
 interface Card {
-  id: ConnectionChannel;
+  id: string;
+  slug: string;
+  via: 'composio' | 'goossip';
+  group: ConnectorGroup;
   label: string;
-  description: string;
+  blurb: string;
+  note?: string;
+  logo: string;
   mode: 'oauth' | 'datos' | 'automatico';
   state: ConnectionState;
   detail: string | null;
   connectedBy: string | null;
   connectedAt: string | null;
+  verifiedAt: string | null;
   pending: string | null;
   data: Record<string, any>;
 }
+
+/**
+ * Los conectores que NO son de Composio no tienen logo en su catálogo (pedirlo
+ * devuelve un cuadrito gris de relleno, medido), así que llevan el ícono de la
+ * casa. Los 21 de Composio sí: su marca de verdad.
+ */
+const ICONO_PROPIO: Record<string, React.ElementType> = {
+  sitio: IconGlobe,
+  mcp: IconBox,
+  whatsapp: IconWhatsApp,
+  meta: IconFacebook,
+};
 
 interface Evento {
   tipo: keyof typeof PROJECT_EVENT_LABEL;
@@ -76,8 +88,8 @@ export function ConnectionsBoard({
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [puedeConectar, setPuedeConectar] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [abierta, setAbierta] = useState<ConnectionChannel | null>(null);
-  const [trabajando, setTrabajando] = useState<ConnectionChannel | null>(null);
+  const [abierta, setAbierta] = useState<string | null>(null);
+  const [trabajando, setTrabajando] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     try {
@@ -98,11 +110,13 @@ export function ConnectionsBoard({
     void cargar();
   }, [cargar]);
 
-  // Vuelta de Facebook: si trae error se dice tal cual, y si viene bien se abre
-  // sola la tarjeta en el paso que falta.
+  // La vuelta del permiso: si trae error se dice tal cual, y si salió bien se
+  // felicita con el nombre del conector, no con un "ok" a secas.
   useEffect(() => {
     const error = search.get('error');
     if (error) push({ title: error, variant: 'error' });
+    const conectado = search.get('conectado');
+    if (conectado) push({ title: 'Cuenta conectada', variant: 'success' });
     if (search.get('meta') === 'elegir') setAbierta('meta');
   }, [search, push]);
 
@@ -112,7 +126,7 @@ export function ConnectionsBoard({
     router.refresh();
   };
 
-  async function pedir(canal: ConnectionChannel, url: string, init: RequestInit) {
+  async function pedir(canal: string, url: string, init: RequestInit) {
     setTrabajando(canal);
     try {
       const res = await fetch(url, init);
@@ -128,8 +142,8 @@ export function ConnectionsBoard({
     }
   }
 
-  async function desconectar(canal: ConnectionChannel, label: string) {
-    const ok = window.confirm(`¿Desconectar ${label} de este proyecto?`);
+  async function desconectar(canal: string, label: string) {
+    const ok = window.confirm(`¿Quitar ${label} de este proyecto?`);
     if (!ok) return;
     const r = await pedir(canal, `/api/projects/${projectId}/connections/${canal}`, {
       method: 'DELETE',
@@ -137,119 +151,119 @@ export function ConnectionsBoard({
     if (r) push({ title: `${label} desconectado`, variant: 'success' });
   }
 
-  if (loading) {
-    return <p className="text-sm text-[var(--color-muted-foreground)]">Cargando tus canales…</p>;
+  async function conectarConComposio(canal: string) {
+    setTrabajando(canal);
+    try {
+      const res = await fetch('/api/connections/composio/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: projectId, toolkit: canal }),
+      });
+      const data = await res.json();
+      if (res.ok && data.alreadyConnected) {
+        setTrabajando(null);
+        push({ title: 'Ya estaba conectado.', variant: 'success' });
+        router.refresh();
+        return;
+      }
+      if (!res.ok || !data.redirectUrl) throw new Error(data.error ?? 'No se pudo.');
+
+      // La ventana de permisos se abre APARTE y esta pantalla se queda donde
+      // está. Quien conecta no pierde su lugar, y si el proveedor manda a la
+      // persona a iniciar sesión —pasa con Slack y con Google— el regreso no
+      // depende de que el navegador acierte a volver a Goossip.
+      const ventana = window.open(
+        data.redirectUrl,
+        `goossip-conexion-${canal}`,
+        'width=640,height=780,noopener=no',
+      );
+      if (!ventana) {
+        // Con el bloqueador de ventanas encendido no hay a dónde abrir: se va
+        // en la misma pestaña, que siempre funciona.
+        window.location.href = data.redirectUrl;
+        return;
+      }
+
+      // La verdad de si quedó es de Composio, no del navegador: se pregunta.
+      const inicio = Date.now();
+      const cada = window.setInterval(async () => {
+        if (Date.now() - inicio > 5 * 60 * 1000) {
+          window.clearInterval(cada);
+          setTrabajando(null);
+          push({ title: 'No se completó la conexión. Inténtalo otra vez.', variant: 'error' });
+          return;
+        }
+        try {
+          const r = await fetch(
+            `/api/connections/composio/status?project=${projectId}&canal=${encodeURIComponent(canal)}`,
+            { cache: 'no-store' },
+          );
+          const s = await r.json();
+          if (s.connected) {
+            window.clearInterval(cada);
+            try {
+              ventana.close();
+            } catch {
+              // Si el navegador no deja cerrarla, no pasa nada: ya está conectada.
+            }
+            setTrabajando(null);
+            push({ title: 'Cuenta conectada', variant: 'success' });
+            void cargar();
+            router.refresh();
+          }
+        } catch {
+          // Un tropiezo de red no cancela la espera: se vuelve a preguntar.
+        }
+      }, 3000);
+    } catch (e) {
+      push({ title: e instanceof Error ? e.message : 'Error', variant: 'error' });
+      setTrabajando(null);
+    }
   }
 
+  if (loading) {
+    return <p className="text-sm text-[var(--color-muted-foreground)]">Cargando tus conexiones…</p>;
+  }
+
+  const grupos = CONNECTOR_GROUPS.filter((g) => cards.some((c) => c.group === g));
+
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 lg:grid-cols-2">
-        {cards.map((card) => {
-          const Icon = ICONO[card.id];
-          const abierto = abierta === card.id;
-          return (
-            <Card key={card.id} className={card.state === 'proximamente' ? 'opacity-70' : 'card-glow'}>
-              <CardContent className="space-y-3 pt-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--color-accent)] text-[var(--color-foreground)]">
-                      <Icon className="h-4.5 w-4.5" />
-                    </span>
-                    <div className="min-w-0">
-                      <h3 className="truncate font-medium">{card.label}</h3>
-                      <p className="text-xs text-[var(--color-muted-foreground)]">
-                        {card.detail ?? card.description}
-                      </p>
-                    </div>
-                  </div>
-                  <ConnectionBadge state={card.state} />
-                </div>
+    <div className="space-y-6">
+      {/* Una sola vez, arriba, y sin explicar la maquinaria. */}
+      <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/40 px-4 py-3 text-xs text-[var(--color-muted-foreground)]">
+        Al conectar verás una pantalla de permisos de Composio, nuestro proveedor de conexiones
+        seguras.
+      </p>
 
-                {card.state === 'conectado' && card.connectedAt && (
-                  <p className="text-[11px] text-[var(--color-muted-foreground)]">
-                    Conectado por {card.connectedBy ?? 'alguien del equipo'} el{' '}
-                    {new Date(card.connectedAt).toLocaleDateString('es-MX', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
-                  </p>
-                )}
-
-                {card.pending && (
-                  <p className="rounded-lg bg-[var(--color-accent)]/60 px-3 py-2 text-[11px] text-[var(--color-foreground)]">
-                    {card.pending}
-                  </p>
-                )}
-
-                {card.state !== 'proximamente' && puedeConectar && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {card.state === 'conectado' ? (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setAbierta(abierto ? null : card.id)}
-                        >
-                          {abierto ? 'Cerrar' : 'Ajustar'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={trabajando === card.id}
-                          onClick={() => void desconectar(card.id, card.label)}
-                        >
-                          Desconectar
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        size="sm"
-                        className="btn-brand"
-                        disabled={trabajando === card.id}
-                        onClick={() => {
-                          if (card.id === 'meta' && !card.data.candidates?.length) {
-                            window.location.href = `/api/connections/meta/start?project=${projectId}`;
-                            return;
-                          }
-                          if (card.id === 'linkedin') {
-                            void conectarConComposio(card.id);
-                            return;
-                          }
-                          if (card.id === 'sitio') {
-                            void pedir(card.id, `/api/projects/${projectId}/connections/sitio`, {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: '{}',
-                            });
-                            setAbierta('sitio');
-                            return;
-                          }
-                          setAbierta(abierto ? null : card.id);
-                        }}
-                      >
-                        {trabajando === card.id ? 'Esperando a que termines en la otra ventana…' : 'Conectar'}
-                      </Button>
-                    )}
-                  </div>
-                )}
-
-                {abierto && (
-                  <div className="border-t border-[var(--color-border)] pt-3">
-                    <Detalle
-                      card={card}
-                      projectId={projectId}
-                      trabajando={trabajando === card.id}
-                      onPedir={pedir}
-                      onCerrar={() => setAbierta(null)}
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {grupos.map((grupo) => (
+        <section key={grupo} className="space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold">{CONNECTOR_GROUP_LABEL[grupo]}</h2>
+            <p className="text-xs text-[var(--color-muted-foreground)]">
+              {CONNECTOR_GROUP_BLURB[grupo]}
+            </p>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {cards
+              .filter((c) => c.group === grupo)
+              .map((card) => (
+                <Tarjeta
+                  key={card.id}
+                  card={card}
+                  projectId={projectId}
+                  puedeConectar={puedeConectar}
+                  abierto={abierta === card.id}
+                  trabajando={trabajando === card.id}
+                  onAbrir={() => setAbierta(abierta === card.id ? null : card.id)}
+                  onCerrar={() => setAbierta(null)}
+                  onConectarComposio={() => void conectarConComposio(card.id)}
+                  onDesconectar={() => void desconectar(card.id, card.label)}
+                  onPedir={pedir}
+                />
+              ))}
+          </div>
+        </section>
+      ))}
 
       {!compact && eventos.length > 0 && (
         <Card>
@@ -274,66 +288,154 @@ export function ConnectionsBoard({
       )}
     </div>
   );
-
-  async function conectarConComposio(canal: ConnectionChannel) {
-    setTrabajando(canal);
-    try {
-      const res = await fetch('/api/connections/composio/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: projectId, canal }),
-      });
-      const data = await res.json();
-      if (res.ok && data.alreadyConnected) {
-        setTrabajando(null);
-        push({ title: 'Ya estaba conectado.', variant: 'success' });
-        router.refresh();
-        return;
-      }
-      if (!res.ok || !data.redirectUrl) throw new Error(data.error ?? 'No se pudo.');
-      // La ventana de permisos se abre APARTE. Esta pantalla se queda y
-      // pregunta a Goossip (que pregunta a Composio) hasta que la cuenta quede.
-      const ventana = window.open(
-        data.redirectUrl,
-        `goossip-conexion-${canal}`,
-        'width=640,height=780,noopener=no',
-      );
-      if (!ventana) {
-        window.location.href = data.redirectUrl;
-        return;
-      }
-      const inicio = Date.now();
-      const cada = window.setInterval(async () => {
-        if (Date.now() - inicio > 5 * 60 * 1000) {
-          window.clearInterval(cada);
-          setTrabajando(null);
-          push({ title: 'No se completó la conexión. Intenta de nuevo.', variant: 'error' });
-          return;
-        }
-        try {
-          const r = await fetch(
-            `/api/connections/composio/status?project=${projectId}&canal=${canal}`,
-            { cache: 'no-store' },
-          );
-          const s = await r.json();
-          if (s.connected) {
-            window.clearInterval(cada);
-            try { ventana.close(); } catch {}
-            setTrabajando(null);
-            push({ title: 'Conectado. Ya puedes cerrar la otra ventana si sigue abierta.', variant: 'success' });
-            router.refresh();
-          }
-        } catch {}
-      }, 3000);
-    } catch (e) {
-      push({ title: e instanceof Error ? e.message : 'Error', variant: 'error' });
-      setTrabajando(null);
-    }
-  }
 }
 
 // ---------------------------------------------------------------------------
-// Lo que se abre al conectar o ajustar cada canal
+// La tarjeta de un conector
+// ---------------------------------------------------------------------------
+
+function Tarjeta({
+  card,
+  projectId,
+  puedeConectar,
+  abierto,
+  trabajando,
+  onAbrir,
+  onCerrar,
+  onConectarComposio,
+  onDesconectar,
+  onPedir,
+}: {
+  card: Card;
+  projectId: string;
+  puedeConectar: boolean;
+  abierto: boolean;
+  trabajando: boolean;
+  onAbrir: () => void;
+  onCerrar: () => void;
+  onConectarComposio: () => void;
+  onDesconectar: () => void;
+  onPedir: (canal: string, url: string, init: RequestInit) => Promise<any>;
+}) {
+  const proximamente = card.state === 'proximamente';
+  return (
+    <Card className={proximamente ? 'opacity-70' : 'card-glow'}>
+      <CardContent className="space-y-3 pt-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <span
+              className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl ${
+                card.via === 'composio' ? 'bg-white' : 'bg-[var(--color-accent)]'
+              }`}
+            >
+              {card.via === 'composio' ? (
+                // El logo viene del catálogo de Composio (`toolkit.meta.logo`).
+                <img src={card.logo} alt="" className="h-6 w-6 object-contain" />
+              ) : (
+                <IconoPropio slug={card.id} />
+              )}
+            </span>
+            <div className="min-w-0">
+              <h3 className="truncate font-medium">{card.label}</h3>
+              <p className="text-xs text-[var(--color-muted-foreground)]">
+                {card.detail ?? card.blurb}
+              </p>
+            </div>
+          </div>
+          <ConnectionBadge state={card.state} />
+        </div>
+
+        {card.note && (
+          <p className="text-[11px] text-[var(--color-muted-foreground)]">{card.note}</p>
+        )}
+
+        {card.state === 'conectado' && card.connectedAt && (
+          <p className="text-[11px] text-[var(--color-muted-foreground)]">
+            Conectado por {card.connectedBy ?? 'alguien del equipo'} el{' '}
+            {new Date(card.connectedAt).toLocaleDateString('es-MX', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}
+          </p>
+        )}
+
+        {card.pending && (
+          <p className="rounded-lg bg-[var(--color-accent)]/60 px-3 py-2 text-[11px] text-[var(--color-foreground)]">
+            {card.pending}
+          </p>
+        )}
+
+        {!proximamente && puedeConectar && (
+          <div className="flex flex-wrap items-center gap-2">
+            {card.state === 'conectado' ? (
+              <>
+                {/* Lo de Composio no tiene nada que ajustar aquí: lo que hay
+                    que elegir se elige en la pantalla del proveedor. */}
+                {card.via === 'goossip' && (
+                  <Button size="sm" variant="outline" onClick={onAbrir}>
+                    {abierto ? 'Cerrar' : 'Ajustar'}
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" disabled={trabajando} onClick={onDesconectar}>
+                  Quitar
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                className="btn-brand"
+                disabled={trabajando}
+                onClick={() => {
+                  if (card.via === 'composio') return onConectarComposio();
+                  if (card.id === 'meta' && !card.data.candidates?.length) {
+                    window.location.href = `/api/connections/meta/start?project=${projectId}`;
+                    return;
+                  }
+                  if (card.id === 'sitio') {
+                    void onPedir(card.id, `/api/projects/${projectId}/connections/sitio`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: '{}',
+                    });
+                    return onAbrir();
+                  }
+                  onAbrir();
+                }}
+              >
+                {trabajando
+                  ? 'Esperando a que termines en la otra ventana…'
+                  : card.state === 'reconectar'
+                    ? 'Reconectar'
+                    : 'Conectar'}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {abierto && (
+          <div className="border-t border-[var(--color-border)] pt-3">
+            <Detalle
+              card={card}
+              projectId={projectId}
+              trabajando={trabajando}
+              onPedir={onPedir}
+              onCerrar={onCerrar}
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function IconoPropio({ slug }: { slug: string }) {
+  const Icon = ICONO_PROPIO[slug] ?? IconGlobe;
+  return <Icon className="h-4.5 w-4.5 text-[var(--color-foreground)]" />;
+}
+
+// ---------------------------------------------------------------------------
+// Lo que se abre al ajustar los canales propios de Goossip
 // ---------------------------------------------------------------------------
 
 function Detalle({
@@ -346,7 +448,7 @@ function Detalle({
   card: Card;
   projectId: string;
   trabajando: boolean;
-  onPedir: (canal: ConnectionChannel, url: string, init: RequestInit) => Promise<any>;
+  onPedir: (canal: string, url: string, init: RequestInit) => Promise<any>;
   onCerrar: () => void;
 }) {
   const { push } = useToast();
@@ -571,11 +673,7 @@ function Detalle({
           variant="ghost"
           disabled={trabajando}
           onClick={async () => {
-            const r = await onPedir(
-              'sitio',
-              `/api/projects/${projectId}/connections/sitio`,
-              json({}),
-            );
+            const r = await onPedir('sitio', `/api/projects/${projectId}/connections/sitio`, json({}));
             if (r) push({ title: 'Dirección nueva generada', variant: 'success' });
           }}
         >

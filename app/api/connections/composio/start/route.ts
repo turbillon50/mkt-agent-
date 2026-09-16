@@ -1,37 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiProject } from '@/lib/project-access';
-import { channelAvailable, composioUserId } from '@/src/projects/connections';
+import { currentUserOrNull } from '@/lib/users';
+import { startComposioConnection } from '@/src/projects/composio-connections';
+import { channelAvailable } from '@/src/projects/connections';
 import { logProjectEvent } from '@/src/projects/events';
+import { resolveConnectionLink } from '@/src/projects/links';
+import { connectorBySlug } from '@/src/projects/catalog';
+import { appOrigin } from '../../meta/start/route';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * Canales que lleva Composio (hoy LinkedIn).
+ * Arranca la conexión de cualquier conector del catálogo — todos van por
+ * Composio con su app administrada.
  *
- * Se conectan a nombre del PROYECTO (`project:<id>`), no del usuario: la cuenta
- * del cliente no se puede ir con quien la enganchó.
+ * Dos puertas al mismo baile, igual que en Meta:
+ *   · POST con `{project, toolkit}` — alguien del proyecto con permiso de
+ *     conectar. Devuelve la URL para mandar la pestaña.
+ *   · GET `?link=<token>&toolkit=<slug>` — alguien de FUERA con un enlace de un
+ *     solo uso. El enlace ES su permiso, y solo para ese proyecto y ese canal.
+ *     No se quema aquí: se quema en el callback, cuando el permiso ya está dado.
  */
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const projectId = String(body?.project ?? '');
-  const canal = String(body?.canal ?? '');
+  // `canal` es como lo llamaba la corrida 3; se acepta para no romper nada.
+  const toolkit = String(body?.toolkit ?? body?.canal ?? '');
 
-  if (canal !== 'linkedin') {
-    return NextResponse.json({ error: 'canal desconocido' }, { status: 400 });
+  const connector = connectorBySlug(toolkit);
+  if (!connector || connector.via !== 'composio') {
+    return NextResponse.json({ error: 'conexión desconocida' }, { status: 400 });
   }
-  if (!channelAvailable('linkedin')) {
-    return NextResponse.json({ error: 'LinkedIn no está disponible por ahora.' }, { status: 503 });
+  if (!channelAvailable(toolkit)) {
+    return NextResponse.json(
+      { error: `${connector.label} no está disponible por ahora.` },
+      { status: 503 },
+    );
   }
 
   const gate = await apiProject(projectId, { section: 'conexiones', capability: 'conectar' });
   if (!gate.ok) return gate.res;
 
   try {
-    const { startConnection } = await import('@/lib/composio');
-    const { redirectUrl, alreadyConnected } = await startConnection(composioUserId(projectId), 'linkedin');
-    if (alreadyConnected) return NextResponse.json({ alreadyConnected: true });
-    if (!redirectUrl) throw new Error('No se pudo abrir la ventana de LinkedIn.');
+    const { redirectUrl, connectedAccountId, alreadyConnected } = await startComposioConnection({
+      project: gate.ctx.project,
+      toolkit,
+      connectedBy: gate.ctx.clerkUserId,
+      userId: gate.ctx.user.id,
+      baseUrl: appOrigin(req),
+    });
 
     await logProjectEvent({
       orgId: gate.ctx.orgId,
@@ -39,9 +57,10 @@ export async function POST(req: NextRequest) {
       type: 'channel_connected',
       actor: gate.ctx.clerkUserId,
       actorEmail: gate.ctx.user.email,
-      payload: { canal: 'linkedin', paso: 'permiso solicitado' },
+      payload: { canal: toolkit, paso: 'permiso solicitado', cuenta: connectedAccountId },
     });
 
+    if (alreadyConnected) return NextResponse.json({ alreadyConnected: true });
     return NextResponse.json({ redirectUrl });
   } catch (e) {
     return NextResponse.json(
@@ -51,11 +70,52 @@ export async function POST(req: NextRequest) {
   }
 }
 
+/** La entrada de quien llega con un enlace de un solo uso. */
+export async function GET(req: NextRequest) {
+  const origin = appOrigin(req);
+  const token = req.nextUrl.searchParams.get('link');
+  if (!token) return NextResponse.json({ error: 'falta el enlace' }, { status: 400 });
+
+  const resolution = await resolveConnectionLink(token);
+  if (!resolution.ok) {
+    return NextResponse.redirect(new URL(`/conectar/${token}`, origin));
+  }
+
+  const toolkit = req.nextUrl.searchParams.get('toolkit') ?? resolution.link.channel;
+  const connector = connectorBySlug(toolkit);
+  if (!connector || connector.via !== 'composio' || !channelAvailable(toolkit)) {
+    return NextResponse.redirect(new URL(`/conectar/${token}`, origin));
+  }
+
+  // Quién hizo la conexión sí se pregunta: la bitácora del proyecto tiene que
+  // poder contestar "¿y esto quién lo enganchó?" con un nombre.
+  const user = await currentUserOrNull();
+  if (!user) return NextResponse.redirect(new URL(`/conectar/${token}`, origin));
+
+  try {
+    // El token del enlace viaja DENTRO del `callback_url` que se le da a
+    // Composio, que es lo único que vuelve garantizado: así se puede quemar al
+    // regreso aunque la persona termine el permiso en otra pestaña.
+    const { redirectUrl } = await startComposioConnection({
+      project: resolution.project,
+      toolkit,
+      connectedBy: user.clerkId,
+      userId: user.id,
+      baseUrl: origin,
+      linkToken: token,
+    });
+    return NextResponse.redirect(redirectUrl);
+  } catch {
+    return NextResponse.redirect(new URL(`/conectar/${token}`, origin));
+  }
+}
+
 /** Nunca le mostramos al usuario el error crudo de Composio en inglés. */
 function mensajeAmable(e: unknown): string {
   const raw = e instanceof Error ? e.message : String(e);
   if (/Multiple connected accounts/i.test(raw)) return 'Había intentos anteriores sin terminar. Vuelve a dar Conectar.';
   if (/unauthorized|401|api key/i.test(raw)) return 'Goossip no pudo hablar con el proveedor de conexiones. Avísanos.';
+  if (/no está disponible/i.test(raw)) return raw;
   console.error('[composio/start]', raw);
   return 'No se pudo iniciar la conexión. Intenta de nuevo.';
 }

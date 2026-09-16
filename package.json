@@ -21,7 +21,9 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "test:projects": "tsx test/projects.test.ts",
-    "test:campanas": "tsx test/campanas.test.ts"
+    "test:campanas": "tsx test/campanas.test.ts",
+    "test:composio": "tsx test/composio.test.ts",
+    "composio:bootstrap": "tsx scripts/composio-bootstrap.ts"
   },
   "engines": {
     "node": ">=20"

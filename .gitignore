@@ -20,3 +20,7 @@ capturas-c3/*
 capturas-c4/*
 !capturas-c4/resumen.json
 !capturas-c4/barrido-clerk.json
+
+# Igual para las de la corrida 5 (8 MB de PNG).
+capturas-c5/*
+!capturas-c5/resumen.json

@@ -63,7 +63,7 @@ import {
 import { buildChannelCards, channelAvailable } from '../src/projects/connections';
 import {
   canSeeSection,
-  CHANNEL_SPECS,
+  CONNECTORS,
   landingSection,
   projectCan,
   PROJECT_ROLES,
@@ -167,7 +167,6 @@ function pruebaRoles(): void {
  * algo a medias.
  */
 const JERGA = [
-  'composio',
   'auth config',
   'auth_config',
   'bridge',
@@ -258,6 +257,26 @@ function pruebaSinJerga(): void {
     encontradas.slice(0, 8).join(' · '),
   );
 
+  /**
+   * "Composio" dejó de ser jerga en la corrida 5 y pasó a ser el nombre de un
+   * proveedor que el usuario VE — Luis lo dictó así: "Al conectar verás una
+   * pantalla de permisos de Composio, nuestro proveedor de conexiones seguras."
+   * Lo que sigue prohibido es explicarle la maquinaria. Por eso el barrido no
+   * cuenta la palabra: exige que cada vez que aparece venga con esa frase y en
+   * un solo lugar.
+   */
+  const conComposio = archivos
+    .map((f) => ({ ruta: path.relative(raiz, f), texto: textoVisible(readFileSync(f, 'utf8')) }))
+    .filter((a) => /composio/i.test(a.texto));
+  check(
+    'Composio solo se nombra como proveedor, una vez y sin explicar la maquinaria',
+    conComposio.length <= 1 &&
+      // El texto llega envuelto por el formateo del JSX: los espacios y saltos
+      // se comparan como uno solo, que es como lo lee una persona.
+      conComposio.every((a) => /proveedor\s+de\s+conexiones\s+seguras/i.test(a.texto)),
+    conComposio.map((a) => a.ruta).join(' · '),
+  );
+
   // Y ninguna marca de trabajo a medias, en mayúsculas, en ningún lado.
   const pendientes = [...archivosTsx(path.join(raiz, 'app')), ...archivosTsx(path.join(raiz, 'components'))]
     .filter((f) => /\b(TODO|FIXME|XXX|HACK)\b:/.test(readFileSync(f, 'utf8')))
@@ -265,7 +284,7 @@ function pruebaSinJerga(): void {
   check('sin marcas de pendiente en el código de pantallas', pendientes.length === 0, pendientes.join(' · '));
 
   // El catálogo de canales es lo que más se lee: se revisa aparte y entero.
-  const textoCanales = CHANNEL_SPECS.map((c) => `${c.label} ${c.description}`).join(' ').toLowerCase();
+  const textoCanales = CONNECTORS.map((c) => `${c.label} ${c.blurb}`).join(' ').toLowerCase();
   check(
     'el catálogo de canales habla en español de a pie',
     !JERGA.some((j) => textoCanales.includes(j.toLowerCase())),
@@ -290,13 +309,17 @@ function pruebaCanales(): void {
   } as any;
 
   const { cards, conectados, conectables } = buildChannelCards(proyecto, []);
-  eq_('hay 8 canales en el catálogo', cards.length, 8);
-  eq_('Meta va primero, por valor', cards[0].id, 'meta');
+  // Corrida 5: el catálogo es el de Composio (21) más los tres propios de
+  // Goossip. Meta con app propia solo aparece con `META_OWN_APP=true`.
+  eq_('el catálogo tiene los 24 conectores', cards.length, CONNECTORS.length);
+  eq_('la publicidad va primero, por valor', cards[0].group, 'publicidad');
   eq_('proyecto nuevo: 0 conectados', conectados, 0);
   check('hay canales conectables de verdad', conectables >= 3, `conectables=${conectables}`);
   eq_(
     'un solo sistema de etiquetas',
-    cards.every((c) => ['conectado', 'sin_conectar', 'proximamente'].includes(c.state)),
+    cards.every((c) =>
+      ['conectado', 'sin_conectar', 'reconectar', 'proximamente'].includes(c.state),
+    ),
     true,
   );
   eq_(
@@ -309,6 +332,13 @@ function pruebaCanales(): void {
     cards.filter((c) => c.state !== 'conectado').every((c) => c.detail === null),
     true,
   );
+
+  // El camino viejo de Meta con app propia no se borró: se apagó. Con la
+  // bandera encendida sigue funcionando igual que en la corrida 3, y apagada
+  // ni siquiera aparece en el catálogo.
+  eq_('con META_OWN_APP apagado, Meta con app propia no está', cards.some((c) => c.id === 'meta'), false);
+  const antes = process.env.META_OWN_APP;
+  process.env.META_OWN_APP = 'true';
 
   // Meta con página pero SIN formulario: conectado a medias, y se dice.
   const conPagina = buildChannelCards(
@@ -328,6 +358,8 @@ function pruebaCanales(): void {
   eq_('Meta con página: conectado', meta.state, 'conectado');
   eq_('Meta con página: dice el nombre real', meta.detail, 'V&living');
   check('Meta sin formulario: avisa qué falta', Boolean(meta.pending), 'no avisó');
+  if (antes === undefined) delete process.env.META_OWN_APP;
+  else process.env.META_OWN_APP = antes;
 
   // WhatsApp con número pero sin permiso para escribir: NO se pinta de verde.
   const conNumero = buildChannelCards(

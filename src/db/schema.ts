@@ -258,6 +258,11 @@ export const socialAccounts = pgTable('social_accounts', {
   label: text('label'),
   connectedBy: text('connected_by'),
   connectedAt: timestamp('connected_at', { withTimezone: true }),
+  /**
+   * Última vez que el proveedor confirmó que la cuenta sigue viva (0015).
+   * Verde sin esto es una promesa sin respaldo: ver `esVerificacionFresca`.
+   */
+  verifiedAt: timestamp('verified_at', { withTimezone: true }),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -265,6 +270,23 @@ export const socialAccounts = pgTable('social_accounts', {
   userPlatformIdx: index('social_accounts_user_platform_idx').on(t.userId, t.platform),
   projectIdx: index('social_accounts_project_idx').on(t.campaignId),
 }));
+
+/**
+ * La "app" que Composio administra por toolkit (0015). Se crea una vez con
+ * `use_composio_managed_auth` y el `ac_xxx` vive aquí — Goossip no registra
+ * apps de developer propias en Meta, Google ni LinkedIn.
+ */
+export const composioAuthConfigs = pgTable('composio_auth_configs', {
+  toolkit: text('toolkit').primaryKey(),
+  authConfigId: text('auth_config_id').notNull(),
+  managed: boolean('managed').notNull().default(true),
+  logo: text('logo'),
+  name: text('name'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type ComposioAuthConfig = typeof composioAuthConfigs.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // El proyecto como unidad central (migración 0014): su gente, sus enlaces de

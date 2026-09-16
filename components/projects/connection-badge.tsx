@@ -6,11 +6,16 @@ import { CONNECTION_STATE_LABEL, type ConnectionState } from '@/src/projects/typ
  *
  * Antes convivían "conectado", "próximo", "en configuración", "soon", un
  * `Badge variant="outline"` y puntitos de colores con `title` escondido. Cinco
- * vocabularios para tres estados. Aquí están los tres y no hay más.
+ * vocabularios para tres estados. Aquí están los cuatro de hoy y no hay más.
+ *
+ * `reconectar` se ve distinto de `sin_conectar` a propósito: una cuenta que se
+ * cayó pide una acción HOY, y pintarla igual que una que nunca se conectó
+ * esconde justo lo que hay que arreglar.
  */
 const ESTILOS: Record<ConnectionState, string> = {
   conectado: 'bg-[var(--color-success)]/15 text-[var(--color-success)]',
   sin_conectar: 'bg-[var(--color-muted)] text-[var(--color-muted-foreground)]',
+  reconectar: 'bg-[var(--color-warning)]/15 text-[var(--color-warning)]',
   proximamente: 'border border-dashed border-[var(--color-border)] text-[var(--color-muted-foreground)]',
 };
 

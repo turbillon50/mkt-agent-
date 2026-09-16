@@ -2,8 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProjectHeader } from '@/components/projects/project-header';
 import { guardProject } from '@/components/projects/project-guard';
 import { KnowledgeForm } from '@/components/projects/knowledge-form';
+import { KnowledgeImport } from '@/components/projects/knowledge-import';
 import { listKnowledge } from '@/lib/data';
 import { formatDate } from '@/lib/utils';
+import { listProjectAccounts } from '@/src/projects/connections';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +19,12 @@ export default async function ConocimientoPage({ params }: { params: Promise<{ i
   if ('denied' in guard) return guard.denied;
   const { project, projectRole, orgId } = guard.ctx;
 
-  const rows = await listKnowledge(orgId).catch(() => []);
+  const [rows, cuentas] = await Promise.all([
+    listKnowledge(orgId).catch(() => []),
+    listProjectAccounts(orgId, id).catch(() => []),
+  ]);
+  // De dónde se puede traer hoy: lo que este proyecto tenga conectado de verdad.
+  const conectadas = cuentas.filter((c) => c.status === 'connected').map((c) => c.platform);
 
   return (
     <div className="space-y-5">
@@ -30,7 +37,12 @@ export default async function ConocimientoPage({ params }: { params: Promise<{ i
         description="Lo que tu vendedor sabe del negocio y puede contestar sin inventar."
       />
 
-      {guard.ctx.can('operar') && <KnowledgeForm projectId={id} />}
+      {guard.ctx.can('operar') && (
+        <>
+          <KnowledgeImport projectId={id} conectadas={conectadas} />
+          <KnowledgeForm projectId={id} />
+        </>
+      )}
 
       <div className="grid gap-3">
         {rows.length === 0 ? (

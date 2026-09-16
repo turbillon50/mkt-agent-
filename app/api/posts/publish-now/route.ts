@@ -5,12 +5,29 @@ import { isClerkConfigured } from '@/lib/clerk-config';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+/**
+ * Publicar de verdad, ahora mismo.
+ *
+ * Desde la corrida 5 el camino normal es el del PROYECTO por Composio: se
+ * publica en la cuenta que el cliente autorizó para ese proyecto. El camino
+ * viejo —las cuentas de la casa con tokens en el entorno— solo se usa con
+ * `META_OWN_APP=true`, que está apagado. Así nadie llama a Graph con
+ * credenciales nuestras sin que alguien lo encienda a propósito.
+ */
+const TOOLKIT_DE: Record<string, string> = {
+  meta: 'facebook',
+  instagram: 'instagram',
+  linkedin: 'linkedin',
+  twitter: 'twitter',
+};
+
 export async function POST(req: NextRequest) {
   let dbUser: { id: string; isAdmin: boolean } | null = null;
   let clerkUserId: string | null = null;
   // `posts.org_id` es NOT NULL desde la migración 0013: sin org activa no hay
   // dónde guardar la publicación.
   let orgId: string | null = null;
+  let activeProjectId: string | null = null;
 
   if (isClerkConfigured()) {
     try {
@@ -19,6 +36,7 @@ export async function POST(req: NextRequest) {
       if (!gate.ok) return gate.res;
       dbUser = { id: gate.ctx.user.id, isAdmin: gate.ctx.user.isAdmin };
       orgId = gate.ctx.orgId;
+      activeProjectId = gate.ctx.activeProjectId ?? null;
       const { userId } = await auth();
       clerkUserId = userId;
     } catch {
@@ -38,6 +56,54 @@ export async function POST(req: NextRequest) {
   if (!platform) return NextResponse.json({ error: 'platform inválido' }, { status: 400 });
   if (!text) return NextResponse.json({ error: 'texto vacío' }, { status: 400 });
 
+  // --- Camino normal: la cuenta del proyecto, por Composio -----------------
+  const { metaOwnAppEnabled } = await import('@/src/projects/catalog');
+  if (!metaOwnAppEnabled()) {
+    if (!activeProjectId) {
+      return NextResponse.json(
+        { error: 'Entra a un proyecto para publicar: las cuentas son del proyecto.' },
+        { status: 400 },
+      );
+    }
+    const { getProject } = await import('@/src/sales/projects');
+    const project = await getProject(orgId, activeProjectId);
+    if (!project) {
+      return NextResponse.json({ error: 'no encontramos tu proyecto activo' }, { status: 404 });
+    }
+    const { requireProjectCapability } = await import('@/lib/project-access');
+    const denied = await requireProjectCapability(project.id, 'operar');
+    if (denied) return denied;
+
+    try {
+      const { publishTo } = await import('@/src/channels');
+      const out = await publishTo(project, TOOLKIT_DE[platform], {
+        texto: text,
+        media: imageUrl ?? null,
+      });
+      const { db } = await import('@/src/db/client');
+      const { posts } = await import('@/src/db/schema');
+      const [row] = await db
+        .insert(posts)
+        .values({
+          orgId,
+          platform,
+          text,
+          topic: topic ?? null,
+          externalId: out.id,
+          externalUrl: out.url,
+          publishedAt: new Date(),
+        })
+        .returning({ id: posts.id });
+      return NextResponse.json({ ok: true, externalUrl: out.url, postId: row?.id ?? null });
+    } catch (e) {
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : 'No se pudo publicar.' },
+        { status: 400 },
+      );
+    }
+  }
+
+  // --- Camino viejo: cuentas de la casa, solo con META_OWN_APP=true --------
   try {
     const { db } = await import('@/src/db/client');
     const { posts } = await import('@/src/db/schema');
