@@ -13,9 +13,18 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { runOnce } = await import('@/src/runner');
+    const { publicarProgramadas, runOnce } = await import('@/src/runner');
+    /**
+     * Primero lo PROGRAMADO y después lo automático.
+     *
+     * El orden importa: lo programado es lo que una persona ya aprobó y le puso
+     * hora, así que sale sí o sí. Lo automático solo sale en los proyectos que
+     * subieron a nivel 2 y activaron la red, y no debería adelantarse a lo que
+     * el cliente planeó para esa hora.
+     */
+    const programadas = await publicarProgramadas({ dryRun: false });
     const result = await runOnce({ dryRun: false });
-    return NextResponse.json({ ok: true, result });
+    return NextResponse.json({ ok: true, programadas, result });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'cron run error';
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

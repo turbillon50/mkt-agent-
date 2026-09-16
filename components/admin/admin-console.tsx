@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast-provider';
-import { IconShield, IconUsers, IconBolt, IconBarChart } from '@/components/icons';
+import { IconShield, IconUsers, IconBolt, IconBarChart, IconSparkles } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
 /**
@@ -14,17 +14,20 @@ import { cn } from '@/lib/utils';
  * encima de todas las organizaciones. La puerta real está en el servidor
  * (`apiAppAdmin`); esto solo la dibuja.
  *
- * Cuatro pestañas, que es lo que pidió el issue: Organizaciones · Usuarios ·
- * Cola global · Salud. Navegable en móvil: las pestañas hacen scroll y las
- * tablas se vuelven tarjetas.
+ * Cinco pestañas: Organizaciones · Usuarios · Cola global · Goossip trabajando
+ * · Salud. La cuarta entra en la corrida 7 y contesta la pregunta de dueño que
+ * ninguna de las otras contestaba: "¿qué tanto está trabajando Goossip en cada
+ * cliente y a costa de cuántas correcciones?". Navegable en móvil: las pestañas
+ * hacen scroll y las tablas se vuelven tarjetas.
  */
 
-type Tab = 'orgs' | 'users' | 'queue' | 'health';
+type Tab = 'orgs' | 'users' | 'queue' | 'goossip' | 'health';
 
 const TABS: Array<{ key: Tab; label: string; Icon: React.ElementType }> = [
   { key: 'orgs', label: 'Organizaciones', Icon: IconShield },
   { key: 'users', label: 'Usuarios', Icon: IconUsers },
   { key: 'queue', label: 'Cola global', Icon: IconBolt },
+  { key: 'goossip', label: 'Goossip trabajando', Icon: IconSparkles },
   { key: 'health', label: 'Salud', Icon: IconBarChart },
 ];
 
@@ -156,6 +159,7 @@ export function AdminConsole() {
       {tab === 'orgs' && <OrgsTab onForbidden={() => setForbidden(true)} />}
       {tab === 'users' && <UsersTab onForbidden={() => setForbidden(true)} />}
       {tab === 'queue' && <QueueTab onForbidden={() => setForbidden(true)} />}
+      {tab === 'goossip' && <GoossipTab onForbidden={() => setForbidden(true)} />}
       {tab === 'health' && <HealthTab onForbidden={() => setForbidden(true)} />}
     </div>
   );
@@ -812,5 +816,152 @@ function Vacio({ texto }: { texto: string }) {
     <Card className="card-glow">
       <CardContent className="py-10 text-center text-sm text-[var(--color-muted-foreground)]">{texto}</CardContent>
     </Card>
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Goossip trabajando
+// ---------------------------------------------------------------------------
+
+interface FilaGoossip {
+  id: string;
+  nombre: string;
+  nivel: number;
+  nivelNombre: string;
+  piezasPublicadas: number;
+  piezasHechas: number;
+  leadsContactados: number;
+  primeraRespuestaMin: number | null;
+  aprobacionSinCambios: { tasa: number | null };
+  correcciones: number;
+  ahorro: { horas: number; cuenta: string };
+}
+
+/**
+ * Goossip medido como empleado, proyecto por proyecto.
+ *
+ * Es EXACTAMENTE el mismo cálculo que ve cada cliente en sus Ajustes. Si el
+ * número del admin y el del cliente no fueran el mismo, uno de los dos estaría
+ * mintiendo — y el que se enseña en una junta es este.
+ */
+function GoossipTab({ onForbidden }: { onForbidden: () => void }) {
+  const [filas, setFilas] = useState<FilaGoossip[]>([]);
+  const [total, setTotal] = useState<{ publicadas: number; contactados: number; correcciones: number; horas: number } | null>(null);
+  const [dias, setDias] = useState(30);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    let vivo = true;
+    setCargando(true);
+    fetch(`/api/admin/goossip?dias=${dias}`, { cache: 'no-store' })
+      .then((r) => {
+        if (r.status === 403) {
+          onForbidden();
+          return null;
+        }
+        return r.ok ? r.json() : null;
+      })
+      .then((d) => {
+        if (!vivo || !d) return;
+        setFilas(d.proyectos ?? []);
+        setTotal(d.total ?? null);
+      })
+      .catch(() => undefined)
+      .finally(() => vivo && setCargando(false));
+    return () => {
+      vivo = false;
+    };
+  }, [dias, onForbidden]);
+
+  if (cargando) return <div className="skeleton h-40 w-full rounded-xl" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        {[7, 30, 90].map((d) => (
+          <button
+            key={d}
+            type="button"
+            onClick={() => setDias(d)}
+            className={cn(
+              'rounded-full px-3 py-1 text-xs',
+              d === dias
+                ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
+                : 'border border-[var(--color-border)] text-[var(--color-muted-foreground)]',
+            )}
+          >
+            {d} días
+          </button>
+        ))}
+      </div>
+
+      {total && (
+        <Card>
+          <CardContent className="grid grid-cols-2 gap-3 py-4 lg:grid-cols-4">
+            <div>
+              <p className="text-2xl font-semibold tabular-nums">{total.publicadas}</p>
+              <p className="text-[11px] text-[var(--color-muted-foreground)]">publicaciones</p>
+            </div>
+            <div>
+              <p className="text-2xl font-semibold tabular-nums">{total.contactados}</p>
+              <p className="text-[11px] text-[var(--color-muted-foreground)]">leads contactados</p>
+            </div>
+            <div>
+              <p className="text-2xl font-semibold tabular-nums">{total.correcciones}</p>
+              <p className="text-[11px] text-[var(--color-muted-foreground)]">correcciones humanas</p>
+            </div>
+            <div>
+              <p className="text-2xl font-semibold tabular-nums">{total.horas} h</p>
+              <p className="text-[11px] text-[var(--color-muted-foreground)]">ahorro estimado</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-2">
+        {filas.map((f) => (
+          <Card key={f.id}>
+            <CardContent className="flex flex-wrap items-center gap-x-5 gap-y-2 py-3 text-xs">
+              <div className="min-w-[10rem] flex-1">
+                <p className="text-sm font-medium">{f.nombre}</p>
+                <Badge variant="outline" className="text-[10px]">
+                  nivel {f.nivel} · {f.nivelNombre}
+                </Badge>
+              </div>
+              <Celda n={f.piezasPublicadas} l="publicó" />
+              <Celda n={f.piezasHechas} l="piezas hechas" />
+              <Celda n={f.leadsContactados} l="contactó" />
+              <Celda
+                n={f.primeraRespuestaMin !== null ? `${f.primeraRespuestaMin} min` : '—'}
+                l="1ª respuesta"
+              />
+              <Celda
+                n={f.aprobacionSinCambios.tasa !== null ? `${f.aprobacionSinCambios.tasa}%` : '—'}
+                l="sin cambios"
+              />
+              <Celda n={f.correcciones} l="correcciones" />
+              <Celda n={`${f.ahorro.horas} h`} l="ahorro" />
+            </CardContent>
+          </Card>
+        ))}
+        {filas.length === 0 && (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-[var(--color-muted-foreground)]">
+              No hay proyectos todavía.
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Celda({ n, l }: { n: number | string; l: string }) {
+  return (
+    <div className="min-w-[4.5rem]">
+      <p className="text-base font-semibold tabular-nums">{n}</p>
+      <p className="text-[10px] text-[var(--color-muted-foreground)]">{l}</p>
+    </div>
   );
 }

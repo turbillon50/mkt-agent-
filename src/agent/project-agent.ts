@@ -90,16 +90,35 @@ export async function preguntarAlAsistente(input: {
     language: ctx.project.brandLanguage ?? config.brand.language,
   };
 
-  const estado = await pendientesDelProyecto({
-    orgId: ctx.orgId,
-    project: ctx.project,
-    kit: ctx.kit,
-  }).catch(() => null);
+  const [estado, lecciones] = await Promise.all([
+    pendientesDelProyecto({
+      orgId: ctx.orgId,
+      project: ctx.project,
+      kit: ctx.kit,
+    }).catch(() => null),
+    /**
+     * Lo que este cliente ya le corrigió a Goossip.
+     *
+     * Van al SYSTEM y no a una tool: una lección que hay que ir a buscar es una
+     * lección que el modelo solo va a mirar cuando se acuerde de que existe, y
+     * justo lo que se quiere evitar es que repita el error sin darse cuenta.
+     * Se buscan por parecido al mensaje del usuario, así que las ocho que entran
+     * son las que tienen que ver con lo que se está pidiendo ahora.
+     */
+    import('../autonomia/lecciones')
+      .then((m) => m.leccionesParecidas(ctx.project.id, input.mensaje, 8))
+      .catch(() => []),
+  ]);
+
+  const { leccionesComoTexto } = await import('../autonomia/lecciones');
+  const { nivelComoTexto } = await import('../autonomia/niveles');
 
   const instrucciones = [
     buildOperatorManifesto(marca, ctx.project.manifesto ?? null),
     reglasDelProyecto(ctx),
+    `## Hasta dónde puedes llegar solo\n\n${nivelComoTexto(ctx.project)}`,
     estado ? `## Cómo está el proyecto hoy\n\n${guiaComoTexto(estado)}` : null,
+    lecciones.length ? `## Lo que ya te corrigieron aquí\n\n${leccionesComoTexto(lecciones)}` : null,
   ]
     .filter(Boolean)
     .join('\n\n');

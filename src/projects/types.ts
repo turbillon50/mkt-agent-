@@ -54,6 +54,10 @@ export const PROJECT_SECTIONS = [
   // marca se toca todo el tiempo mientras se hacen piezas, no una vez al dar
   // de alta el proyecto.
   'marca',
+  // Corrida 7. Deja de ser una sección GLOBAL del menú: la competencia de
+  // V&LIVING no es la de MOMENTUM, y tenerla fuera del proyecto era la misma
+  // clase de bug que el chat global — una herramienta sin dueño.
+  'competencia',
   'automatizaciones',
   'conocimiento',
   'conexiones',
@@ -69,6 +73,7 @@ export const PROJECT_SECTION_LABEL: Record<ProjectSection, string> = {
   campanas: 'Campañas',
   contenido: 'Contenido',
   marca: 'Marca',
+  competencia: 'Competencia',
   automatizaciones: 'Automatizaciones',
   conocimiento: 'Conocimiento',
   conexiones: 'Conexiones',
@@ -147,6 +152,14 @@ export const PROJECT_EVENT_TYPES = [
   'campaign_created',
   'campaign_updated',
   'campaign_deleted',
+  // Corrida 7. La bitácora del proyecto es donde vive el "¿quién aprobó esto y
+  // cuándo?" que pide el issue: la pieza guarda su estado actual, los eventos
+  // guardan el camino.
+  'pieza_movida',
+  'competencia_leida',
+  'prospeccion_busqueda',
+  'prospecto_convertido',
+  'autonomia_cambiada',
 ] as const;
 export type ProjectEventType = (typeof PROJECT_EVENT_TYPES)[number];
 
@@ -165,6 +178,11 @@ export const PROJECT_EVENT_LABEL: Record<ProjectEventType, string> = {
   campaign_created: 'Campaña creada',
   campaign_updated: 'Campaña editada',
   campaign_deleted: 'Campaña borrada',
+  pieza_movida: 'Pieza movida',
+  competencia_leida: 'Competencia leída',
+  prospeccion_busqueda: 'Búsqueda en el mapa',
+  prospecto_convertido: 'Prospecto convertido a lead',
+  autonomia_cambiada: 'Nivel de autonomía cambiado',
 };
 
 // ---------------------------------------------------------------------------

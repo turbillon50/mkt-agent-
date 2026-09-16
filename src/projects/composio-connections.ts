@@ -19,20 +19,23 @@ import { db } from '../db/client';
 import { campaigns, socialAccounts, type Project, type SocialAccount } from '../db/schema';
 import { ensureAuthConfig } from '../composio/auth-configs';
 import {
+  composioReady,
   createConnectLink,
   deleteConnectedAccount,
   getConnectedAccount,
   listConnectedAccounts,
   type ConnectedAccount,
 } from '../composio/client';
-import { connectorOrThrow, type Connector } from './catalog';
+import { connectorBySlug, connectorOrThrow, type Connector } from './catalog';
 import {
   channelAvailable,
   composioUserId,
+  listProjectAccounts,
   markNeedsReconnect,
   saveConnection,
   stageConnection,
   revokeConnection,
+  verificacionFresca,
 } from './connections';
 import type { ConnectionChannel } from './types';
 
@@ -423,6 +426,126 @@ export async function verifyProjectAccounts(project: Project): Promise<VerifyOut
       });
     }
   }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// 3 bis. Reconciliar: Composio manda
+// ---------------------------------------------------------------------------
+
+export interface Reconciliacion {
+  /** Cuántas cuentas ACTIVE tiene el proyecto en Composio ahora mismo. */
+  enComposio: number;
+  /** Toolkits que Composio tenía vivos y a nosotros nos faltaban (o estaban apagados). */
+  encendidos: string[];
+  /** Toolkits que nosotros dábamos por conectados y allá ya no existen. */
+  apagados: string[];
+  /** Cuentas de Composio cuyo toolkit no está en el catálogo de Goossip. */
+  fuera: string[];
+  /** Si Composio no contestó, se dice — y no se toca ni una fila. */
+  error?: string;
+}
+
+/**
+ * Reconciliar el proyecto contra Composio ANTES de pintar nada.
+ *
+ * `verifyProjectAccounts` recorre las filas que YA tenemos: si una conexión
+ * existe allá y aquí no hay fila —o la fila quedó `disconnected` porque el
+ * usuario volvió del permiso por otro navegador y el callback nunca corrió—,
+ * verificar no la encuentra y la pantalla dice "sin conectar" de algo que está
+ * perfectamente conectado. Eso es exactamente el bug que reportó Luis: MOMENTUM
+ * tiene seis cuentas vivas y el Inicio decía que no.
+ *
+ * Aquí se pregunta al revés: **se listan las cuentas del proyecto en Composio y
+ * la base se acomoda a eso.** Composio es el dueño de la verdad; nuestra tabla
+ * es una copia y una copia que discute con el original no sirve de nada.
+ *
+ * Es UNA sola llamada (`user_ids=project:<uuid>`, sin filtro de toolkit), así
+ * que se puede hacer en cada apertura de pantalla sin castigar a nadie.
+ *
+ * Lo que NO hace: borrar filas. Una cuenta que ya no está allá queda
+ * `needs_reconnect` con su motivo, porque quién la conectó y cuándo es parte de
+ * la bitácora del proyecto.
+ */
+export async function reconciliarConComposio(project: Project): Promise<Reconciliacion> {
+  const out: Reconciliacion = { enComposio: 0, encendidos: [], apagados: [], fuera: [] };
+  if (!composioReady()) return { ...out, error: 'Falta la llave de Composio en este entorno.' };
+
+  let remotas: ConnectedAccount[];
+  try {
+    remotas = await listConnectedAccounts({ userId: composioUserId(project.id) });
+  } catch (e) {
+    // Composio caído no puede tumbar la pantalla NI borrar el estado local: se
+    // devuelve el motivo y las filas se quedan como estaban, envejeciendo su
+    // `verified_at` — que es lo que las despinta de verde solas.
+    return { ...out, error: e instanceof Error ? e.message : 'Composio no contestó.' };
+  }
+
+  const activas = new Map<string, ConnectedAccount>();
+  for (const cuenta of remotas) {
+    const slug = cuenta.toolkit?.slug;
+    if (!slug) continue;
+    if (cuenta.status !== 'ACTIVE') continue;
+    if (!connectorBySlug(slug)) {
+      // Una cuenta de un toolkit que Goossip no ofrece. No se inventa una
+      // tarjeta para ella: se cuenta y se dice, que es distinto de esconderla.
+      if (!out.fuera.includes(slug)) out.fuera.push(slug);
+      continue;
+    }
+    // Con dos cuentas vivas del mismo toolkit gana la más reciente: es la que
+    // el usuario acaba de autorizar.
+    const previa = activas.get(slug);
+    if (!previa || (cuenta.created_at ?? '') > (previa.created_at ?? '')) activas.set(slug, cuenta);
+  }
+  out.enComposio = activas.size;
+
+  const locales = await listProjectAccounts(project.orgId, project.id);
+  const porToolkit = new Map(locales.map((l) => [l.platform, l]));
+
+  // 1. Lo que está vivo allá: se enciende aquí, con la hora de AHORA. Acabamos
+  //    de preguntar, así que este verde sí está respaldado.
+  const ahora = new Date();
+  for (const [slug, cuenta] of activas) {
+    const fila = porToolkit.get(slug) ?? null;
+    const yaEstaba = fila?.status === 'connected' && verificacionFresca(fila.verifiedAt, ahora);
+    const handle = handleDeCuenta(cuenta);
+    await saveConnection({
+      orgId: project.orgId,
+      projectId: project.id,
+      channel: slug as ConnectionChannel,
+      // Reconciliar no inventa un autor: si ya había fila se respeta quién la
+      // enganchó, y si no la había fue Composio quien nos lo contó.
+      connectedBy: fila?.connectedBy ?? 'composio',
+      userId: fila?.userId ?? null,
+      label: handle ?? fila?.label ?? connectorBySlug(slug)?.label ?? slug,
+      externalHandle: handle ?? fila?.externalHandle ?? null,
+      verifiedAt: ahora,
+      metadata: {
+        connected_account_id: cuenta.id,
+        auth_config_id: cuenta.auth_config?.id ?? null,
+        via: 'composio',
+        motivo: null,
+        motivo_tecnico: null,
+      },
+    }).catch(() => undefined);
+    if (!yaEstaba) out.encendidos.push(slug);
+  }
+
+  // 2. Lo que aquí damos por conectado y allá ya no existe: se apaga con su
+  //    motivo en español. Verde sin respaldo es la mentira que cuesta caro.
+  for (const fila of locales) {
+    if (fila.status !== 'connected') continue;
+    if (((fila.metadata ?? {}) as { via?: string }).via !== 'composio') continue;
+    if (activas.has(fila.platform)) continue;
+    await markNeedsReconnect(
+      project.orgId,
+      project.id,
+      fila.platform as ConnectionChannel,
+      'Ya no existe el permiso. Vuelve a conectarla.',
+    ).catch(() => undefined);
+    out.apagados.push(fila.platform);
+  }
+
   return out;
 }
 

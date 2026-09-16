@@ -94,6 +94,25 @@ export function AssistantDrawer() {
     if (abierto) setTimeout(() => inputRef.current?.focus(), 60);
   }, [abierto]);
 
+  /**
+   * Cualquier pantalla le puede DICTAR algo al Asistente.
+   *
+   * Es un evento del navegador y no un estado global a propósito: el botón
+   * "Generar pieza" de la auditoría de marca vive tres componentes más abajo y
+   * en otro árbol, y pasarle una función por props significaría enhebrarla por
+   * toda la app. El cajón escucha, se abre y manda.
+   */
+  useEffect(() => {
+    const onDictar = (e: Event) => {
+      const prompt = (e as CustomEvent<{ prompt?: string }>).detail?.prompt;
+      if (!prompt) return;
+      setAbierto(true);
+      void mandarRef.current?.(prompt);
+    };
+    window.addEventListener('goossip:dictar', onDictar);
+    return () => window.removeEventListener('goossip:dictar', onDictar);
+  }, []);
+
   useEffect(() => {
     finRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensajes, pensando]);
@@ -172,7 +191,27 @@ export function AssistantDrawer() {
     [pensando, projectId],
   );
 
+  // El listener de `goossip:dictar` se monta UNA vez y `mandar` cambia en cada
+  // render (depende de `pensando`). Sin la referencia, el listener se quedaría
+  // con la primera versión y mandaría con el proyecto de hace tres pantallas.
+  const mandarRef = useRef(mandar);
+  useEffect(() => {
+    mandarRef.current = mandar;
+  }, [mandar]);
+
   const pendientes = guia?.sugerencias.length ?? 0;
+
+  /**
+   * En el Inicio del proyecto, el botón flotante NO se pinta.
+   *
+   * Ahí el Asistente está EMBEBIDO en la columna ancha (corrida 7), así que el
+   * botón sería un segundo acceso a lo mismo — y, peor, un botón fijo abajo a
+   * la derecha que tapa una esquina del grid de Herramientas. Se vio en la
+   * captura de 1440: caía justo encima de la tarjeta de Competencia.
+   *
+   * El atajo Ctrl+K sigue funcionando en todas partes, también aquí.
+   */
+  const enElInicio = Boolean(projectId) && pathname === `/projects/${projectId}`;
 
   return (
     <>
@@ -185,7 +224,7 @@ export function AssistantDrawer() {
         title="Asistente · Ctrl+K"
         className={cn(
           'fixed bottom-24 right-4 z-40 flex h-12 items-center gap-2 rounded-full bg-gradient-to-br from-[var(--color-brand-1)] to-[var(--color-brand-3)] px-4 text-white shadow-lg transition-transform hover:scale-105 lg:bottom-6',
-          abierto && 'hidden',
+          (abierto || enElInicio) && 'hidden',
         )}
       >
         <IconSparkles className="h-5 w-5" />

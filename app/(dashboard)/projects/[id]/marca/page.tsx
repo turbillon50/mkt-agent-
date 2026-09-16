@@ -1,6 +1,7 @@
 import { ProjectHeader } from '@/components/projects/project-header';
 import { guardProject } from '@/components/projects/project-guard';
 import { BrandKitBoard } from '@/components/marca/brand-kit-board';
+import { AuditoriaDeMarca } from '@/components/marca/auditoria';
 import { getBrandKit } from '@/src/creative/brand-kit';
 
 export const dynamic = 'force-dynamic';
@@ -41,6 +42,13 @@ export default async function MarcaPage({ params }: { params: Promise<{ id: stri
             : null
         }
       />
+
+      {/*
+        La auditoría va DEBAJO del kit y no arriba: primero se define cómo debe
+        verse la marca, después se mide si lo que sale se le parece. Al revés no
+        hay contra qué medir.
+      */}
+      <AuditoriaDeMarca projectId={id} />
     </div>
   );
 }

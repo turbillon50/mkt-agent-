@@ -130,7 +130,11 @@ async function api(path: string, init: RequestInit = {}): Promise<any> {
 async function pruebaCatalogo(): Promise<void> {
   console.log('\n— catálogo contra el catálogo real de Composio —');
   const composio = CONNECTORS.filter((c) => c.via === 'composio');
-  eq_('21 toolkits de Composio en el catálogo', composio.length, 21);
+  // 22 desde la corrida 7: entra `google_maps`, que es la fuente OFICIAL de la
+  // prospección por mapa. Su `managed` también se comprueba abajo contra la API
+  // real, igual que los otros 21 — el número de aquí solo caza que alguien
+  // agregue un conector sin pasar por esta prueba.
+  eq_('22 toolkits de Composio en el catálogo', composio.length, 22);
 
   let coinciden = 0;
   const desacuerdos: string[] = [];

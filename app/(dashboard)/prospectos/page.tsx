@@ -1,28 +1,22 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { orgContextOrNull } from '@/lib/org';
+import { visibleProjects } from '@/lib/project-access';
 
-import { useState, useCallback } from 'react';
-import { LeadsBoard } from '@/components/leads/board';
-import { ProspectSearch } from '@/components/leads/search';
+export const dynamic = 'force-dynamic';
 
 /**
- * Prospección en frío (LinkedIn / Maps). Vive aparte del pipeline de ventas:
- * `leads` y `sales_leads` son tablas distintas y flujos distintos.
+ * Prospección GLOBAL: desvío.
+ *
+ * Desde la corrida 7 la prospección es una pestaña de Leads DENTRO del
+ * proyecto: los prospectos de un cliente no son los del otro, y el contador de
+ * búsquedas de Google Maps —que cuesta dinero— se lleva por proyecto porque es
+ * por proyecto que se paga.
  */
-export default function ProspectosPage() {
-  const [refreshKey, setRefreshKey] = useState(0);
-  const bump = useCallback(() => setRefreshKey((k) => k + 1), []);
-
-  return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Prospectos</h1>
-        <p className="text-sm text-[var(--color-muted-foreground)]">
-          Busca negocios reales o pega links de perfiles públicos. Léelo desde el chat cuando
-          quieras redactar el primer mensaje.
-        </p>
-      </header>
-      <ProspectSearch onAdded={bump} />
-      <LeadsBoard key={refreshKey} />
-    </div>
-  );
+export default async function ProspectosGlobalPage() {
+  const ctx = await orgContextOrNull();
+  if (!ctx) redirect('/onboarding');
+  const visible = await visibleProjects(ctx);
+  if (visible.length === 0) redirect('/projects/new');
+  const activo = visible.find((v) => v.project.id === ctx.activeProjectId) ?? visible[0];
+  redirect(`/projects/${activo.project.id}/leads?vista=prospeccion`);
 }

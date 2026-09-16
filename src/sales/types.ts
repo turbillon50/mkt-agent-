@@ -59,17 +59,45 @@ export const LEAD_STAGE_LABEL_ONE: Record<LeadStage, string> = {
   interesado: 'Interesado',
 };
 
-export const LEAD_SOURCES = ['meta_leadgen', 'site', 'manual', 'import'] as const;
+/**
+ * `maps` entra en la corrida 7: un lead que salió de Prospección por Google
+ * Maps. Es su propia fuente y no `manual` porque la diferencia importa al
+ * medir — un lead que levantó la mano en un formulario y uno al que salimos a
+ * buscar no cierran igual, y mezclarlos hace que la tasa de conversión del
+ * proyecto deje de significar nada.
+ *
+ * La columna es `text` sin CHECK (0012), así que sumar una fuente no pide
+ * migración.
+ */
+export const LEAD_SOURCES = ['meta_leadgen', 'site', 'manual', 'import', 'maps'] as const;
 export type LeadSource = (typeof LEAD_SOURCES)[number];
+
+export const LEAD_SOURCE_LABEL: Record<LeadSource, string> = {
+  meta_leadgen: 'Formulario de anuncio',
+  site: 'Formulario del sitio',
+  manual: 'Alta a mano',
+  import: 'Importado',
+  maps: 'Prospección en Maps',
+};
 
 export type LeadGrade = 'A' | 'B' | 'C';
 
+/**
+ * `propose_outreach` entra en la corrida 7 y la palabra que importa es
+ * *propose*: deja el primer mensaje REDACTADO y en la cola, para correo,
+ * Messenger o llamada, y ahí se queda hasta que una persona lo apruebe. El
+ * runner no lo ejecuta solo en ningún nivel de autonomía.
+ *
+ * La columna `kind` es `text` sin CHECK (0012): sumar una acción no pide
+ * migración.
+ */
 export const ACTION_KINDS = [
   'send_template',
   'send_sms',
   'notify_owner',
   'propose_reply',
   'propose_campaign',
+  'propose_outreach',
   'retarget',
 ] as const;
 export type ActionKind = (typeof ACTION_KINDS)[number];
@@ -132,6 +160,19 @@ export interface ProjectRules {
   business_hours?: string;
   /** A quién le pasa la bola cuando escala: nombre y teléfono o correo. */
   escalate_to?: string;
+  // --- corrida 7 -----------------------------------------------------------
+  /**
+   * Cuánto puede hacer Goossip solo en ESTE proyecto: 1 a 4. Ver
+   * `src/autonomia/niveles.ts`. Vive en `rules` (jsonb) y no en una columna
+   * porque un nivel es una regla del proyecto, igual que `auto_reply`.
+   */
+  autonomy_level?: 1 | 2 | 3 | 4;
+  /** Tope de presupuesto diario cuando el nivel 4 opera campañas, en la moneda del proyecto. */
+  autonomy_daily_budget?: number;
+  /** Tope mensual de búsquedas en Google Maps. Places cobra por búsqueda. */
+  maps_search_cap?: number;
+  /** Redes donde lo aprobado sale solo, sin que nadie apriete "publicar". */
+  auto_publish?: string[];
 }
 
 export interface McpSource {

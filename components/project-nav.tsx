@@ -49,6 +49,7 @@ const SECTION_ICON: Record<ProjectSection, React.ElementType> = {
   campanas: IconMegaphone,
   contenido: IconFile,
   marca: IconPalette,
+  competencia: IconBarChart,
   automatizaciones: IconBolt,
   conocimiento: IconBrain,
   conexiones: IconPlug,
@@ -64,6 +65,7 @@ const SECCIONES: ProjectSection[] = [
   'campanas',
   'contenido',
   'marca',
+  'competencia',
   'automatizaciones',
   'conocimiento',
 ];
@@ -71,13 +73,20 @@ const SECCIONES: ProjectSection[] = [
 /** Lo que hay ABAJO, bajo la etiqueta "Proyecto": cómo está armado. */
 const DEL_PROYECTO: ProjectSection[] = ['conexiones', 'equipo', 'ajustes'];
 
-/** Herramientas de la organización entera, no de un proyecto. */
-const DE_LA_ORG = [
-  { href: '/projects', label: 'Todos los proyectos', Icon: IconFolder },
-  { href: '/prospectos', label: 'Prospección', Icon: IconUsers },
-  { href: '/competencia', label: 'Competencia', Icon: IconBarChart },
-  { href: '/plan', label: 'Calendario', Icon: IconCalendar },
-];
+/**
+ * Lo que de verdad es de la ORGANIZACIÓN entera. Una sola cosa.
+ *
+ * Corrida 7: Prospección, Competencia y Calendario salieron de aquí. No es
+ * limpieza de menú — es el mismo bug que tenía el chat global, una herramienta
+ * sin dueño. La competencia de V&LIVING no es la de MOMENTUM, los prospectos de
+ * un cliente no son los del otro, y un calendario que mezcla el contenido de
+ * tres clientes no sirve para planear el de ninguno. Ahora:
+ *   · Competencia  → sección del proyecto
+ *   · Prospección  → pestaña dentro de Leads del proyecto
+ *   · Calendario   → vista "Semana" dentro de Contenido del proyecto
+ * Las rutas viejas se quedan como desvío: hay marcadores apuntando ahí.
+ */
+const DE_LA_ORG = [{ href: '/projects', label: 'Todos los proyectos', Icon: IconFolder }];
 
 interface Badges {
   leads: number;

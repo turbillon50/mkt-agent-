@@ -5,6 +5,7 @@ import {
   timestamp,
   integer,
   numeric,
+  doublePrecision,
   boolean,
   jsonb,
   index,
@@ -716,7 +717,26 @@ export const projectBrandKit = pgTable('project_brand_kit', {
 export type ProjectBrandKit = typeof projectBrandKit.$inferSelect;
 export type NewProjectBrandKit = typeof projectBrandKit.$inferInsert;
 
-export type PieceState = 'propuesta' | 'aprobada' | 'descartada' | 'publicada';
+/**
+ * El camino de una pieza, de borrador a publicada (corrida 7).
+ *
+ * `propuesta` ES el borrador: no se renombró para no romper las 12 piezas que
+ * ya existen en producción, y porque la columna es texto libre. Lo que sí es
+ * nuevo son los tres estados de en medio, que son los que el issue pide y los
+ * que hacen que "aprobado" signifique algo:
+ *
+ *   propuesta → en_revision → aprobada → programada → publicada
+ *                    ↘ cambios (con comentario) ↗
+ *                    ↘ descartada
+ */
+export type PieceState =
+  | 'propuesta'
+  | 'en_revision'
+  | 'cambios'
+  | 'aprobada'
+  | 'programada'
+  | 'descartada'
+  | 'publicada';
 export type PieceEngine = 'gemini' | 'canva' | 'sharp' | 'higgsfield';
 
 export const creativePieces = pgTable('creative_pieces', {
@@ -739,6 +759,12 @@ export const creativePieces = pgTable('creative_pieces', {
   estado: text('estado').$type<PieceState>().notNull().default('propuesta'),
   aprobadaPor: text('aprobada_por'),
   aprobadaEn: timestamp('aprobada_en', { withTimezone: true }),
+  /** Cuándo debe salir. Sin esto, "programada" no significa nada (0019). */
+  programadaPara: timestamp('programada_para', { withTimezone: true }),
+  /** Lo que pidió quien apretó "Pedir cambios", con sus palabras (0019). */
+  comentario: text('comentario'),
+  estadoPor: text('estado_por'),
+  estadoEn: timestamp('estado_en', { withTimezone: true }),
   postId: uuid('post_id').references(() => posts.id, { onDelete: 'set null' }),
   /** Las 2-3 opciones de un mismo brief comparten lote. */
   loteId: uuid('lote_id'),
@@ -752,6 +778,180 @@ export const creativePieces = pgTable('creative_pieces', {
 
 export type CreativePiece = typeof creativePieces.$inferSelect;
 export type NewCreativePiece = typeof creativePieces.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Corrida 7: prospección por Maps, competencia por proyecto y lecciones (0019).
+// ---------------------------------------------------------------------------
+
+export type ProspectStatus = 'nuevo' | 'contactado' | 'descartado' | 'convertido';
+
+/** Lo que el negocio publica EN SU PROPIO SITIO. Nada de perfiles personales. */
+export interface ProspectEnrichment {
+  email?: string | null;
+  whatsapp?: string | null;
+  /** Las redes que ellos mismos ponen en su página. */
+  redes?: Record<string, string>;
+  /** Qué páginas se leyeron y con qué código contestaron. */
+  leido?: Array<{ url: string; status: number }>;
+  leidoEn?: string;
+}
+
+/**
+ * Un negocio encontrado en Google Maps.
+ *
+ * Es del PROYECTO y no de la organización: dos clientes de la misma agencia
+ * pueden prospectar el mismo giro en la misma zona, y mezclarles las listas
+ * sería el mismo bug que `posts` sin `project_id`.
+ */
+export const prospects = pgTable('prospects', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  /** El id de Google. Es la llave de idempotencia dentro del proyecto. */
+  placeId: text('place_id').notNull(),
+  name: text('name').notNull(),
+  address: text('address'),
+  phone: text('phone'),
+  website: text('website'),
+  rating: numeric('rating', { precision: 2, scale: 1 }),
+  ratingsCount: integer('ratings_count'),
+  category: text('category'),
+  lat: doublePrecision('lat'),
+  lng: doublePrecision('lng'),
+  mapsUrl: text('maps_url'),
+  source: text('source').notNull().default('google_maps'),
+  status: text('status').$type<ProspectStatus>().notNull().default('nuevo'),
+  enrichment: jsonb('enrichment').$type<ProspectEnrichment>().notNull().default({}),
+  searchId: uuid('search_id'),
+  leadId: uuid('lead_id').references(() => salesLeads.id, { onDelete: 'set null' }),
+  foundAt: timestamp('found_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  placeIdx: index('prospects_project_place_idx').on(t.projectId, t.placeId),
+  statusIdx: index('prospects_project_status_idx').on(t.projectId, t.status, t.foundAt),
+  orgIdx: index('prospects_org_idx').on(t.orgId),
+}));
+
+export type Prospect = typeof prospects.$inferSelect;
+export type NewProspect = typeof prospects.$inferInsert;
+
+/**
+ * Cada búsqueda que se le pidió a Google. Existe SOLO porque Places cobra por
+ * búsqueda: sin esta tabla, "cuántas van este mes" se contesta adivinando y el
+ * tope de gasto de Ajustes no tendría contra qué medir.
+ */
+export const prospectSearches = pgTable('prospect_searches', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull().default('texto'),
+  query: text('query').notNull(),
+  zone: text('zone'),
+  radiusM: integer('radius_m'),
+  /** 'composio' (cuenta del cliente) o 'places' (llave oficial de la casa). */
+  via: text('via').notNull().default('places'),
+  results: integer('results').notNull().default(0),
+  nuevos: integer('nuevos').notNull().default(0),
+  costUnits: integer('cost_units').notNull().default(1),
+  error: text('error'),
+  createdBy: text('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('prospect_searches_project_idx').on(t.projectId, t.createdAt),
+}));
+
+export type ProspectSearch = typeof prospectSearches.$inferSelect;
+export type NewProspectSearch = typeof prospectSearches.$inferInsert;
+
+/** Las redes públicas DE NEGOCIO del rival. Nunca un perfil personal. */
+export interface CompetitorHandles {
+  facebook?: string;
+  instagram?: string;
+  linkedin?: string;
+  tiktok?: string;
+  youtube?: string;
+  twitter?: string;
+}
+
+export const projectCompetitors = pgTable('project_competitors', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  website: text('website'),
+  handles: jsonb('handles').$type<CompetitorHandles>().notNull().default({}),
+  notes: text('notes'),
+  createdBy: text('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('project_competitors_project_idx').on(t.projectId, t.createdAt),
+}));
+
+export type ProjectCompetitor = typeof projectCompetitors.$inferSelect;
+export type NewProjectCompetitor = typeof projectCompetitors.$inferInsert;
+
+/** De dónde salió una lectura. Va PEGADO al dato: un número sin fuente no se defiende. */
+export type SnapshotFuente = 'composio' | 'web' | 'ninguna';
+
+export const competitorSnapshots = pgTable('competitor_snapshots', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  /** NULL = la lectura es del PROPIO proyecto. Es el otro lado del comparativo. */
+  competitorId: uuid('competitor_id').references(() => projectCompetitors.id, { onDelete: 'cascade' }),
+  red: text('red').notNull(),
+  fuente: text('fuente').$type<SnapshotFuente>().notNull(),
+  /** Cuando la fuente se negó, POR QUÉ, con el código del proveedor. */
+  motivo: text('motivo'),
+  postsLeidos: integer('posts_leidos').notNull().default(0),
+  porSemana: numeric('por_semana', { precision: 6, scale: 2 }),
+  ultimoPost: timestamp('ultimo_post', { withTimezone: true }),
+  formatos: jsonb('formatos').$type<Record<string, number>>().notNull().default({}),
+  seguidores: integer('seguidores'),
+  muestra: jsonb('muestra').$type<Array<Record<string, unknown>>>().notNull().default([]),
+  leidoEn: timestamp('leido_en', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('competitor_snapshots_project_idx').on(t.projectId, t.leidoEn),
+  rivalIdx: index('competitor_snapshots_rival_idx').on(t.competitorId, t.leidoEn),
+}));
+
+export type CompetitorSnapshot = typeof competitorSnapshots.$inferSelect;
+export type NewCompetitorSnapshot = typeof competitorSnapshots.$inferInsert;
+
+/**
+ * Lo que Goossip aprendió de una corrección HUMANA.
+ *
+ * Se guarda solo cuando alguien corrigió de verdad: una pieza rechazada, un
+ * texto editado, un cambio pedido. Nada de "acierto" automático — un sistema
+ * que se felicita solo aprende a felicitarse.
+ */
+export type LessonKind =
+  | 'pieza_rechazada'
+  | 'pieza_editada'
+  | 'cambios_pedidos'
+  | 'texto_corregido';
+
+export const lessons = pgTable('lessons', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  kind: text('kind').$type<LessonKind>().notNull(),
+  queHizo: text('que_hizo').notNull(),
+  queCorrigio: text('que_corrigio').notNull(),
+  leccion: text('leccion').notNull(),
+  refType: text('ref_type'),
+  refId: uuid('ref_id'),
+  actor: text('actor'),
+  embedding: vector('embedding', { dimensions: 1024 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('lessons_project_idx').on(t.projectId, t.createdAt),
+  vecIdx: index('lessons_vec_idx').using('hnsw', sql`${t.embedding} vector_cosine_ops`),
+}));
+
+export type Lesson = typeof lessons.$inferSelect;
+export type NewLesson = typeof lessons.$inferInsert;
 
 /** Alias de dominio: en la base es `campaigns`, en la app es un proyecto. */
 export const projects = campaigns;

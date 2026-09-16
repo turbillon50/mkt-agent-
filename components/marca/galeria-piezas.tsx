@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { IconCheck, IconSparkles, IconTrash } from '@/components/icons';
 import { useToast } from '@/components/ui/toast-provider';
+import { PreviewRed } from '@/components/contenido/preview-red';
 import { cn } from '@/lib/utils';
 
 /**
@@ -36,6 +37,9 @@ export interface PiezaUI {
   nota: string | null;
   loteId: string | null;
   createdAt: string;
+  /** Lo que pidieron al apretar "Pedir cambios" (corrida 7). */
+  comentario?: string | null;
+  programadaPara?: string | null;
 }
 
 const REDES: Array<{ slug: string; label: string }> = [
@@ -49,23 +53,47 @@ const REDES: Array<{ slug: string; label: string }> = [
   { slug: 'whatsapp', label: 'WhatsApp' },
 ];
 
+/**
+ * El camino de la pieza (corrida 7). `propuesta` ES el borrador: no se renombró
+ * la columna para no romper las piezas que ya existen en producción, pero lo
+ * que el usuario lee es "Borrador", que es lo que significa.
+ */
 const ESTADO_LABEL: Record<string, string> = {
-  propuesta: 'Propuesta',
+  propuesta: 'Borrador',
+  en_revision: 'En revisión',
+  cambios: 'Cambios pedidos',
   aprobada: 'Aprobada',
-  descartada: 'Descartada',
+  programada: 'Programada',
+  descartada: 'Rechazada',
   publicada: 'Publicada',
+};
+
+const ESTADO_ESTILO: Record<string, string> = {
+  propuesta: '',
+  en_revision: 'border-[var(--color-primary)]/50 text-[var(--color-primary)]',
+  cambios: 'border-amber-500/50 text-amber-700 dark:text-amber-400',
+  aprobada: 'border-[var(--color-success)]/50 text-[var(--color-success)]',
+  programada: 'border-[var(--color-success)]/50 text-[var(--color-success)]',
+  descartada: '',
+  publicada: 'border-[var(--color-success)]/50 text-[var(--color-success)]',
 };
 
 export function GaleriaPiezas({
   projectId,
   puedeEditar,
   kitCompleto,
+  nombreProyecto = 'Tu marca',
+  logo = null,
 }: {
   projectId: string;
   puedeEditar: boolean;
   kitCompleto: boolean;
+  /** Para el visor: la pieza se ve firmada como la firma la red. */
+  nombreProyecto?: string;
+  logo?: string | null;
 }) {
   const toast = useToast();
+  const [visor, setVisor] = useState<string | null>(null);
   const [piezas, setPiezas] = useState<PiezaUI[]>([]);
   const [porRed, setPorRed] = useState<Array<{ red: string; label: string; n: number }>>([]);
   const [filtro, setFiltro] = useState<string | null>(null);
@@ -136,22 +164,70 @@ export function GaleriaPiezas({
     }
   }, [brief, cta, cargar, filtro, formato, projectId, red, titular, toast]);
 
-  const decidir = useCallback(
-    async (id: string, accion: 'aprobar' | 'descartar') => {
+  /**
+   * Mover una pieza por el camino de aprobación.
+   *
+   * La transición la valida el SERVIDOR. Aquí solo se pide: si un botón mal
+   * pintado intentara mandar una pieza publicada a borrador, la ruta contesta
+   * 409 y el mensaje se enseña tal cual.
+   */
+  const mover = useCallback(
+    async (id: string, estado: string, extra: Record<string, unknown> = {}) => {
       try {
         const res = await fetch(`/api/projects/${projectId}/piezas/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ accion }),
+          body: JSON.stringify({ estado, ...extra }),
         });
-        if (!res.ok) throw new Error();
+        const d = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(d?.error ?? 'No se pudo.');
         await cargar(filtro);
-      } catch {
-        toast.push({ title: 'No se pudo guardar tu decisión', variant: 'error' });
+      } catch (e) {
+        toast.push({
+          title: 'No se pudo guardar tu decisión',
+          description: e instanceof Error ? e.message : undefined,
+          variant: 'error',
+        });
       }
     },
     [cargar, filtro, projectId, toast],
   );
+
+  /**
+   * "Pedir cambios" OBLIGA a escribir cuáles.
+   *
+   * Sin el porqué no es una corrección, es un no — y es justo el texto que se
+   * guarda como lección del proyecto para que Goossip no repita el error. Un
+   * rechazo mudo no le enseña nada a nadie.
+   */
+  const pedirCambios = useCallback(
+    async (id: string) => {
+      const comentario = window.prompt('¿Qué quieres distinto? Esto se lo guardo a Goossip como lección.');
+      if (comentario === null) return;
+      if (comentario.trim().length < 3) {
+        toast.push({ title: 'Dime qué cambiar', variant: 'error' });
+        return;
+      }
+      await mover(id, 'cambios', { comentario: comentario.trim() });
+    },
+    [mover, toast],
+  );
+
+  const programar = useCallback(
+    async (id: string) => {
+      const cuando = window.prompt('¿Qué día y a qué hora sale? (2026-09-20 10:00)');
+      if (cuando === null) return;
+      const fecha = new Date(cuando.trim().replace(' ', 'T'));
+      if (Number.isNaN(fecha.getTime())) {
+        toast.push({ title: 'Esa fecha no se entiende', variant: 'error' });
+        return;
+      }
+      await mover(id, 'programada', { programadaPara: fecha.toISOString() });
+    },
+    [mover, toast],
+  );
+
+  const abiertaEnVisor = piezas.find((p) => p.id === visor) ?? null;
 
   return (
     <div className="space-y-4">
@@ -254,6 +330,37 @@ export function GaleriaPiezas({
         </Card>
       )}
 
+      {/* ---- el visor, a ancho completo ---- */}
+      {abiertaEnVisor && (
+        <Card className="border-[var(--color-primary)]/40">
+          <CardContent className="space-y-3 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">Cómo se va a ver</p>
+                <p className="truncate text-xs text-[var(--color-muted-foreground)]">
+                  {abiertaEnVisor.brief}
+                </p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setVisor(null)}>
+                Cerrar el visor
+              </Button>
+            </div>
+            <PreviewRed
+              pieza={{
+                id: abiertaEnVisor.id,
+                url: abiertaEnVisor.url,
+                red: abiertaEnVisor.red,
+                formato: abiertaEnVisor.formato,
+                brief: abiertaEnVisor.brief,
+              }}
+              texto={abiertaEnVisor.brief}
+              proyecto={nombreProyecto}
+              logo={logo}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* ---- la galería ---- */}
       {cargando ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -286,8 +393,8 @@ export function GaleriaPiezas({
                     {REDES.find((r) => r.slug === p.red)?.label ?? p.red}
                   </Badge>
                   <Badge
-                    variant={p.estado === 'aprobada' ? 'default' : 'outline'}
-                    className="text-[10px]"
+                    variant="outline"
+                    className={cn('text-[10px]', ESTADO_ESTILO[p.estado] ?? '')}
                   >
                     {ESTADO_LABEL[p.estado] ?? p.estado}
                   </Badge>
@@ -304,20 +411,105 @@ export function GaleriaPiezas({
                 {p.nota && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-400">{p.nota}</p>
                 )}
-                {puedeEditar && p.estado === 'propuesta' && (
-                  <div className="flex gap-2 pt-1">
-                    <Button size="sm" className="btn-brand flex-1" onClick={() => decidir(p.id, 'aprobar')}>
-                      <IconCheck className="h-3.5 w-3.5" />
-                      Esta
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      aria-label="Descartar"
-                      onClick={() => decidir(p.id, 'descartar')}
-                    >
-                      <IconTrash className="h-3.5 w-3.5" />
-                    </Button>
+                {p.comentario && (
+                  <p className="rounded border-l-2 border-amber-500 bg-amber-500/10 py-1 pl-2 text-[10px] leading-snug">
+                    Pidieron: {p.comentario}
+                  </p>
+                )}
+                {p.programadaPara && (
+                  <p className="text-[10px] text-[var(--color-success)]">
+                    Sale el{' '}
+                    {new Date(p.programadaPara).toLocaleString('es-MX', {
+                      day: '2-digit',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                )}
+
+                {/*
+                  El visor NO se abre dentro de la tarjeta.
+                  
+                  Se intentó y se vio en la captura por qué no: la galería es un
+                  grid de tres columnas, así que la tarjeta mide un tercio de la
+                  pantalla, y ahí dentro la columna de avisos del visor quedaba
+                  de treinta píxeles — el texto salía a UNA LETRA POR RENGLÓN.
+                  Las clases `lg:` responden al ancho de la VENTANA, no al del
+                  contenedor, así que a 1440 creían tener sitio de sobra.
+
+                  Ahora se abre a ancho completo arriba de la galería, que
+                  además es donde se quiere ver: aprobar una pieza mirándola en
+                  miniatura es lo mismo que aprobarla sin mirarla.
+                */}
+                <button
+                  type="button"
+                  onClick={() => setVisor((v) => (v === p.id ? null : p.id))}
+                  className="text-[11px] font-medium text-[var(--color-primary)] hover:underline"
+                >
+                  {visor === p.id ? 'Cerrar el visor' : 'Ver en cada red'}
+                </button>
+
+                {puedeEditar && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {(p.estado === 'propuesta' || p.estado === 'en_revision' || p.estado === 'cambios') && (
+                      <>
+                        {p.estado !== 'en_revision' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-[11px]"
+                            onClick={() => void mover(p.id, 'en_revision')}
+                          >
+                            A revisión
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          className="btn-brand h-8 flex-1 text-[11px]"
+                          onClick={() => void mover(p.id, 'aprobada')}
+                        >
+                          <IconCheck className="h-3.5 w-3.5" /> Aprobar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-[11px]"
+                          onClick={() => void pedirCambios(p.id)}
+                        >
+                          Pedir cambios
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8"
+                          aria-label="Rechazar"
+                          onClick={() => void mover(p.id, 'descartada')}
+                        >
+                          <IconTrash className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
+                    {p.estado === 'aprobada' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-[11px]"
+                        onClick={() => void programar(p.id)}
+                      >
+                        Programar
+                      </Button>
+                    )}
+                    {p.estado === 'programada' && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 text-[11px]"
+                        onClick={() => void mover(p.id, 'aprobada')}
+                      >
+                        Quitar la fecha
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>

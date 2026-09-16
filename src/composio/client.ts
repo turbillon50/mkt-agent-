@@ -333,8 +333,25 @@ export async function proxyExecuteFull(input: {
     typeof json?.status === 'number' ? json.status : typeof dentro?.status === 'number' ? dentro.status : null;
 
   if (!res.ok || json?.error || (estadoProveedor !== null && estadoProveedor >= 400)) {
+    /**
+     * El motivo del PROVEEDOR, no un genérico.
+     *
+     * `dentro.error.message` va primero y no es un detalle: cuando Meta niega
+     * la lectura de la página de un tercero contesta ahí dentro *"Object with
+     * ID 'inmuebles24' does not exist, cannot be loaded due to missing
+     * permissions"* — que dice exactamente qué falta y qué NO está roto.
+     * Sin esta línea, la pantalla de Competencia decía "La llamada al proveedor
+     * falló" y mandaba a nadie a diagnosticar nada.
+     */
+    const delProveedor =
+      dentro?.error?.message ??
+      dentro?.error?.error_user_msg ??
+      json?.error?.message ??
+      dentro?.message;
     throw new ComposioError(
-      json?.error?.message ?? dentro?.message ?? 'La llamada al proveedor falló.',
+      typeof delProveedor === 'string' && delProveedor.trim()
+        ? delProveedor
+        : 'La llamada al proveedor falló.',
       estadoProveedor ?? res.status,
     );
   }
