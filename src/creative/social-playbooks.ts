@@ -55,9 +55,9 @@ export const SOCIAL_PLAYBOOKS: Record<RedPublicable, SocialPlaybook> = {
     fuente: 'https://developers.facebook.com/docs/instagram-platform/content-publishing',
     version: '2026-09-16',
     angulos: [
-      { angulo: 'Hero editorial', direccion: 'traducir la idea central del encargo a un símbolo o sujeto propio de la marca, grande y vertical, con contraste limpio y espacio para un titular corto' },
-      { angulo: 'Detalle propio', direccion: 'primer plano de un elemento real y distintivo del producto, servicio o sistema; textura y luz premium, sin utilería genérica' },
-      { angulo: 'Sistema de marca', direccion: 'composición editorial de formas y objetos derivados del negocio y de su identidad visual, con profundidad y materialidad; nunca códigos, letras ni dashboards falsos' },
+      { angulo: 'Hero editorial', direccion: 'elegir un artefacto real del contexto del proyecto y convertirlo mediante un solo giro editorial inesperado pero físicamente plausible; fondo limpio, luz de estudio y espacio para un titular corto; nunca gemas, cristales, circuitos ni símbolos genéricos de tecnología' },
+      { angulo: 'Detalle propio', direccion: 'macro o recorte cercano de un objeto, material, gesto o proceso que sólo pueda pertenecer a este negocio; textura real, luz premium y cero utilería genérica' },
+      { angulo: 'Sistema de marca', direccion: 'bodegón editorial con tres elementos reales del negocio organizados por tensión, escala y espacio negativo; materialidad mate o física, nunca códigos, letras, hologramas, gemas ni dashboards falsos' },
     ],
   },
   linkedin: {

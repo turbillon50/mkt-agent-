@@ -22,7 +22,14 @@ function normalizar(crudo: any): EvaluacionVisual {
   const razones = Array.isArray(crudo?.razones)
     ? crudo.razones.filter((r: unknown) => typeof r === 'string').map((r: string) => r.slice(0, 220)).slice(0, 6)
     : [];
-  const critica = Boolean(crudo?.texto_legible || crudo?.marca_agua || crudo?.artefactos || crudo?.irrelevante);
+  const critica = Boolean(
+    crudo?.texto_legible
+      || crudo?.marca_agua
+      || crudo?.artefactos
+      || crudo?.irrelevante
+      || crudo?.cliche_visual
+      || crudo?.marca_inconsistente,
+  );
   return {
     aprobada: crudo?.aprobada === true && score >= 80 && !critica,
     score,
@@ -55,11 +62,13 @@ export async function evaluarImagenBase(input: {
 
 Evalúala contra el negocio y el encargo, no por gusto personal. Recházala si ocurre cualquiera:
 - parece stock genérico y no comunica el negocio o la idea concreta;
+- usa un cliché automático de IA (cristal o gema azul, circuitos, cerebro, holograma, portal, globo, cohete, ajedrez o silueta frente a una ciudad) que no fue pedido literalmente;
 - contiene letras, palabras, números, códigos hex, logotipos o marcas de agua;
 - tiene manos, caras, arquitectura, objetos, perspectiva o sombras defectuosas;
 - inventa una interfaz, producto, inmueble, persona, dato o promesa que no está respaldada;
 - el sujeto queda cortado o invade la zona donde irá el titular;
 - se ve barata, saturada, repetitiva o no resistiría una revisión profesional.
+- contradice la dirección visual del proyecto, especialmente su color de fondo, materialidad o nivel de contraste.
 
 Lienzo final: ${input.formato.label}, ${input.formato.ancho}x${input.formato.alto}.
 Dirección: ${input.direccion}
@@ -67,7 +76,7 @@ Encargo: ${input.brief}
 ${input.contexto.slice(0, 3_500)}
 
 Devuelve sólo JSON:
-{"aprobada":true,"score":0,"razones":["..."],"correccion":"instrucción concreta para regenerar","texto_legible":false,"marca_agua":false,"artefactos":false,"irrelevante":false}`;
+{"aprobada":true,"score":0,"razones":["..."],"correccion":"instrucción concreta para regenerar","texto_legible":false,"marca_agua":false,"artefactos":false,"irrelevante":false,"cliche_visual":false,"marca_inconsistente":false}`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${MODELO_QA}:generateContent?key=${apiKey}`,
