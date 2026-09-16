@@ -21,6 +21,15 @@
  *
  * Klaviyo no tiene auth administrada, así que el catálogo lleva MAILCHIMP en su
  * lugar, que sí la tiene — es la salida que el propio issue autoriza.
+ *
+ * Corrida 11: `metaads` SALE de esa lista de "Próximamente" y pasa a `via:
+ * 'meta_own_app'`. No porque Composio haya cambiado —se volvió a medir el
+ * 16-sep-2026 y sigue sin auth administrada— sino porque Goossip YA tiene una
+ * app de Meta viva (`META_APP_ID`/`META_APP_SECRET`, app "V&Living MCP") con la
+ * que se leyó de verdad la cuenta `act_2629053887531679` "V&LIVING Ads". Tener
+ * la llave en la mano y enseñar "Próximamente" es la clase de mentira que esta
+ * doctrina prohíbe. Es el ÚNICO conector con app propia de anuncios, y es de
+ * SOLO LECTURA: ni crea campañas ni toca presupuestos.
  */
 
 export type ConnectorGroup = 'publicidad' | 'conocimiento' | 'operacion';
@@ -46,7 +55,15 @@ export const CONNECTOR_GROUP_BLURB: Record<ConnectorGroup, string> = {
 export interface Connector {
   /** Slug del toolkit en Composio, o el id del canal propio de Goossip. */
   slug: string;
-  via: 'composio' | 'goossip';
+  /**
+   * Quién pone la app ante el proveedor:
+   *   composio     — la app administrada de Composio. La regla.
+   *   goossip      — no hay tercero (el formulario del sitio, el catálogo).
+   *   meta_own_app — la app de Meta de Goossip. HOY SOLO Meta Ads, y solo para
+   *                  leer: Composio no tiene auth administrada para `metaads`
+   *                  y la app propia ya existe y está medida.
+   */
+  via: 'composio' | 'goossip' | 'meta_own_app';
   group: ConnectorGroup;
   /** Lo que lee el usuario. */
   label: string;
@@ -65,12 +82,16 @@ export interface Connector {
 export const CONNECTORS = [
   // --- Publicidad y publicación -------------------------------------------
   {
+    // Corrida 11. `managed: true` aquí NO habla de Composio: habla de que
+    // Goossip puede conectarlo HOY sin pedirle a nadie una app de developer.
+    // La app es la de Goossip; la cuenta publicitaria, la del cliente.
     slug: 'metaads',
-    via: 'composio',
+    via: 'meta_own_app',
     group: 'publicidad',
     label: 'Meta Ads',
     blurb: 'Lee tus campañas, lo que llevas gastado y de dónde vienen los leads.',
-    managed: false,
+    managed: true,
+    note: 'Solo lectura: Goossip no crea campañas ni mueve tu presupuesto.',
   },
   {
     slug: 'facebook',
@@ -335,7 +356,7 @@ export type ConnectionMode = 'oauth' | 'datos' | 'automatico';
 
 export function connectorMode(slug: string): ConnectionMode {
   const c = connectorOrThrow(slug);
-  if (c.via === 'composio' || c.slug === 'meta') return 'oauth';
+  if (c.via === 'composio' || c.via === 'meta_own_app' || c.slug === 'meta') return 'oauth';
   return c.slug === 'sitio' ? 'automatico' : 'datos';
 }
 

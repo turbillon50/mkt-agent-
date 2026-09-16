@@ -52,6 +52,7 @@ import { ensureCatalogAuthConfigs, listStoredAuthConfigs } from '../src/composio
 import {
   CONNECTORS,
   connectorMode,
+  connectorOrThrow,
   connectorShareable,
   managedComposioSlugs,
   unmanagedComposioConnectors,
@@ -130,11 +131,13 @@ async function api(path: string, init: RequestInit = {}): Promise<any> {
 async function pruebaCatalogo(): Promise<void> {
   console.log('\n— catálogo contra el catálogo real de Composio —');
   const composio = CONNECTORS.filter((c) => c.via === 'composio');
-  // 22 desde la corrida 7: entra `google_maps`, que es la fuente OFICIAL de la
-  // prospección por mapa. Su `managed` también se comprueba abajo contra la API
-  // real, igual que los otros 21 — el número de aquí solo caza que alguien
-  // agregue un conector sin pasar por esta prueba.
-  eq_('22 toolkits de Composio en el catálogo', composio.length, 22);
+  // 22 desde la corrida 7 (entró `google_maps`), 21 desde la corrida 11: Meta
+  // Ads SE SALE de Composio y pasa a la app propia de Goossip, porque `metaads`
+  // sigue sin auth administrada y la app propia ya lee la cuenta de verdad.
+  // El `managed` de cada uno se comprueba abajo contra la API real — el número
+  // de aquí solo caza que alguien agregue un conector sin pasar por esta prueba.
+  eq_('21 toolkits de Composio en el catálogo', composio.length, 21);
+  eq_('Meta Ads ya no va por Composio', connectorOrThrow('metaads').via, 'meta_own_app');
 
   let coinciden = 0;
   const desacuerdos: string[] = [];
@@ -153,8 +156,18 @@ async function pruebaCatalogo(): Promise<void> {
   const sinManaged = unmanagedComposioConnectors().map((c) => c.slug).sort();
   check(
     'los que no tienen auth administrada están declarados',
-    JSON.stringify(sinManaged) === JSON.stringify(['metaads', 'semrush', 'tiktok', 'twitter']),
+    JSON.stringify(sinManaged) === JSON.stringify(['semrush', 'tiktok', 'twitter']),
     sinManaged.join(','),
+  );
+
+  // Y se sigue midiendo que `metaads` NO tiene auth administrada. Que haya
+  // salido del camino de Composio no es una excusa para dejar de comprobarlo:
+  // el día que Composio la habilite, esta prueba es la que avisa.
+  const metaads = await getToolkit('metaads');
+  check(
+    'metaads sigue sin auth administrada en Composio (por eso va con app propia)',
+    Boolean(metaads) && !toolkitIsManaged(metaads!),
+    `managed=${metaads ? toolkitIsManaged(metaads) : 'no existe'}`,
   );
 
   // Klaviyo salió del catálogo por esto mismo: se comprueba, no se recuerda.

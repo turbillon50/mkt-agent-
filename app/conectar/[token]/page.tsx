@@ -57,13 +57,17 @@ export default async function ConectarPage({ params }: { params: Promise<{ token
   const spec = channelSpec(link.channel);
   const user = isClerkConfigured() ? await currentUserOrNull() : null;
 
-  // Todo lo del catálogo se conecta por Composio. El camino viejo de la app
-  // propia de Meta sigue ahí para los proyectos que ya lo usaban, detrás de su
-  // bandera: no se borra, se deja de usar.
+  // Casi todo el catálogo se conecta por Composio. Las dos excepciones salen de
+  // la app de Meta de Goossip: las PÁGINAS de la corrida 3 (detrás de su
+  // bandera, no se borra, se dejó de usar) y las CUENTAS PUBLICITARIAS de la
+  // corrida 11, que es el camino vivo — Composio no tiene auth administrada
+  // para `metaads` y la app propia sí puede leerlas.
   const arranque =
     spec.via === 'composio'
       ? `/api/connections/composio/start?link=${encodeURIComponent(token)}&toolkit=${encodeURIComponent(link.channel)}`
-      : `/api/connections/meta/start?link=${encodeURIComponent(token)}`;
+      : spec.via === 'meta_own_app'
+        ? `/api/connections/metaads/start?link=${encodeURIComponent(token)}`
+        : `/api/connections/meta/start?link=${encodeURIComponent(token)}`;
 
   return (
     <Marco>

@@ -1,0 +1,95 @@
+{
+  "corrida": "c11",
+  "base": "http://127.0.0.1:3111",
+  "conTokenDeMeta": true,
+  "cuentasQueLeeElToken": 1,
+  "cuentaConectada": "V&LIVING Ads",
+  "capturas": 8,
+  "http200": 8,
+  "erroresJs": 0,
+  "notasInternas": 0,
+  "medidas": {
+    "tarjeta": true,
+    "proximamente": false,
+    "soloLectura": true,
+    "campanas": {
+      "seccion": true,
+      "cuenta": true,
+      "cpl": true
+    }
+  },
+  "detalle": [
+    {
+      "pantalla": "01-conexiones-tarjeta-meta-ads",
+      "ruta": "/projects/97c72b9b-afe7-4d81-a5e8-c0723c11837b/conexiones",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-metaads-c11/capturas-c11/01-conexiones-tarjeta-meta-ads-1440.png"
+    },
+    {
+      "pantalla": "01-conexiones-tarjeta-meta-ads",
+      "ruta": "/projects/97c72b9b-afe7-4d81-a5e8-c0723c11837b/conexiones",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-metaads-c11/capturas-c11/01-conexiones-tarjeta-meta-ads-movil.png"
+    },
+    {
+      "pantalla": "02-selector-de-cuentas",
+      "ruta": "/projects/97c72b9b-afe7-4d81-a5e8-c0723c11837b/conexiones",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-metaads-c11/capturas-c11/02-selector-de-cuentas-1440.png"
+    },
+    {
+      "pantalla": "02-selector-de-cuentas",
+      "ruta": "/projects/97c72b9b-afe7-4d81-a5e8-c0723c11837b/conexiones",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-metaads-c11/capturas-c11/02-selector-de-cuentas-movil.png"
+    },
+    {
+      "pantalla": "03-conexiones-conectado",
+      "ruta": "/projects/97c72b9b-afe7-4d81-a5e8-c0723c11837b/conexiones",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-metaads-c11/capturas-c11/03-conexiones-conectado-1440.png"
+    },
+    {
+      "pantalla": "03-conexiones-conectado",
+      "ruta": "/projects/97c72b9b-afe7-4d81-a5e8-c0723c11837b/conexiones",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-metaads-c11/capturas-c11/03-conexiones-conectado-movil.png"
+    },
+    {
+      "pantalla": "04-campanas-anuncios-de-meta",
+      "ruta": "/projects/97c72b9b-afe7-4d81-a5e8-c0723c11837b/campanas",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-metaads-c11/capturas-c11/04-campanas-anuncios-de-meta-1440.png"
+    },
+    {
+      "pantalla": "04-campanas-anuncios-de-meta",
+      "ruta": "/projects/97c72b9b-afe7-4d81-a5e8-c0723c11837b/campanas",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-metaads-c11/capturas-c11/04-campanas-anuncios-de-meta-movil.png"
+    }
+  ]
+}

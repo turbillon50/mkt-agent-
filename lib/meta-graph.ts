@@ -9,6 +9,28 @@ const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v21.0';
 export const GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
 /**
+ * Las credenciales de la app de Meta de Goossip, en UN solo lugar.
+ *
+ * Viven aquí —y no en `meta-oauth.ts`, que es quien las usaba— porque desde la
+ * corrida 11 salen DOS caminos de la misma app: las páginas (`meta-oauth.ts`) y
+ * las cuentas publicitarias (`meta-ads.ts`). Este archivo es el único de los
+ * tres sin `server-only`, así que es el único que los tres pueden importar.
+ *
+ * La comprobación del corchete no es cosmética: Vercel devuelve el literal
+ * `[SENSITIVE]` cuando la variable está marcada como sensible, y tratarlo como
+ * un app id válido manda a Facebook una petición que siempre falla.
+ */
+export function metaAppId(): string | null {
+  const v = process.env.META_APP_ID?.trim();
+  return v && !v.startsWith('[') ? v : null;
+}
+
+export function metaAppSecret(): string | null {
+  const v = process.env.META_APP_SECRET?.trim();
+  return v && !v.startsWith('[') ? v : null;
+}
+
+/**
  * Valida X-Hub-Signature-256 contra el cuerpo CRUDO. Comparación en tiempo
  * constante: un `===` filtra la firma byte a byte.
  */
