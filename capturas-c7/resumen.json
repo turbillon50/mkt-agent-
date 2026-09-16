@@ -1,0 +1,295 @@
+{
+  "corrida": "c7",
+  "base": "http://127.0.0.1:3117",
+  "capturas": 25,
+  "limpias": 25,
+  "http200": 25,
+  "erroresJs": 0,
+  "notasInternas": 0,
+  "panel": {
+    "abierto": true,
+    "sugerencias": 3,
+    "botones": [
+      "Ver los leads",
+      "Conectar un canal",
+      "Ver las piezas"
+    ],
+    "texto": "Asistente\n\nMOMENTUM\n\n0 conectados\n1 sin contactar\nMarca cargada\n\nHay 1 lead sin contactar. Un lead que espera más de un día se enfría.\n\nVer los leads\n\nTodavía no hay ningún canal conectado. Sin eso no entran leads y no se puede publicar con la cuenta de este cliente.\n\nConectar un canal\n\nHay 1 pieza esperando que elijas si sirve o no.\n\nVer las piezas\n\nPregúntame lo que quieras de MOMENTUM: qué publicar, qué medidas lleva un reel, o pídeme que te haga la pieza.",
+    "siguePintadoElFondo": true,
+    "cerro": true
+  },
+  "medidas": {
+    "inicio": {
+      "chips": 25,
+      "conectar": 21,
+      "proximamente": 4,
+      "verTodas": true,
+      "deM": "0 de 25",
+      "asistenteEmbebido": true,
+      "sugerencias": 3,
+      "herramientas": 8,
+      "actividad": true,
+      "vendedor": true
+    },
+    "menu": {
+      "filas": [
+        "Inicio",
+        "Leads1",
+        "Conversaciones",
+        "Campañas",
+        "Contenido",
+        "Marca",
+        "Competencia",
+        "Automatizaciones1",
+        "Conocimiento",
+        "Conexiones",
+        "Equipo",
+        "Ajustes",
+        "Todos los proyectos"
+      ],
+      "tieneCompetenciaDelProyecto": true,
+      "organizacion": 0
+    },
+    "visor": {
+      "formatos": 9,
+      "redes": [
+        "Facebook",
+        "Instagram",
+        "LinkedIn",
+        "X",
+        "TikTok",
+        "YouTube"
+      ],
+      "caracteres": true,
+      "fuente": true
+    },
+    "cajaDeWhatsapp": false
+  },
+  "detalle": [
+    {
+      "pantalla": "02-inicio-centro-de-mando",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/02-inicio-centro-de-mando-1440.png"
+    },
+    {
+      "pantalla": "02-inicio-centro-de-mando",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719",
+      "tamano": "1280",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/02-inicio-centro-de-mando-1280.png"
+    },
+    {
+      "pantalla": "02-inicio-centro-de-mando",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/02-inicio-centro-de-mando-movil.png"
+    },
+    {
+      "pantalla": "03-prospeccion",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/leads?vista=prospeccion",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/03-prospeccion-1440.png"
+    },
+    {
+      "pantalla": "03-prospeccion",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/leads?vista=prospeccion",
+      "tamano": "1280",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/03-prospeccion-1280.png"
+    },
+    {
+      "pantalla": "03-prospeccion",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/leads?vista=prospeccion",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/03-prospeccion-movil.png"
+    },
+    {
+      "pantalla": "04-competencia",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/competencia",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/04-competencia-1440.png"
+    },
+    {
+      "pantalla": "04-competencia",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/competencia",
+      "tamano": "1280",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/04-competencia-1280.png"
+    },
+    {
+      "pantalla": "04-competencia",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/competencia",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/04-competencia-movil.png"
+    },
+    {
+      "pantalla": "05-contenido",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/contenido",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/05-contenido-1440.png"
+    },
+    {
+      "pantalla": "05-contenido",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/contenido",
+      "tamano": "1280",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/05-contenido-1280.png"
+    },
+    {
+      "pantalla": "05-contenido",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/contenido",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/05-contenido-movil.png"
+    },
+    {
+      "pantalla": "06-semana",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/contenido?vista=semana",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/06-semana-1440.png"
+    },
+    {
+      "pantalla": "06-semana",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/contenido?vista=semana",
+      "tamano": "1280",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/06-semana-1280.png"
+    },
+    {
+      "pantalla": "06-semana",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/contenido?vista=semana",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/06-semana-movil.png"
+    },
+    {
+      "pantalla": "07-marca",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/marca",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/07-marca-1440.png"
+    },
+    {
+      "pantalla": "07-marca",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/marca",
+      "tamano": "1280",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/07-marca-1280.png"
+    },
+    {
+      "pantalla": "07-marca",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/marca",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/07-marca-movil.png"
+    },
+    {
+      "pantalla": "08-ajustes-autonomia",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/ajustes",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/08-ajustes-autonomia-1440.png"
+    },
+    {
+      "pantalla": "08-ajustes-autonomia",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/ajustes",
+      "tamano": "1280",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/08-ajustes-autonomia-1280.png"
+    },
+    {
+      "pantalla": "08-ajustes-autonomia",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/ajustes",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/08-ajustes-autonomia-movil.png"
+    },
+    {
+      "pantalla": "09-visor-por-red",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/contenido",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/09-visor-por-red-1440.png"
+    },
+    {
+      "pantalla": "10-leads-sin-whatsapp",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/leads",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/10-leads-sin-whatsapp-1440.png"
+    },
+    {
+      "pantalla": "10-leads-sin-whatsapp",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/leads",
+      "tamano": "1280",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/10-leads-sin-whatsapp-1280.png"
+    },
+    {
+      "pantalla": "10-leads-sin-whatsapp",
+      "ruta": "/projects/1989b1ea-828e-47a2-abb5-26a30fc8e719/leads",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c7/10-leads-sin-whatsapp-movil.png"
+    }
+  ]
+}

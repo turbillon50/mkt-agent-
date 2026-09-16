@@ -212,6 +212,24 @@ export const CONNECTORS = [
     managed: false,
   },
   {
+    // Corrida 7. `managed` medido el 16-sep-2026 contra
+    // `GET /api/v3/toolkits/google_maps`: `composio_managed_auth_schemes` trae
+    // `["OAUTH2"]` y el toolkit publica `GOOGLE_MAPS_TEXT_SEARCH` y
+    // `GOOGLE_MAPS_NEARBY_SEARCH`, que es exactamente lo que pide Prospección.
+    //
+    // Conectarlo NO es obligatorio para usar la herramienta: sin él, la
+    // búsqueda sale por la llave oficial de la casa. Lo que cambia es de quién
+    // es la cuenta a la que Google le cobra — y siendo el negocio del cliente,
+    // lo natural es que sea la suya.
+    slug: 'google_maps',
+    via: 'composio',
+    group: 'conocimiento',
+    label: 'Google Maps',
+    blurb: 'Busca negocios por zona y giro para prospectar, con tu propia cuenta de Google.',
+    managed: true,
+    note: 'Si no lo conectas, la búsqueda sale por la cuenta de Goossip y cuenta contra tu tope mensual.',
+  },
+  {
     slug: 'sitio',
     via: 'goossip',
     group: 'conocimiento',

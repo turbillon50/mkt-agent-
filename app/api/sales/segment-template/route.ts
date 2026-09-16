@@ -5,6 +5,7 @@ import { activeProject } from '@/lib/sales';
 import { listLeadsByProject } from '@/src/sales/repo';
 import { enqueue } from '@/src/sales/queue';
 import { LEAD_STAGES, resolveRules, type LeadGrade, type LeadStage } from '@/src/sales/types';
+import { whatsappHabilitado, WHATSAPP_APAGADO } from '@/src/banderas';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,8 +16,16 @@ const MAX_SEGMENT = 200;
  * "Enviar plantilla a segmento": NO manda nada aquí. Encola una acción por
  * lead y el runner las ejecuta con rate limit. Así una lista de 200 no tumba
  * el número de WhatsApp ni se va sin que el dueño la vea.
+ *
+ * Y con `WHATSAPP_ENABLED` abajo NO encola nada. La caja de Leads ya no se
+ * pinta, pero esconder el botón no apaga la ruta: cualquiera con la URL podría
+ * dejar 200 acciones en la cola de un canal que no existe.
  */
 export async function POST(req: NextRequest) {
+  if (!whatsappHabilitado()) {
+    return NextResponse.json({ error: WHATSAPP_APAGADO }, { status: 409 });
+  }
+
   const gate = await apiOrg();
   if (!gate.ok) return gate.res;
   const { orgId, activeProjectId, user } = gate.ctx;

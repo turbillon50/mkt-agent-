@@ -14,6 +14,11 @@
  * Y una regla que no estaba: si el canal es Instagram y no hay pieza aprobada,
  * NO se publica. Instagram no admite publicaciones sin imagen, así que
  * intentarlo es garantizar un error en el log a las 9 de la mañana.
+ *
+ * CORRIDA 7: y ni siquiera eso pasa sin permiso. Publicar solo es el nivel 2 de
+ * autonomía, y además la red tiene que estar en `rules.auto_publish`. Un cron
+ * que publica en la cuenta de un cliente que nunca dijo que sí es el mismo bug
+ * de la corrida 6 con otro disfraz.
  */
 import { and, eq, isNull, or } from 'drizzle-orm';
 import { db } from './db/client';
@@ -21,6 +26,7 @@ import { campaigns, posts, type Project } from './db/schema';
 import { generatePost } from './generator';
 import { CANALES_DE_PUBLICACION, publishTo } from './channels/index';
 import { activeAccountFor } from './projects/composio-connections';
+import { autoPublicaEn, puedeSolo } from './autonomia/niveles';
 import { getBrandKit } from './creative/brand-kit';
 import { marcarPublicada, piezaAprobadaDe } from './creative/repo';
 import { buildPlan, nextUnusedItem, markUsed } from './planner';
@@ -108,6 +114,28 @@ export async function runOnce(
     const kit = await getBrandKit(project.orgId, project.id).catch(() => null);
 
     for (const canal of canales) {
+      /**
+       * La compuerta de autonomía (corrida 7).
+       *
+       * Hasta aquí, el cron generaba un texto y lo PUBLICABA en cada canal vivo
+       * de cada proyecto activo. Eso es comportamiento de nivel 2 pasando en
+       * proyectos que están en nivel 1 — es decir, publicar en la cuenta de un
+       * cliente sin que nadie haya aprobado ni el texto ni la decisión de
+       * publicar solo.
+       *
+       * Ahora hacen falta las dos cosas: que el proyecto esté en nivel 2 o más
+       * Y que esa red esté en `rules.auto_publish`. Sin las dos, se salta y se
+       * dice por qué — no se publica "por si acaso".
+       */
+      if (!autoPublicaEn(project, canal)) {
+        saltados.push({
+          projectId: project.id,
+          projectName: project.name,
+          motivo: `${canal}: ${puedeSolo(project, 'publicar_organico').puede ? 'no está en auto_publish' : puedeSolo(project, 'publicar_organico').motivo}`,
+        });
+        continue;
+      }
+
       const plataforma = plataformaDeTexto(canal);
       const planeado = await nextUnusedItem(plataforma).catch(() => null);
       const tema = planeado?.topic ?? temaDeRespaldo();
@@ -191,6 +219,83 @@ export async function runOnce(
           motivo: `${canal}: ${e instanceof Error ? e.message : 'no se pudo publicar'}`,
         });
       }
+    }
+  }
+
+  return { publicados, saltados };
+}
+
+/**
+ * Las piezas PROGRAMADAS que ya les tocaba salir.
+ *
+ * Es otra corrida y no parte de `runOnce` a propósito: esto NO genera nada ni
+ * decide nada. Publica lo que una persona ya aprobó y ya le puso fecha, que es
+ * el único caso en el que publicar sin preguntar no necesita ningún nivel de
+ * autonomía — el permiso ya se dio, con nombre y hora, cuando se programó.
+ */
+export async function publicarProgramadas(
+  opts: { dryRun?: boolean; ahora?: Date } = {},
+): Promise<RunReport> {
+  const { programadasVencidas } = await import('./creative/repo');
+  const publicados: RunResult[] = [];
+  const saltados: RunSkip[] = [];
+
+  const piezas = await programadasVencidas(opts.ahora ?? new Date());
+  if (piezas.length === 0) return { publicados, saltados };
+
+  const porProyecto = new Map<string, Project>();
+  for (const pieza of piezas) {
+    let project = porProyecto.get(pieza.projectId) ?? null;
+    if (!project) {
+      const [fila] = await db.select().from(campaigns).where(eq(campaigns.id, pieza.projectId)).limit(1);
+      if (!fila) continue;
+      project = fila;
+      porProyecto.set(pieza.projectId, fila);
+    }
+
+    if (opts.dryRun) {
+      publicados.push({
+        projectId: project.id,
+        projectName: project.name,
+        channel: pieza.red,
+        text: pieza.brief,
+        posted: { dryRun: true },
+      });
+      continue;
+    }
+
+    try {
+      const out = await publishTo(project, pieza.red, {
+        texto: pieza.brief,
+        media: pieza.url ?? null,
+      });
+      const [fila] = await db
+        .insert(posts)
+        .values({
+          orgId: project.orgId,
+          projectId: project.id,
+          platform: pieza.red,
+          text: pieza.brief,
+          externalId: out.id,
+          externalUrl: out.url,
+          publishedAt: new Date(),
+          metadata: { programada: true, piezaId: pieza.id },
+        })
+        .returning({ id: posts.id });
+      await marcarPublicada(pieza.id, fila?.id ?? null);
+      publicados.push({
+        projectId: project.id,
+        projectName: project.name,
+        channel: pieza.red,
+        text: pieza.brief,
+        posted: { id: out.id, url: out.url },
+      });
+    } catch (e) {
+      saltados.push({
+        projectId: project.id,
+        projectName: project.name,
+        motivo: `${pieza.red}: ${e instanceof Error ? e.message : 'no se pudo publicar la pieza programada'}`,
+      });
     }
   }
 

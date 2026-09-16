@@ -5,7 +5,7 @@
  * que la compuso y una FOTO del kit de marca de ese momento. Sin eso, una pieza
  * que salió bien no se puede repetir y una que salió mal no se puede explicar.
  */
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../db/client';
 import {
   creativePieces,
@@ -156,7 +156,13 @@ export async function aprobarPieza(
   const ahora = new Date();
   const [fila] = await db
     .update(creativePieces)
-    .set({ estado: 'aprobada', aprobadaPor: quien, aprobadaEn: ahora })
+    .set({
+      estado: 'aprobada',
+      aprobadaPor: quien,
+      aprobadaEn: ahora,
+      estadoPor: quien,
+      estadoEn: ahora,
+    })
     .where(eq(creativePieces.id, id))
     .returning();
 
@@ -164,17 +170,182 @@ export async function aprobarPieza(
     const hermanas = await db
       .select({ id: creativePieces.id })
       .from(creativePieces)
-      .where(and(eq(creativePieces.loteId, pieza.loteId), eq(creativePieces.estado, 'propuesta')));
+      .where(
+        and(
+          eq(creativePieces.loteId, pieza.loteId),
+          // También las que estaban "en revisión": aprobar una opción cierra el
+          // lote entero, y dejar a sus hermanas esperando revisión es dejar
+          // trabajo abierto que ya no tiene sentido.
+          inArray(creativePieces.estado, ['propuesta', 'en_revision']),
+        ),
+      );
     const otras = hermanas.map((h) => h.id).filter((h) => h !== id);
     if (otras.length) {
       await db
         .update(creativePieces)
-        .set({ estado: 'descartada' })
+        .set({ estado: 'descartada', estadoPor: quien, estadoEn: ahora })
         .where(inArray(creativePieces.id, otras));
     }
   }
 
   return fila ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// El camino de la pieza (corrida 7)
+// ---------------------------------------------------------------------------
+
+/**
+ * Qué se puede hacer desde cada estado.
+ *
+ * La tabla existe para que un botón mal pintado no pueda mandar una pieza
+ * publicada de vuelta a borrador. Las transiciones NO se validan en la pantalla:
+ * se validan aquí, que es por donde pasan todas.
+ */
+export const TRANSICIONES: Record<PieceState, PieceState[]> = {
+  propuesta: ['en_revision', 'aprobada', 'descartada'],
+  en_revision: ['aprobada', 'cambios', 'descartada'],
+  // De "cambios" se vuelve a revisión cuando ya se rehízo, o se tira.
+  cambios: ['en_revision', 'descartada'],
+  aprobada: ['programada', 'publicada', 'cambios', 'descartada'],
+  programada: ['publicada', 'aprobada', 'descartada'],
+  publicada: [],
+  descartada: ['propuesta'],
+};
+
+export function puedeIr(de: PieceState, a: PieceState): boolean {
+  return TRANSICIONES[de]?.includes(a) ?? false;
+}
+
+export const ESTADO_LABEL: Record<PieceState, string> = {
+  propuesta: 'Borrador',
+  en_revision: 'En revisión',
+  cambios: 'Cambios pedidos',
+  aprobada: 'Aprobada',
+  programada: 'Programada',
+  publicada: 'Publicada',
+  descartada: 'Rechazada',
+};
+
+export class TransicionInvalida extends Error {
+  constructor(de: PieceState, a: PieceState) {
+    super(`Una pieza ${ESTADO_LABEL[de].toLowerCase()} no puede pasar a ${ESTADO_LABEL[a].toLowerCase()}.`);
+    this.name = 'TransicionInvalida';
+  }
+}
+
+export interface CambioDeEstado {
+  orgId: string;
+  projectId: string;
+  id: string;
+  a: PieceState;
+  quien: string | null;
+  /** Obligatorio para "Pedir cambios": sin el porqué, no es una corrección, es un no. */
+  comentario?: string | null;
+  programadaPara?: Date | null;
+}
+
+/**
+ * Mueve la pieza por el camino y devuelve el estado anterior.
+ *
+ * Devuelve el anterior y no solo la fila nueva porque quien llama necesita los
+ * dos para la bitácora y para decidir si esto fue una CORRECCIÓN que hay que
+ * guardar como lección.
+ */
+export async function moverPieza(
+  input: CambioDeEstado,
+): Promise<{ pieza: CreativePiece; antes: PieceState } | null> {
+  const pieza = await getPieza(input.orgId, input.projectId, input.id);
+  if (!pieza) return null;
+
+  const antes = pieza.estado;
+  if (antes === input.a) return { pieza, antes };
+  if (!puedeIr(antes, input.a)) throw new TransicionInvalida(antes, input.a);
+
+  if (input.a === 'cambios' && !input.comentario?.trim()) {
+    throw new Error('Para pedir cambios hay que decir cuáles. Escribe qué quieres distinto.');
+  }
+  if (input.a === 'programada' && !input.programadaPara) {
+    throw new Error('Para programarla hay que decir cuándo sale.');
+  }
+
+  // Aprobar pasa por `aprobarPieza`, que además cierra el lote.
+  if (input.a === 'aprobada') {
+    const fila = await aprobarPieza(input.orgId, input.projectId, input.id, input.quien);
+    return fila ? { pieza: fila, antes } : null;
+  }
+
+  const ahora = new Date();
+  const [fila] = await db
+    .update(creativePieces)
+    .set({
+      estado: input.a,
+      estadoPor: input.quien,
+      estadoEn: ahora,
+      ...(input.a === 'cambios' ? { comentario: input.comentario!.trim() } : {}),
+      ...(input.a === 'programada' ? { programadaPara: input.programadaPara } : {}),
+      // Volver a revisión limpia el comentario viejo: si siguiera ahí, la
+      // siguiente vuelta enseñaría un pedido que ya se atendió.
+      ...(input.a === 'en_revision' ? { comentario: null } : {}),
+    })
+    .where(eq(creativePieces.id, input.id))
+    .returning();
+
+  return fila ? { pieza: fila, antes } : null;
+}
+
+/** Las piezas programadas que ya les tocaba salir. Las lee el cron. */
+export async function programadasVencidas(ahora = new Date()): Promise<CreativePiece[]> {
+  return db
+    .select()
+    .from(creativePieces)
+    .where(
+      and(
+        eq(creativePieces.estado, 'programada'),
+        sql`${creativePieces.programadaPara} is not null`,
+        sql`${creativePieces.programadaPara} <= ${ahora.toISOString()}`,
+      ),
+    )
+    .orderBy(creativePieces.programadaPara)
+    .limit(50);
+}
+
+/**
+ * La semana: las piezas con fecha, por día y por red.
+ *
+ * Solo entran las que tienen `programada_para`. Una pieza aprobada sin fecha no
+ * está "en el lunes": está esperando que alguien decida cuándo sale, y ponerla
+ * en el calendario de hoy sería inventarle un plan al cliente.
+ */
+export async function semanaDe(
+  orgId: string,
+  projectId: string,
+  desde: Date,
+): Promise<Array<{ dia: string; piezas: CreativePiece[] }>> {
+  const hasta = new Date(desde.getTime() + 7 * 86_400_000);
+  const filas = await db
+    .select()
+    .from(creativePieces)
+    .where(
+      and(
+        eq(creativePieces.orgId, orgId),
+        eq(creativePieces.projectId, projectId),
+        sql`${creativePieces.programadaPara} >= ${desde.toISOString()}`,
+        sql`${creativePieces.programadaPara} < ${hasta.toISOString()}`,
+      ),
+    )
+    .orderBy(creativePieces.programadaPara);
+
+  const dias: Array<{ dia: string; piezas: CreativePiece[] }> = [];
+  for (let i = 0; i < 7; i += 1) {
+    const d = new Date(desde.getTime() + i * 86_400_000);
+    const clave = d.toISOString().slice(0, 10);
+    dias.push({
+      dia: clave,
+      piezas: filas.filter((f) => f.programadaPara?.toISOString().slice(0, 10) === clave),
+    });
+  }
+  return dias;
 }
 
 export async function descartarPieza(

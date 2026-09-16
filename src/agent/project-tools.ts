@@ -35,6 +35,7 @@ import { generatePost } from '../generator';
 import { readUrl, search } from '../jina';
 import { sendViaBridge } from '../whatsapp/bridge';
 import { insertMessage } from '../whatsapp/repo';
+import { whatsappHabilitado, WHATSAPP_APAGADO } from '../banderas';
 import type { AgentContext } from './project-context';
 
 /** El canal por el que se publica en cada red que Goossip sabe publicar. */
@@ -445,6 +446,10 @@ export function toolsParaProyecto(ctx: AgentContext) {
     outputSchema: z.object({ ok: z.boolean() }),
     execute: async (input) => {
       soloOperadores(ctx, 'mandar mensajes');
+      // La compuerta dura del issue #40: WhatsApp no sale hasta que Luis lo
+      // abra, y el Asistente es justo el camino por el que se colaría sin que
+      // nadie apretara un botón.
+      if (!whatsappHabilitado()) throw new Error(WHATSAPP_APAGADO);
       const enviado = await sendViaBridge(input.a, input.mensaje);
       const fila = await insertMessage({
         externalId: enviado.id ?? null,
@@ -495,6 +500,102 @@ export function toolsParaProyecto(ctx: AgentContext) {
     },
   });
 
+  // -------------------------------------------------------- prospección
+  const buscarNegocios = createTool({
+    id: 'buscar-negocios',
+    description:
+      'Busca NEGOCIOS reales por giro y zona en Google Maps y los deja en la lista de Prospección del proyecto: nombre, dirección, teléfono, sitio y rating. Úsala cuando pidan "encuéntrame restaurantes en Tulum", "quiénes hay de este giro en tal colonia", "sácame prospectos". Solo negocios: nunca busques personas.',
+    inputSchema: z.object({
+      consulta: z
+        .string()
+        .min(4)
+        .describe('El giro y la zona con las palabras del usuario: "restaurantes en Tulum".'),
+      cuantos: z.number().int().min(1).max(20).optional(),
+    }),
+    outputSchema: z.object({
+      encontrados: z.number(),
+      nuevos: z.number(),
+      via: z.string(),
+      busquedasDelMes: z.number(),
+      tope: z.number(),
+      negocios: z.array(
+        z.object({
+          nombre: z.string(),
+          telefono: z.string().nullable(),
+          sitio: z.string().nullable(),
+          rating: z.string().nullable(),
+          direccion: z.string().nullable(),
+        }),
+      ),
+    }),
+    execute: async (input) => {
+      soloOperadores(ctx, 'prospectar');
+      const { buscarNegocios: buscar } = await import('../prospeccion/maps');
+      const r = await buscar({
+        project,
+        consulta: input.consulta,
+        limite: input.cuantos ?? 20,
+        quien: ctx.quien,
+      });
+      return {
+        encontrados: r.encontrados,
+        nuevos: r.nuevos,
+        via: r.via === 'composio' ? 'la cuenta de Google del proyecto' : 'la cuenta de Goossip',
+        busquedasDelMes: r.costo.mes,
+        tope: r.costo.tope,
+        negocios: r.prospectos.slice(0, 20).map((p) => ({
+          nombre: p.name,
+          telefono: p.phone,
+          sitio: p.website,
+          rating: p.rating,
+          direccion: p.address,
+        })),
+      };
+    },
+  });
+
+  // -------------------------------------------------------- competencia
+  const leerCompetencia = createTool({
+    id: 'leer-competencia',
+    description:
+      'Contesta "¿qué hace la competencia?" con lo ÚLTIMO que se leyó de los rivales de este proyecto y de sus propias redes: cada cuánto publican, qué formatos usan y de dónde salió cada número. Si no hay rivales dados de alta, dilo y manda a la sección Competencia del proyecto.',
+    inputSchema: z.object({ releer: z.boolean().optional().describe('Volver a leer ahora mismo.') }),
+    outputSchema: z.object({
+      veredicto: z.array(z.string()),
+      filas: z.array(
+        z.object({
+          quien: z.string(),
+          red: z.string(),
+          porSemana: z.number().nullable(),
+          fuente: z.string(),
+          motivo: z.string().nullable(),
+        }),
+      ),
+    }),
+    execute: async (input) => {
+      const { comparativo, leerPropio, leerRival, listarRivales } = await import(
+        '../competencia/lectura'
+      );
+      if (input.releer && ctx.puedeOperar) {
+        await leerPropio(project).catch(() => undefined);
+        for (const rival of await listarRivales(orgId, project.id)) {
+          await leerRival(project, rival).catch(() => undefined);
+        }
+      }
+      const c = await comparativo(orgId, project.id);
+      return {
+        veredicto: c.veredicto,
+        filas: c.filas.map((f) => ({
+          quien: f.quien,
+          red: f.red,
+          porSemana: f.porSemana,
+          fuente: f.fuente,
+          motivo: f.motivo,
+        })),
+      };
+    },
+  });
+
   return {
     generarTextoDePost,
     hacerPieza,
@@ -506,9 +607,14 @@ export function toolsParaProyecto(ctx: AgentContext) {
     guardarConocimiento,
     postsRecientes,
     estadoDelProyecto,
-    mandarWhatsapp,
+    // Con la bandera abajo, WhatsApp ni siquiera entra al menú del modelo. Una
+    // herramienta que va a tronar en cuanto se llame no es una salvaguarda: es
+    // una promesa que el Asistente le hace al usuario y después rompe.
+    ...(whatsappHabilitado() ? { mandarWhatsapp } : {}),
     leerUrl,
     buscarEnWeb,
+    buscarNegocios,
+    leerCompetencia,
   };
 }
 

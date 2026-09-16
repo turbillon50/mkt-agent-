@@ -123,7 +123,15 @@ export interface ProjectConnections {
   /** Cuántos conectores de verdad conectables tiene el proyecto hoy. */
   conectables: number;
   conectados: number;
+  /** Todos los del catálogo, conectables o no. Es la M del "N de M". */
+  total: number;
   grupos: ConnectorGroup[];
+  /**
+   * Qué dijo Composio cuando se reconcilió, si se reconcilió. Sirve para que la
+   * pantalla pueda decir "no pudimos preguntarle a Composio" en vez de pintar
+   * un "sin conectar" que no es verdad.
+   */
+  reconciliado?: { enComposio: number; encendidos: string[]; apagados: string[]; error?: string };
 }
 
 /** Estados de la fila en la base. `connecting` = abrió el permiso y no volvió. */
@@ -309,8 +317,37 @@ export function buildChannelCards(
     cards,
     conectables: cards.filter((c) => c.state !== 'proximamente').length,
     conectados: cards.filter((c) => c.state === 'conectado').length,
+    total: cards.length,
     grupos: [...new Set(cards.map((c) => c.group))],
   };
+}
+
+/**
+ * ¿Este proyecto tiene Facebook o Instagram de verdad?
+ *
+ * Existe como función y no como un `find('meta')` suelto porque ESE era el bug
+ * que reportó Luis: la lista de arranque preguntaba por el conector `meta` —el
+ * de la app propia, apagado desde la corrida 5— y contestaba "no conectado" con
+ * las cuentas de Facebook e Instagram de Composio vivas y verificadas. Una sola
+ * función, y todo lo que pregunte por Meta pregunta lo mismo.
+ */
+export function metaConectado(cards: ChannelCard[]): {
+  conectado: boolean;
+  cuales: ChannelCard[];
+  formularios: number;
+} {
+  const cuales = cards.filter(
+    (c) => (c.id === 'facebook' || c.id === 'instagram' || c.id === 'meta') && c.state === 'conectado',
+  );
+  // Los formularios de lead ads solo existen del lado de la página: viven en la
+  // tarjeta de `meta` (app propia) o en la de `facebook` cuando el proyecto ya
+  // eligió de cuál recibir.
+  let formularios = 0;
+  for (const c of cuales) {
+    const forms = (c.data as { forms?: unknown[] })?.forms;
+    if (Array.isArray(forms)) formularios += forms.length;
+  }
+  return { conectado: cuales.length > 0, cuales, formularios };
 }
 
 // ---------------------------------------------------------------------------
@@ -384,17 +421,33 @@ async function nombresDe(orgId: string, clerkIds: string[]): Promise<Map<string,
 /**
  * El estado de las conexiones del proyecto, listo para pintar.
  *
- * `verificar` pregunta a Composio por cada cuenta antes de contestar. Se hace
- * al abrir la pantalla porque es el único momento en que alguien va a creerle
- * al color verde.
+ * `verificar` RECONCILIA contra Composio antes de contestar: se listan las
+ * cuentas del proyecto allá y la base se acomoda a eso. Se hace al abrir la
+ * pantalla porque es el único momento en que alguien va a creerle al color
+ * verde — y porque preguntar solo por las filas que ya teníamos es como se
+ * quedó MOMENTUM diciendo "sin conectar" con seis cuentas vivas.
+ *
+ * Es UNA llamada a Composio (`user_ids=project:<uuid>`), no una por canal.
  */
 export async function projectConnections(
   project: Project,
   opts: { verificar?: boolean } = {},
 ): Promise<ProjectConnections> {
+  let reconciliado: ProjectConnections['reconciliado'];
   if (opts.verificar && composioReady()) {
-    const { verifyProjectAccounts } = await import('./composio-connections');
-    await verifyProjectAccounts(project).catch(() => undefined);
+    const { reconciliarConComposio } = await import('./composio-connections');
+    const r = await reconciliarConComposio(project).catch((e) => ({
+      enComposio: 0,
+      encendidos: [] as string[],
+      apagados: [] as string[],
+      error: e instanceof Error ? e.message : 'Composio no contestó.',
+    }));
+    reconciliado = {
+      enComposio: r.enComposio,
+      encendidos: r.encendidos,
+      apagados: r.apagados,
+      ...(r.error ? { error: r.error } : {}),
+    };
   }
 
   const [accounts, logos] = await Promise.all([
@@ -402,6 +455,7 @@ export async function projectConnections(
     toolkitLogos().catch(() => new Map<string, string>()),
   ]);
   const built = buildChannelCards(project, accounts, { logos });
+  if (reconciliado) built.reconciliado = reconciliado;
 
   const nombres = await nombresDe(
     project.orgId,

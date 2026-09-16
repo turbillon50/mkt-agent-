@@ -43,6 +43,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       angulo: (p.metadata as any)?.angulo ?? null,
       nota: (p.metadata as any)?.nota ?? null,
       loteId: p.loteId,
+      comentario: p.comentario,
+      programadaPara: p.programadaPara?.toISOString() ?? null,
       createdAt: p.createdAt.toISOString(),
     })),
     porRed,

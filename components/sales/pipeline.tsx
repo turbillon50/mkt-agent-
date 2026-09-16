@@ -60,7 +60,12 @@ function fechaCorta(iso: string) {
   return new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
 }
 
-export function SalesPipeline() {
+/**
+ * `whatsapp` llega del SERVIDOR, no de `process.env` aquí: este componente es
+ * de cliente y las banderas del entorno no cruzan sin `NEXT_PUBLIC_`. La página
+ * que lo monta lee `whatsappHabilitado()` y lo pasa.
+ */
+export function SalesPipeline({ whatsapp = false }: { whatsapp?: boolean }) {
   const { push } = useToast();
   const [leads, setLeads] = useState<PipelineLead[]>([]);
   const [project, setProject] = useState<{ id: string; name: string } | null>(null);
@@ -175,34 +180,47 @@ export function SalesPipeline() {
         </p>
       </header>
 
-      <Card>
-        <CardContent className="flex flex-wrap items-end gap-3 py-4">
-          <div className="min-w-[200px] flex-1">
-            <label className="mb-1 block text-xs font-medium">Plantilla de WhatsApp a un segmento</label>
-            <Input value={template} onChange={(e) => setTemplate(e.target.value)} placeholder="primer_contacto_es" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium">Grado</label>
-            <select
-              value={segmentGrade}
-              onChange={(e) => setSegmentGrade(e.target.value as '' | LeadGrade)}
-              className="flex h-9 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
-            >
-              <option value="">Todos</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-            </select>
-          </div>
-          <Button onClick={() => void sendSegment()} className="btn-brand">
-            <IconSend className="h-4 w-4" /> Encolar
-          </Button>
-          <p className="w-full text-[11px] text-[var(--color-muted-foreground)]">
-            No se manda nada aquí: se encola una acción por lead y el runner las ejecuta con rate
-            limit, después de que las apruebes.
-          </p>
-        </CardContent>
-      </Card>
+      {/*
+        La caja de plantillas de WhatsApp SOLO existe con la bandera arriba.
+        Decisión de Luis (16-sep-2026): WhatsApp va al final. Mientras el número
+        del cliente no esté dado de alta en Business Manager, este botón encola
+        mensajes que no van a salir — y el usuario se queda creyendo que ya
+        contactó a sus leads, que es el peor de los dos mundos.
+
+        No es `display:none`: el componente no se monta, y la ruta que encola
+        contesta 409 con la misma bandera abajo. Esconder el botón y dejar viva
+        la ruta es esconder el interruptor, no apagarlo.
+      */}
+      {whatsapp && (
+        <Card>
+          <CardContent className="flex flex-wrap items-end gap-3 py-4">
+            <div className="min-w-[200px] flex-1">
+              <label className="mb-1 block text-xs font-medium">Plantilla de WhatsApp a un segmento</label>
+              <Input value={template} onChange={(e) => setTemplate(e.target.value)} placeholder="primer_contacto_es" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Grado</label>
+              <select
+                value={segmentGrade}
+                onChange={(e) => setSegmentGrade(e.target.value as '' | LeadGrade)}
+                className="flex h-9 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
+              >
+                <option value="">Todos</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+              </select>
+            </div>
+            <Button onClick={() => void sendSegment()} className="btn-brand">
+              <IconSend className="h-4 w-4" /> Encolar
+            </Button>
+            <p className="w-full text-[11px] text-[var(--color-muted-foreground)]">
+              No se manda nada aquí: se encola una acción por lead y el runner las ejecuta con rate
+              limit, después de que las apruebes.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {porEtapa.map(({ stage, leads: grupo }) => (
         <section key={stage} className="space-y-2">
