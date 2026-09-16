@@ -5,7 +5,13 @@ import { ProjectHeader } from '@/components/projects/project-header';
 import { guardProject } from '@/components/projects/project-guard';
 import { CampaignsBoard } from '@/components/marketing/campaigns-board';
 import { AdsCampaigns } from '@/components/ads/campaigns';
-import { googleAdsAvailable, projectConnections } from '@/src/projects/connections';
+import { MetaAds } from '@/components/ads/meta-ads';
+import {
+  channelAvailable,
+  googleAdsAvailable,
+  metaConectado,
+  projectConnections,
+} from '@/src/projects/connections';
 import type { ConnectionChannel } from '@/src/projects/types';
 
 export const dynamic = 'force-dynamic';
@@ -33,15 +39,29 @@ export default async function CampanasPage({ params }: { params: Promise<{ id: s
     .filter((c) => c.state === 'conectado')
     .map((c) => c.id as ConnectionChannel);
 
-  // Los formularios de lead ads de la página conectada: con ellos se amarra la
-  // campaña a Meta, que es de donde sale la atribución de cada lead.
-  const meta = cards.find((c) => c.id === 'meta');
-  const disponibles = (meta?.data.available_forms ?? meta?.data.forms ?? []) as Array<{
-    id: string;
-    name: string;
-    leadsCount?: number;
-  }>;
+  /**
+   * Los formularios de lead ads de la página conectada: con ellos se amarra la
+   * campaña a Meta, que es de donde sale la atribución de cada lead.
+   *
+   * Esto buscaba `cards.find(c => c.id === 'meta')`, y la tarjeta **se llama
+   * `facebook`** desde la corrida 5 (medido en el JSON de `/connections`). Como
+   * nunca encontraba nada, `meta?.state !== 'conectado'` era SIEMPRE verdad: el
+   * letrero "Conecta Facebook…" quedaba permanente con Facebook conectado a un
+   * lado, y `disponibles` venía vacío, así que una campaña nunca se podía
+   * amarrar a un formulario. Es el hallazgo D de la QA.
+   *
+   * `metaConectado` ya sabía mirar las tres tarjetas (`meta`, `facebook`,
+   * `instagram`). Lo único que faltaba era usarlo.
+   */
+  const meta = metaConectado(cards);
+  const disponibles = meta.cuales.flatMap(
+    (c) =>
+      ((c.data as { available_forms?: unknown[]; forms?: unknown[] }).available_forms ??
+        (c.data as { forms?: unknown[] }).forms ??
+        []) as Array<{ id: string; name: string; leadsCount?: number }>,
+  );
   const googleListo = googleAdsAvailable();
+  const metaAdsListo = channelAvailable('metaads');
 
   return (
     <div className="space-y-6">
@@ -54,7 +74,7 @@ export default async function CampanasPage({ params }: { params: Promise<{ id: s
         description="Cada pauta por separado: qué trae, cuánto cuesta y de cuál viene cada lead."
       />
 
-      {meta?.state !== 'conectado' && (
+      {!meta.conectado && (
         <Card>
           <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
             <p className="text-sm text-[var(--color-muted-foreground)]">
@@ -75,6 +95,26 @@ export default async function CampanasPage({ params }: { params: Promise<{ id: s
       />
 
       {/*
+        Corrida 11. Los anuncios de Meta van ANTES que los de Google porque es
+        donde está la pauta de los clientes de hoy, y por lo mismo que los de
+        Google: son de la cuenta del cliente, se leen de allá y se administran
+        allá. Goossip aquí solo contesta "¿cuánto llevo gastado y cuánto me está
+        costando cada lead?", que es la pregunta de cada mañana.
+      */}
+      {metaAdsListo && (
+        <section className="space-y-3 border-t border-[var(--color-border)] pt-6">
+          <div>
+            <h2 className="text-lg font-semibold">Anuncios de Meta</h2>
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Lo que está corriendo en tu cuenta de Meta Ads, lo que llevas gastado y cuánto te
+              cuesta cada lead.
+            </p>
+          </div>
+          <MetaAds projectId={id} />
+        </section>
+      )}
+
+      {/*
         Los anuncios de Google son de la CUENTA de Google Ads, no de Goossip: se
         leen de allá y se prenden y apagan allá. Van abajo y separados a
         propósito — mezclarlos con las campañas de arriba haría creer que
@@ -88,7 +128,7 @@ export default async function CampanasPage({ params }: { params: Promise<{ id: s
               Lo que ya está corriendo en tu cuenta de Google Ads.
             </p>
           </div>
-          <AdsCampaigns />
+          <AdsCampaigns projectId={id} />
         </section>
       )}
     </div>

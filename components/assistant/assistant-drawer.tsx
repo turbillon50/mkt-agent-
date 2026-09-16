@@ -16,6 +16,7 @@ import {
 } from '@/components/icons';
 import { useProjects } from '@/components/projects-provider';
 import { cn } from '@/lib/utils';
+import { enEscritorio } from './panel-prefs';
 
 /**
  * El Asistente, en TODA la app.
@@ -78,8 +79,15 @@ export function AssistantDrawer() {
   const projectId = active?.id ?? null;
 
   // ⌘K / Ctrl+K abre y cierra. Escape cierra.
+  //
+  // Desde la corrida 8, de 1280 px para arriba este cajón no existe: ahí manda
+  // el panel de tres columnas, que también escucha ⌘K. Los dos están montados
+  // —cuál se ve lo decide CSS, para no parpadear al hidratar— así que el atajo
+  // tiene que preguntar de quién es antes de hacer nada. Sin esto, ⌘K en
+  // escritorio abría un cajón invisible y se robaba el foco del compose.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (enEscritorio()) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setAbierto((v) => !v);
@@ -101,9 +109,16 @@ export function AssistantDrawer() {
    * "Generar pieza" de la auditoría de marca vive tres componentes más abajo y
    * en otro árbol, y pasarle una función por props significaría enhebrarla por
    * toda la app. El cajón escucha, se abre y manda.
+   *
+   * Desde la corrida 8 el mismo evento lo escucha también el panel de tres
+   * columnas, y los dos están montados a la vez. Sin el candado de
+   * `enEscritorio()`, un clic en "Generar pieza" en una ventana de 1440
+   * mandaría el prompt DOS veces —una por cada oyente— y Goossip cobraría dos
+   * piezas por un solo clic.
    */
   useEffect(() => {
     const onDictar = (e: Event) => {
+      if (enEscritorio()) return;
       const prompt = (e as CustomEvent<{ prompt?: string }>).detail?.prompt;
       if (!prompt) return;
       setAbierto(true);
@@ -224,7 +239,14 @@ export function AssistantDrawer() {
         title="Asistente · Ctrl+K"
         className={cn(
           'fixed bottom-24 right-4 z-40 flex h-12 items-center gap-2 rounded-full bg-gradient-to-br from-[var(--color-brand-1)] to-[var(--color-brand-3)] px-4 text-white shadow-lg transition-transform hover:scale-105 lg:bottom-6',
+          // En escritorio el panel vive abierto en su columna: un botón
+          // flotante para abrir lo que ya está abierto solo tapa contenido.
+          'panel:hidden',
+          // Y abajo de 1250 px sigue valiendo lo de la corrida 7: en el Inicio
+          // del proyecto el Asistente va EMBEBIDO, así que el flotante sería un
+          // segundo acceso a lo mismo tapando la tarjeta de Competencia.
           (abierto || enElInicio) && 'hidden',
+
         )}
       >
         <IconSparkles className="h-5 w-5" />
@@ -249,6 +271,8 @@ export function AssistantDrawer() {
         aria-hidden={!abierto}
         className={cn(
           'fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l border-[var(--color-border)] bg-[var(--color-background-elevated)] shadow-2xl transition-transform duration-200 ease-out',
+          // Ver arriba: de 1280 px para arriba manda el panel de tres columnas.
+          'panel:hidden',
           abierto ? 'translate-x-0' : 'translate-x-full',
         )}
       >

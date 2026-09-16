@@ -4,6 +4,7 @@ import {
   text,
   timestamp,
   integer,
+  bigint,
   numeric,
   doublePrecision,
   boolean,
@@ -208,6 +209,13 @@ export const users = pgTable('users', {
    */
   activeCampaignId: uuid('active_campaign_id'),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
+  /**
+   * Preferencias de interfaz de la PERSONA (0019): ancho y plegado del panel de
+   * Goossip, modo de autonomía. Aparte de `metadata`, que es el espejo de
+   * Clerk: el día que el webhook reescriba ese objeto entero —que es lo que
+   * hacen los espejos— el panel volvería a su ancho de fábrica sin motivo.
+   */
+  settings: jsonb('settings').$type<Record<string, unknown>>().notNull().default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => ({
@@ -549,9 +557,26 @@ export const conversations = pgTable('conversations', {
   orgId: text('org_id').notNull(),
   campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'cascade' }),
   leadId: uuid('lead_id').references(() => salesLeads.id, { onDelete: 'set null' }),
-  channel: text('channel').$type<'whatsapp' | 'sms' | 'email'>().notNull().default('whatsapp'),
+  /**
+   * `messenger` e `instagram` entran en la corrida 13. La columna siempre fue
+   * `text` sin CHECK, así que ampliarla no costó migración de tipo.
+   */
+  channel: text('channel')
+    .$type<'whatsapp' | 'sms' | 'email' | 'messenger' | 'instagram'>()
+    .notNull()
+    .default('whatsapp'),
   externalThreadId: text('external_thread_id').notNull(),
   status: text('status').$type<'open' | 'escalated' | 'closed'>().notNull().default('open'),
+  /** Quién escribe, cuando no es un lead del CRM (0020). */
+  contactName: text('contact_name'),
+  /**
+   * El PSID/IGSID de la persona. NO es el id del hilo: Meta pide el de la
+   * PERSONA para contestar. Sin esto se puede leer y no se puede responder.
+   */
+  contactExternalId: text('contact_external_id'),
+  /** Lo que dice el proveedor, no lo que deducimos de lo que alcanzamos a bajar. */
+  unreadCount: integer('unread_count').notNull().default(0),
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
   lastInboundAt: timestamp('last_inbound_at', { withTimezone: true }),
   lastOutboundAt: timestamp('last_outbound_at', { withTimezone: true }),
   windowExpiresAt: timestamp('window_expires_at', { withTimezone: true }),
@@ -560,6 +585,7 @@ export const conversations = pgTable('conversations', {
 }, (t) => ({
   leadIdx: index('conversations_lead_idx').on(t.leadId),
   campaignStatusIdx: index('conversations_campaign_status_idx').on(t.campaignId, t.status),
+  recientesIdx: index('conversations_project_recientes_idx').on(t.campaignId, t.updatedAt),
 }));
 
 export const messages = pgTable('messages', {
@@ -952,6 +978,99 @@ export const lessons = pgTable('lessons', {
 
 export type Lesson = typeof lessons.$inferSelect;
 export type NewLesson = typeof lessons.$inferInsert;
+
+/* ---------------------------------------------------------------------------
+   Corrida 8 — el Asistente siempre abierto: hilos, mensajes y adjuntos.
+
+   Hasta la 7 el historial vivía en `chat_messages`, que es por USUARIO y
+   guarda el proyecto dentro del jsonb. Pedirle "los hilos del proyecto X" a
+   esa tabla es traer los últimos 20 del usuario y filtrarlos en memoria: con
+   dos clientes activos, el Asistente del segundo abría vacío. Aquí el
+   proyecto es columna, con índice.
+--------------------------------------------------------------------------- */
+
+export const assistantConversations = pgTable('assistant_conversations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  /** Lo escribe la app con las primeras palabras del primer mensaje. */
+  title: text('title'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  /** Se mueve con cada mensaje: por esto se ordena la lista del historial. */
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  proyectoIdx: index('assistant_conversations_proyecto_idx').on(t.projectId, t.userId, t.updatedAt),
+}));
+
+export type AssistantConversation = typeof assistantConversations.$inferSelect;
+export type NewAssistantConversation = typeof assistantConversations.$inferInsert;
+
+/** Lo que hay que volver a pintar al recargar un hilo. */
+export interface AssistantMessageMeta {
+  piezas?: Array<{ id: string; url: string; angulo: string }>;
+  publicado?: string | null;
+  adjuntos?: Array<{ id: string; name: string; mime: string; size: number; url: string }>;
+  menciones?: Array<{ tipo: string; id: string; etiqueta: string }>;
+  autonomia?: 'propone' | 'publica';
+  /** La pantalla en la que estaba parado el usuario al preguntar. */
+  pantalla?: string;
+  error?: boolean;
+}
+
+export const assistantMessages = pgTable('assistant_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  conversationId: uuid('conversation_id')
+    .notNull()
+    .references(() => assistantConversations.id, { onDelete: 'cascade' }),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  role: text('role').$type<'user' | 'assistant'>().notNull(),
+  content: text('content').notNull(),
+  metadata: jsonb('metadata').$type<AssistantMessageMeta>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  hiloIdx: index('assistant_messages_hilo_idx').on(t.conversationId, t.createdAt),
+}));
+
+export type AssistantMessage = typeof assistantMessages.$inferSelect;
+export type NewAssistantMessage = typeof assistantMessages.$inferInsert;
+
+/** Dónde quedaron los bytes. Sin esto no se sabe qué URLs siguen vivas. */
+export type FileStorage = 'blob' | 'casa';
+export type ExtractStatus = 'pendiente' | 'leido' | 'sin-lector' | 'error';
+
+export const assistantFiles = pgTable('assistant_files', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  /**
+   * SET NULL y no CASCADE: el archivo vive en un almacén de afuera y borrar la
+   * fila no borra los bytes. Si la fila se fuera con el hilo, el archivo
+   * quedaría en el almacén sin nadie que sepa que existe.
+   */
+  conversationId: uuid('conversation_id').references(() => assistantConversations.id, {
+    onDelete: 'set null',
+  }),
+  name: text('name').notNull(),
+  url: text('url').notNull(),
+  mime: text('mime').notNull(),
+  size: bigint('size', { mode: 'number' }).notNull(),
+  storage: text('storage').$type<FileStorage>().notNull().default('casa'),
+  extractStatus: text('extract_status').$type<ExtractStatus>().notNull().default('pendiente'),
+  /** Lo que Goossip pudo LEER. Se lee una vez y se guarda, no en cada turno. */
+  extractedText: text('extracted_text'),
+  /** Por qué no se pudo leer, en español, para poder decírselo al usuario. */
+  extractNote: text('extract_note'),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  proyectoIdx: index('assistant_files_proyecto_idx').on(t.projectId, t.createdAt),
+  hiloIdx: index('assistant_files_hilo_idx').on(t.conversationId),
+}));
+
+export type AssistantFile = typeof assistantFiles.$inferSelect;
+export type NewAssistantFile = typeof assistantFiles.$inferInsert;
 
 /** Alias de dominio: en la base es `campaigns`, en la app es un proyecto. */
 export const projects = campaigns;

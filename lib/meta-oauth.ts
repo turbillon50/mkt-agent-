@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { GRAPH } from './meta-graph';
+import { GRAPH, metaAppId, metaAppSecret } from './meta-graph';
 
 /**
  * Conexión de Facebook e Instagram con la app de Goossip.
@@ -25,15 +25,14 @@ export function metaOAuthConfigured(): boolean {
   return Boolean(appId() && appSecret());
 }
 
-function appId(): string | null {
-  const v = process.env.META_APP_ID?.trim();
-  return v && !v.startsWith('[') ? v : null;
-}
-
-function appSecret(): string | null {
-  const v = process.env.META_APP_SECRET?.trim();
-  return v && !v.startsWith('[') ? v : null;
-}
+/**
+ * Las credenciales viven en `meta-graph.ts` desde la corrida 11: de la misma
+ * app de Meta salen ahora dos caminos —las páginas (aquí) y las cuentas
+ * publicitarias (`meta-ads.ts`)— y la regla de "vacío o `[SENSITIVE]` es lo
+ * mismo que no estar" tiene que estar escrita una sola vez.
+ */
+const appId = metaAppId;
+const appSecret = metaAppSecret;
 
 /** La URL pública de esta instalación. Meta exige que coincida exacta. */
 export function callbackUrl(origin: string): string {
@@ -51,6 +50,15 @@ export interface MetaState {
   link?: string;
   /** A dónde volver al terminar. */
   back: string;
+  /**
+   * Cuál de los dos caminos de la app de Meta pidió el permiso (corrida 11):
+   * las páginas o las cuentas publicitarias. Los dos firman con el mismo
+   * secreto, así que sin esto un `state` de uno valdría en el callback del
+   * otro — y el callback de Ads se pondría a buscar cuentas publicitarias con
+   * un permiso que solo trae páginas. Opcional porque los `state` de la
+   * corrida 3 que anden en vuelo no lo traen.
+   */
+  via?: 'paginas' | 'ads';
   exp: number;
 }
 

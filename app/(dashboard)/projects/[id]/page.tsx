@@ -95,9 +95,22 @@ export default async function ProjectHomePage({ params }: { params: Promise<{ id
         una caja de chat vacía en un proyecto nuevo— crecía hasta los 620 px con
         medio metro de blanco adentro. Se vio en la captura de 1440 y se veía
         exactamente como lo que es: una caja sin terminar.
+
+        Y de 1250 px para arriba la columna del Asistente DESAPARECE: ahí
+        Goossip ya está abierto en su propia columna (corrida 8), y dejar el
+        embebido sería enseñar el mismo chat dos veces en la misma pantalla,
+        con dos historiales que se pintan por separado. La caja se esconde y la
+        rejilla se vuelve de una columna para que el centro de mando —los
+        números, las herramientas, la actividad— use todo el ancho que queda.
+
+        Abajo de 1250 no cambia nada de la corrida 7: el embebido sigue siendo
+        la columna ancha del Inicio, que es donde el chat tiene que verse sin
+        descubrir un atajo de teclado.
       */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
-        <AsistenteEmbebido projectId={project.id} nombre={project.name} puedeOperar={can('operar')} />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start panel:grid-cols-1">
+        <div className="panel:hidden">
+          <AsistenteEmbebido projectId={project.id} nombre={project.name} puedeOperar={can('operar')} />
+        </div>
 
         <div className="space-y-4">
           <section className="grid grid-cols-2 gap-3">

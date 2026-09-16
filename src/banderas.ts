@@ -36,6 +36,22 @@ export function whatsappHabilitado(): boolean {
   return encendida('WHATSAPP_ENABLED', false);
 }
 
+/**
+ * Meta Ads con la app propia de Goossip: ENCENDIDO por omisión (corrida 11).
+ *
+ * La bandera no es la puerta — la puerta son `META_APP_ID` y `META_APP_SECRET`,
+ * que es lo que de verdad decide si hay con qué conectar (ver `channelAvailable`
+ * en `src/projects/connections.ts`). Existe para poder APAGARLO en caliente sin
+ * un deploy el día que Meta cierre la app o caduque la revisión de permisos,
+ * que es el riesgo real de un conector que depende de una app nuestra.
+ *
+ * Por eso el valor por omisión es `true` y no `false`: un entorno con las
+ * credenciales puestas y sin esta variable debe conectar, no quedarse mudo.
+ */
+export function metaAdsHabilitado(): boolean {
+  return encendida('META_ADS_ENABLED', true);
+}
+
 /** El mensaje único cuando algo de WhatsApp se pide con la bandera abajo. */
 export const WHATSAPP_APAGADO =
   'WhatsApp todavía no está abierto en Goossip. Va al final, cuando el número del cliente esté dado de alta en Business Manager.';

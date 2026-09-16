@@ -1,0 +1,678 @@
+{
+  "corrida": "c8",
+  "base": "http://127.0.0.1:3100",
+  "capturas": 14,
+  "erroresJs": 0,
+  "notasInternas": 0,
+  "vueltas": {
+    "1280": {
+      "abierto": {
+        "panelAncho": 256,
+        "panelVisible": true,
+        "mainAncho": 760,
+        "mainDerecha": 1024,
+        "panelIzquierda": 1024,
+        "estado": "abierto",
+        "varAncho": "256px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      },
+      "plegado": {
+        "panelAncho": 48,
+        "panelVisible": true,
+        "mainAncho": 968,
+        "mainDerecha": 1232,
+        "panelIzquierda": 1232,
+        "estado": "plegado",
+        "varAncho": "48px",
+        "cabecera": null,
+        "chips": [],
+        "botonesDelCompose": [
+          "Abrir Goossip (Ctrl+K)"
+        ],
+        "hayFlotante": false
+      },
+      "arrastrado": {
+        "panelAncho": 256,
+        "panelVisible": true,
+        "mainAncho": 760,
+        "mainDerecha": 1024,
+        "panelIzquierda": 1024,
+        "estado": "abierto",
+        "varAncho": "256px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      },
+      "trasRecargar": {
+        "panelAncho": 256,
+        "panelVisible": true,
+        "mainAncho": 750,
+        "mainDerecha": 1014,
+        "panelIzquierda": 1014,
+        "estado": "abierto",
+        "varAncho": "256px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      },
+      "menuArroba": {
+        "abierto": true,
+        "opciones": [
+          "LEAD · Ana Gómez · nuevo · grado C · 5215511111111",
+          "LEAD · Andrés Salas · nuevo · grado C · 5215522222222"
+        ]
+      },
+      "menuBarra": {
+        "abierto": true,
+        "opciones": [
+          "/pieza · Hazme las piezas de una publicación",
+          "/publica · Publica en una red del proyecto",
+          "/leads · Qué hay en los leads del proyecto",
+          "/medidas · Qué medidas lleva un formato",
+          "/campaña · Arma o revisa una campaña"
+        ]
+      },
+      "erroresJs": []
+    },
+    "1440": {
+      "abierto": {
+        "panelAncho": 360,
+        "panelVisible": true,
+        "mainAncho": 816,
+        "mainDerecha": 1080,
+        "panelIzquierda": 1080,
+        "estado": "abierto",
+        "varAncho": "360px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      },
+      "plegado": {
+        "panelAncho": 48,
+        "panelVisible": true,
+        "mainAncho": 1128,
+        "mainDerecha": 1392,
+        "panelIzquierda": 1392,
+        "estado": "plegado",
+        "varAncho": "48px",
+        "cabecera": null,
+        "chips": [],
+        "botonesDelCompose": [
+          "Abrir Goossip (Ctrl+K)"
+        ],
+        "hayFlotante": false
+      },
+      "arrastrado": {
+        "panelAncho": 400,
+        "panelVisible": true,
+        "mainAncho": 776,
+        "mainDerecha": 1040,
+        "panelIzquierda": 1040,
+        "estado": "abierto",
+        "varAncho": "400px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      },
+      "trasRecargar": {
+        "panelAncho": 400,
+        "panelVisible": true,
+        "mainAncho": 766,
+        "mainDerecha": 1030,
+        "panelIzquierda": 1030,
+        "estado": "abierto",
+        "varAncho": "400px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      },
+      "menuArroba": {
+        "abierto": true,
+        "opciones": [
+          "LEAD · Ana Gómez · nuevo · grado C · 5215511111111",
+          "LEAD · Andrés Salas · nuevo · grado C · 5215522222222"
+        ]
+      },
+      "menuBarra": {
+        "abierto": true,
+        "opciones": [
+          "/pieza · Hazme las piezas de una publicación",
+          "/publica · Publica en una red del proyecto",
+          "/leads · Qué hay en los leads del proyecto",
+          "/medidas · Qué medidas lleva un formato",
+          "/campaña · Arma o revisa una campaña"
+        ]
+      },
+      "erroresJs": []
+    },
+    "celular": {
+      "hayFlotante": true,
+      "panelDeEscritorioVisible": false,
+      "cajonAbierto": true,
+      "texto": "Asistente\n\nMOMENTUM\n\n0 conectados\n3 sin contactar\nMarca cargada\n\nHay 3 leads sin contactar. Un lead que espera más de un día se enfría.\n\nVer los leads\n\nTodavía no hay ningún canal conectado. Sin eso no entran leads y no se puede publicar con la cuenta de este cliente.\n\nConectar un canal\n\nPregúntame ",
+      "erroresJs": []
+    }
+  },
+  "detalle": [
+    {
+      "nombre": "01-abierto",
+      "tamano": "1440",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/01-abierto-1440.png",
+      "medidas": {
+        "panelAncho": 360,
+        "panelVisible": true,
+        "mainAncho": 816,
+        "mainDerecha": 1080,
+        "panelIzquierda": 1080,
+        "estado": "abierto",
+        "varAncho": "360px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      }
+    },
+    {
+      "nombre": "02-plegado",
+      "tamano": "1440",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/02-plegado-1440.png",
+      "medidas": {
+        "panelAncho": 48,
+        "panelVisible": true,
+        "mainAncho": 1128,
+        "mainDerecha": 1392,
+        "panelIzquierda": 1392,
+        "estado": "plegado",
+        "varAncho": "48px",
+        "cabecera": null,
+        "chips": [],
+        "botonesDelCompose": [
+          "Abrir Goossip (Ctrl+K)"
+        ],
+        "hayFlotante": false
+      }
+    },
+    {
+      "nombre": "03-redimensionado",
+      "tamano": "1440",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/03-redimensionado-1440.png",
+      "medidas": {
+        "panelAncho": 400,
+        "panelVisible": true,
+        "mainAncho": 776,
+        "mainDerecha": 1040,
+        "panelIzquierda": 1040,
+        "estado": "abierto",
+        "varAncho": "400px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      }
+    },
+    {
+      "nombre": "04-tras-recargar-en-conexiones",
+      "tamano": "1440",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/04-tras-recargar-en-conexiones-1440.png",
+      "medidas": {
+        "panelAncho": 400,
+        "panelVisible": true,
+        "mainAncho": 766,
+        "mainDerecha": 1030,
+        "panelIzquierda": 1030,
+        "estado": "abierto",
+        "varAncho": "400px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      }
+    },
+    {
+      "nombre": "05-menciones",
+      "tamano": "1440",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/05-menciones-1440.png",
+      "medidas": {
+        "panelAncho": 400,
+        "panelVisible": true,
+        "mainAncho": 776,
+        "mainDerecha": 1040,
+        "panelIzquierda": 1040,
+        "estado": "abierto",
+        "varAncho": "400px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false,
+        "menuArroba": {
+          "abierto": true,
+          "opciones": [
+            "LEAD · Ana Gómez · nuevo · grado C · 5215511111111",
+            "LEAD · Andrés Salas · nuevo · grado C · 5215522222222"
+          ]
+        }
+      }
+    },
+    {
+      "nombre": "06-comandos",
+      "tamano": "1440",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/06-comandos-1440.png",
+      "medidas": {
+        "panelAncho": 400,
+        "panelVisible": true,
+        "mainAncho": 776,
+        "mainDerecha": 1040,
+        "panelIzquierda": 1040,
+        "estado": "abierto",
+        "varAncho": "400px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false,
+        "menuBarra": {
+          "abierto": true,
+          "opciones": [
+            "/pieza · Hazme las piezas de una publicación",
+            "/publica · Publica en una red del proyecto",
+            "/leads · Qué hay en los leads del proyecto",
+            "/medidas · Qué medidas lleva un formato",
+            "/campaña · Arma o revisa una campaña"
+          ]
+        }
+      }
+    },
+    {
+      "nombre": "07-historial",
+      "tamano": "1440",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/07-historial-1440.png",
+      "medidas": {
+        "panelAncho": 400,
+        "panelVisible": true,
+        "mainAncho": 776,
+        "mainDerecha": 1040,
+        "panelIzquierda": 1040,
+        "estado": "abierto",
+        "varAncho": "400px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      }
+    },
+    {
+      "nombre": "01-abierto",
+      "tamano": "1280",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/01-abierto-1280.png",
+      "medidas": {
+        "panelAncho": 256,
+        "panelVisible": true,
+        "mainAncho": 760,
+        "mainDerecha": 1024,
+        "panelIzquierda": 1024,
+        "estado": "abierto",
+        "varAncho": "256px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      }
+    },
+    {
+      "nombre": "02-plegado",
+      "tamano": "1280",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/02-plegado-1280.png",
+      "medidas": {
+        "panelAncho": 48,
+        "panelVisible": true,
+        "mainAncho": 968,
+        "mainDerecha": 1232,
+        "panelIzquierda": 1232,
+        "estado": "plegado",
+        "varAncho": "48px",
+        "cabecera": null,
+        "chips": [],
+        "botonesDelCompose": [
+          "Abrir Goossip (Ctrl+K)"
+        ],
+        "hayFlotante": false
+      }
+    },
+    {
+      "nombre": "03-redimensionado",
+      "tamano": "1280",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/03-redimensionado-1280.png",
+      "medidas": {
+        "panelAncho": 256,
+        "panelVisible": true,
+        "mainAncho": 760,
+        "mainDerecha": 1024,
+        "panelIzquierda": 1024,
+        "estado": "abierto",
+        "varAncho": "256px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      }
+    },
+    {
+      "nombre": "04-tras-recargar-en-conexiones",
+      "tamano": "1280",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/04-tras-recargar-en-conexiones-1280.png",
+      "medidas": {
+        "panelAncho": 256,
+        "panelVisible": true,
+        "mainAncho": 750,
+        "mainDerecha": 1014,
+        "panelIzquierda": 1014,
+        "estado": "abierto",
+        "varAncho": "256px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      }
+    },
+    {
+      "nombre": "05-menciones",
+      "tamano": "1280",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/05-menciones-1280.png",
+      "medidas": {
+        "panelAncho": 256,
+        "panelVisible": true,
+        "mainAncho": 760,
+        "mainDerecha": 1024,
+        "panelIzquierda": 1024,
+        "estado": "abierto",
+        "varAncho": "256px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false,
+        "menuArroba": {
+          "abierto": true,
+          "opciones": [
+            "LEAD · Ana Gómez · nuevo · grado C · 5215511111111",
+            "LEAD · Andrés Salas · nuevo · grado C · 5215522222222"
+          ]
+        }
+      }
+    },
+    {
+      "nombre": "06-comandos",
+      "tamano": "1280",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/06-comandos-1280.png",
+      "medidas": {
+        "panelAncho": 256,
+        "panelVisible": true,
+        "mainAncho": 760,
+        "mainDerecha": 1024,
+        "panelIzquierda": 1024,
+        "estado": "abierto",
+        "varAncho": "256px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false,
+        "menuBarra": {
+          "abierto": true,
+          "opciones": [
+            "/pieza · Hazme las piezas de una publicación",
+            "/publica · Publica en una red del proyecto",
+            "/leads · Qué hay en los leads del proyecto",
+            "/medidas · Qué medidas lleva un formato",
+            "/campaña · Arma o revisa una campaña"
+          ]
+        }
+      }
+    },
+    {
+      "nombre": "07-historial",
+      "tamano": "1280",
+      "status": null,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-composio-c5/capturas-c8/07-historial-1280.png",
+      "medidas": {
+        "panelAncho": 256,
+        "panelVisible": true,
+        "mainAncho": 760,
+        "mainDerecha": 1024,
+        "panelIzquierda": 1024,
+        "estado": "abierto",
+        "varAncho": "256px",
+        "cabecera": "Goossip · MOMENTUM",
+        "chips": [],
+        "botonesDelCompose": [
+          "Conversación nueva",
+          "Historial de conversaciones",
+          "Plegar el panel",
+          "Adjuntar un archivo",
+          "Adjuntar una imagen",
+          "Adjuntar video o audio",
+          "Mencionar algo del proyecto",
+          "Comandos",
+          "Mandar"
+        ],
+        "hayFlotante": false
+      }
+    }
+  ]
+}

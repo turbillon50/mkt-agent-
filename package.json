@@ -25,7 +25,11 @@
     "composio:bootstrap": "tsx scripts/composio-bootstrap.ts",
     "ingest:diseno": "tsx scripts/ingest-design-knowledge.ts",
     "test:creative": "tsx test/creative.test.ts",
-    "test:corrida7": "tsx test/corrida7.test.ts"
+    "test:corrida7": "tsx test/corrida7.test.ts",
+    "test:asistente": "tsx test/asistente.test.ts",
+    "test:metaads": "tsx test/metaads.test.ts",
+    "capturas:c11": "tsx scripts/capturas-c11.ts",
+    "test:corrida13": "tsx test/corrida13.test.ts"
   },
   "engines": {
     "node": ">=20"
@@ -44,15 +48,19 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-toast": "^1.2.15",
     "@tailwindcss/typography": "^0.5.19",
+    "@vercel/blob": "^2.8.0",
     "axios": "^1.7.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.36.4",
+    "fflate": "^0.8.3",
     "geist": "^1.7.2",
+    "mammoth": "^1.12.3",
     "next": "^16.2.6",
     "node-cron": "^3.0.3",
     "openai": "^4.67.3",
+    "pdf-parse": "^2.4.5",
     "pg": "^8.13.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
@@ -63,6 +71,7 @@
     "tailwindcss-animate": "^1.0.7",
     "twitter-api-v2": "^1.18.2",
     "ws": "^8.18.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {

@@ -131,6 +131,29 @@ function texto(v: unknown, max: number): string | undefined {
   return s ? s.slice(0, max) : undefined;
 }
 
+/**
+ * Teléfono en E.164 o nada.
+ *
+ * Se perdona la forma de escribirlo —espacios, guiones, paréntesis— y hasta que
+ * falte el `+`, porque en México todo el mundo escribe "55 1234 5678". Lo que no
+ * se perdona es guardar algo que Twilio va a rechazar: eso convierte un aviso en
+ * un `failed` que nadie relaciona con este campo.
+ */
+function telefonoE164(v: unknown): string | undefined {
+  const crudo = String(v ?? '').trim();
+  if (!crudo) return undefined;
+  const digitos = crudo.replace(/[^\d+]/g, '');
+  const conMas = digitos.startsWith('+') ? digitos : `+${digitos.replace(/^0+/, '')}`;
+  return /^\+[1-9]\d{7,14}$/.test(conMas) ? conMas : undefined;
+}
+
+/** Correo con forma de correo, en minúsculas, o nada. */
+function correo(v: unknown): string | undefined {
+  const s = String(v ?? '').trim().toLowerCase();
+  if (!s) return undefined;
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s) ? s : undefined;
+}
+
 export function sanitizeRules(raw: unknown): ProjectRules {
   const src = (raw ?? {}) as Record<string, unknown>;
   const num = (v: unknown) => {
@@ -150,7 +173,18 @@ export function sanitizeRules(raw: unknown): ProjectRules {
       : undefined,
     twilio_mode: src.twilio_mode === 'paid' ? 'paid' : src.twilio_mode === 'trial' ? 'trial' : undefined,
     first_contact_template: String(src.first_contact_template ?? '').trim() || undefined,
-    owner_phone: String(src.owner_phone ?? '').trim() || undefined,
+    /**
+     * Las dos vías del aviso al dueño, VALIDADAS aquí.
+     *
+     * Un teléfono sin `+52` o un correo sin arroba se guardaban tal cual y
+     * después `notify_owner` moría con un error de Twilio que nadie relaciona
+     * con lo que tecleó en Ajustes. Lo que no tiene forma de teléfono o de
+     * correo no entra: mejor el campo vacío —y la escalera de
+     * `aviso-al-dueno.ts` baja al siguiente— que un dato que solo sirve para
+     * fallar.
+     */
+    owner_phone: telefonoE164(src.owner_phone),
+    owner_email: correo(src.owner_email),
     seller_tone: texto(src.seller_tone, 120),
     never_promises: texto(src.never_promises, 600),
     business_hours: texto(src.business_hours, 200),

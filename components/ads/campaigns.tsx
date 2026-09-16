@@ -4,7 +4,6 @@ import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 
 type Campaign = {
   id: string;
@@ -12,12 +11,22 @@ type Campaign = {
   status: string;
   channelType: string;
   budgetMicros: string | null;
+  costMicros: string | null;
+  impressions: string | null;
+  clicks: string | null;
 };
 
 function formatMoney(micros: string | null): string {
   if (!micros) return '—';
   const n = Number(micros) / 1_000_000;
   return `$${n.toLocaleString('es-MX', { maximumFractionDigits: 2 })}/día`;
+}
+
+/** Lo GASTADO, que no lleva "/día". Confundirlos hace creer que se gastó 30 veces más. */
+function gastado(micros: string | null): string {
+  if (!micros) return '$0';
+  const n = Number(micros) / 1_000_000;
+  return `$${n.toLocaleString('es-MX', { maximumFractionDigits: 2 })}`;
 }
 
 /**
@@ -39,53 +48,64 @@ function enCristiano(crudo: string): string {
   return s;
 }
 
-export function AdsCampaigns() {
+/**
+ * Las campañas de Google Ads DEL PROYECTO.
+ *
+ * Dos cosas cambian en la corrida 13 y las dos salen de la QA:
+ *
+ *   · **Lleva `projectId`.** La ruta llaveaba por el usuario de Clerk y por eso
+ *     contestaba "no conectado" con Google Ads conectado (hallazgo G).
+ *   · **Ya no se teclea el ID de cliente.** Se descubre con
+ *     `customers:listAccessibleCustomers` y, si hay más de uno, se elige de una
+ *     lista. Pedirle a alguien un dato de 10 dígitos con guiones que la API ya
+ *     sabe es una forma barata de perderlo en el primer minuto.
+ */
+export function AdsCampaigns({ projectId }: { projectId: string }) {
   const [loading, setLoading] = React.useState(true);
   const [connected, setConnected] = React.useState(false);
   const [customerId, setCustomerId] = React.useState('');
+  const [disponibles, setDisponibles] = React.useState<string[]>([]);
+  const [motivo, setMotivo] = React.useState<string | null>(null);
   const [campaigns, setCampaigns] = React.useState<Campaign[]>([]);
   const [error, setError] = React.useState<string | null>(null);
-  const [connectInput, setConnectInput] = React.useState('');
-  const [connecting, setConnecting] = React.useState(false);
   const [toggling, setToggling] = React.useState<string | null>(null);
 
-  async function refresh() {
+  const refresh = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/ads/campaigns', { cache: 'no-store' });
+      const res = await fetch(`/api/ads/campaigns?project=${projectId}`, { cache: 'no-store' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error cargando campañas');
       setConnected(Boolean(data.connected));
       setCustomerId(data.customerId ?? '');
+      setDisponibles(data.disponibles ?? []);
+      setMotivo(data.motivo ?? data.error ?? null);
       setCampaigns(data.campaigns ?? []);
     } catch (e) {
       setError(enCristiano(e instanceof Error ? e.message : ''));
     } finally {
       setLoading(false);
     }
-  }
+  }, [projectId]);
 
   React.useEffect(() => {
-    refresh();
-  }, []);
+    void refresh();
+  }, [refresh]);
 
-  async function connect() {
-    if (connecting) return;
-    setConnecting(true);
-    setError(null);
+  /** Elegir con cuál de las cuentas accesibles trabaja este proyecto. */
+  async function elegir(cuenta: string) {
+    setLoading(true);
     try {
-      const res = await fetch('/api/integrations/composio/connect-googleads', {
+      await fetch('/api/ads/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerId: connectInput }),
+        body: JSON.stringify({ projectId, customerId: cuenta }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.redirectUrl) throw new Error(data.error || 'No se pudo iniciar la conexión');
-      window.location.href = data.redirectUrl;
+      await refresh();
     } catch (e) {
       setError(enCristiano(e instanceof Error ? e.message : ''));
-      setConnecting(false);
+      setLoading(false);
     }
   }
 
@@ -96,7 +116,7 @@ export function AdsCampaigns() {
       const res = await fetch(`/api/ads/campaigns/${id}/toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: next }),
+        body: JSON.stringify({ projectId, status: next }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -124,24 +144,30 @@ export function AdsCampaigns() {
     return (
       <Card className="card-glow">
         <CardHeader>
-          <CardTitle className="text-base">Conecta tu cuenta de Google Ads</CardTitle>
+          <CardTitle className="text-base">
+            {disponibles.length > 0 ? 'Elige tu cuenta de Google Ads' : 'Conecta tu cuenta de Google Ads'}
+          </CardTitle>
           <CardDescription>
-            Pega tu ID de cliente (Customer ID), formato 123-456-7890. Lo encuentras arriba a la
-            derecha en ads.google.com, junto al nombre de tu cuenta.
+            {disponibles.length > 0
+              ? 'Tu permiso llega a estas cuentas. Elige con cuál trabaja este proyecto.'
+              : (motivo ??
+                'Conecta Google en Conexiones del proyecto y aquí aparecen tus cuentas solas. No hace falta que teclees ningún ID.')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              value={connectInput}
-              onChange={(e) => setConnectInput(e.target.value)}
-              placeholder="123-456-7890"
-              className="sm:max-w-xs"
-            />
-            <Button onClick={connect} disabled={connecting || !connectInput} className="btn-brand">
-              {connecting ? 'Abriendo…' : 'Conectar Google Ads'}
+          {disponibles.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {disponibles.map((cuenta) => (
+                <Button key={cuenta} variant="outline" size="sm" onClick={() => void elegir(cuenta)}>
+                  {cuenta}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <Button asChild variant="outline" size="sm">
+              <a href={`/projects/${projectId}/conexiones`}>Ir a Conexiones</a>
             </Button>
-          </div>
+          )}
           {error && <p className="text-xs text-[var(--color-destructive)]">{error}</p>}
         </CardContent>
       </Card>
@@ -153,8 +179,9 @@ export function AdsCampaigns() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-[var(--color-muted-foreground)]">
           Cuenta conectada: <code>{customerId}</code>
+          {disponibles.length > 1 && ` · ${disponibles.length} cuentas a tu alcance`}
         </p>
-        <Button onClick={refresh} variant="outline" size="sm">
+        <Button onClick={() => void refresh()} variant="outline" size="sm">
           Refrescar
         </Button>
       </div>
@@ -180,7 +207,9 @@ export function AdsCampaigns() {
                     </Badge>
                   </div>
                   <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-                    {c.channelType.replaceAll('_', ' ').toLowerCase()} · presupuesto {formatMoney(c.budgetMicros)}
+                    {c.channelType.replaceAll('_', ' ').toLowerCase()} · presupuesto{' '}
+                    {formatMoney(c.budgetMicros)} · gastado 30 d {gastado(c.costMicros)} ·{' '}
+                    {c.impressions ?? 0} impresiones
                   </p>
                 </div>
                 {(c.status === 'ENABLED' || c.status === 'PAUSED') && (

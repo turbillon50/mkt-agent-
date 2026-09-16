@@ -30,6 +30,7 @@ import {
 } from '../db/schema';
 import { hasProjectSecret, projectSecret } from '../../lib/project-secrets';
 import { open } from '../../lib/secret-box';
+import { metaAdsHabilitado } from '../banderas';
 import { composioReady } from '../composio/client';
 import { resolveRules, type McpSource, type ProjectChannels } from '../sales/types';
 import {
@@ -76,6 +77,13 @@ export function channelAvailable(id: string): boolean {
       .map((x) => x.trim())
       .filter(Boolean);
     return (c.managed || propias.includes(c.slug)) && composioReady();
+  }
+  // Meta Ads con la app propia (corrida 11). NO depende de `META_OWN_APP`: esa
+  // bandera apaga el camino de PÁGINAS de la corrida 3, que es otro conector y
+  // otra decisión. Lo que decide aquí es lo único que importa — si hay app con
+  // qué conectar — más un interruptor propio para poder apagarlo sin deploy.
+  if (c.via === 'meta_own_app') {
+    return metaAdsHabilitado() && Boolean(env('META_APP_ID') && env('META_APP_SECRET'));
   }
   switch (id) {
     case 'meta':
@@ -210,6 +218,92 @@ function composioCard(c: Connector, account: SocialAccount | null, opts: CardOpt
   return base;
 }
 
+/** Lo que guarda la fila de `metaads` en `metadata`. Nada de esto es un secreto. */
+export interface MetaAdsMeta {
+  motivo?: string;
+  business?: string | null;
+  business_id?: string | null;
+  currency?: string | null;
+  account_status?: number | null;
+  /** Las cuentas entre las que el usuario todavía tiene que elegir. */
+  candidates?: Array<{
+    id: string;
+    accountId: string;
+    name: string;
+    business: string | null;
+    currency: string | null;
+    status: number | null;
+  }>;
+  /** El token de usuario de larga duración, CIFRADO. Nunca sale por una API. */
+  user_token?: string;
+}
+
+/**
+ * La tarjeta de Meta Ads.
+ *
+ * Tres diferencias con la de Composio y las tres son de negocio:
+ *   · la conexión no termina al volver de Facebook — falta elegir CUÁL de las
+ *     cuentas publicitarias es la de este proyecto, y adivinar con un cliente
+ *     que tiene tres cuentas es reportarle el gasto de otro negocio;
+ *   · el verde también caduca a las 24 h, porque el token de usuario de Meta se
+ *     puede revocar desde Facebook sin avisarnos, y
+ *   · el motivo de "Reconectar" viene de Graph traducido (`motivoDeMeta`), no
+ *     del código crudo: "(#200) Ad account owner has NOT grant ads_management"
+ *     no le dice a nadie que tiene que ir a Business Manager.
+ */
+function metaAdsCard(c: Connector, account: SocialAccount | null, opts: CardOptions): ChannelCard {
+  const base = baseCard(c, account, opts);
+  const meta = (account?.metadata ?? {}) as MetaAdsMeta;
+  const status = (account?.status ?? 'disconnected') as AccountStatus;
+  const detail = account?.label ?? account?.externalHandle ?? null;
+  const data = {
+    account_id: account?.externalId ?? null,
+    business: meta.business ?? null,
+    currency: meta.currency ?? null,
+    account_status: meta.account_status ?? null,
+  };
+
+  if (status === 'connected' && account?.externalId) {
+    if (verificacionFresca(account.verifiedAt, opts.ahora)) {
+      return { ...base, state: 'conectado', detail, data };
+    }
+    return {
+      ...base,
+      state: 'reconectar',
+      detail,
+      pending: 'Hace más de un día que no confirmamos esta cuenta publicitaria. Vuelve a conectarla.',
+      data,
+    };
+  }
+
+  if (status === 'needs_reconnect') {
+    return {
+      ...base,
+      state: 'reconectar',
+      detail,
+      pending: meta.motivo ?? 'Tu cuenta publicitaria dejó de responder. Vuelve a conectarla.',
+      data,
+    };
+  }
+
+  // Volvió de Facebook y falta el último paso. La tarjeta NO se pinta de verde:
+  // sin cuenta elegida no hay un solo número que enseñar.
+  const candidatas = meta.candidates ?? [];
+  if (candidatas.length > 0) {
+    return {
+      ...base,
+      pending: 'Elige qué cuenta publicitaria usa este proyecto.',
+      data: { candidates: candidatas },
+    };
+  }
+
+  if (status === 'connecting') {
+    return { ...base, pending: 'Te quedaste a medias en la pantalla de permisos. Inténtalo otra vez.' };
+  }
+
+  return base;
+}
+
 /**
  * Arma las tarjetas del proyecto. Es la ÚNICA fuente del estado: la pantalla no
  * vuelve a decidir nada, solo pinta.
@@ -229,6 +323,7 @@ export function buildChannelCards(
 
     if (!channelAvailable(c.slug as ConnectionChannel)) return { ...base, state: 'proximamente' };
     if (c.via === 'composio') return composioCard(c, account, opts);
+    if (c.via === 'meta_own_app') return metaAdsCard(c, account, opts);
 
     switch (c.slug) {
       case 'meta': {
@@ -441,6 +536,17 @@ export async function projectConnections(
   project: Project,
   opts: { verificar?: boolean } = {},
 ): Promise<ProjectConnections> {
+  // Meta Ads no pasa por Composio, así que su verdad hay que ir a buscarla
+  // aparte: una llamada a Graph con la cuenta del proyecto que refresca
+  // `verified_at` o la marca para reconectar con el motivo en español. Sin
+  // esto la tarjeta se pondría en "Reconectar" sola a las 24 h con la cuenta
+  // perfectamente viva — que es exactamente el bug que la regla del verde
+  // caduco vino a evitar, al revés.
+  if (opts.verificar && channelAvailable('metaads')) {
+    const { verificarMetaAds } = await import('../channels/metaads');
+    await verificarMetaAds(project).catch(() => undefined);
+  }
+
   let reconciliado: ProjectConnections['reconciliado'];
   if (opts.verificar && composioReady()) {
     const { reconciliarConComposio } = await import('./composio-connections');
@@ -668,6 +774,104 @@ export async function pendingMeta(
     user_token?: string;
   };
   return { candidates: meta.candidates ?? [], userToken: open(meta.user_token ?? null) };
+}
+
+/** Lo que dejó a medias el OAuth de Meta Ads: las cuentas entre las que elegir. */
+export async function pendingMetaAds(
+  orgId: string,
+  projectId: string,
+): Promise<{ candidates: NonNullable<MetaAdsMeta['candidates']>; userToken: string | null }> {
+  const rows = await db
+    .select({ metadata: socialAccounts.metadata })
+    .from(socialAccounts)
+    .where(
+      and(
+        eq(socialAccounts.orgId, orgId),
+        eq(socialAccounts.campaignId, projectId),
+        eq(socialAccounts.platform, 'metaads'),
+      ),
+    )
+    .limit(1);
+  const meta = (rows[0]?.metadata ?? {}) as MetaAdsMeta;
+  return { candidates: meta.candidates ?? [], userToken: open(meta.user_token ?? null) };
+}
+
+/** La cuenta publicitaria conectada de un proyecto, con su token EN CLARO. */
+export interface CuentaMetaAds {
+  accountId: string;
+  nombre: string;
+  business: string | null;
+  currency: string | null;
+  token: string;
+  verifiedAt: Date | null;
+}
+
+/**
+ * La cuenta de Meta Ads de este proyecto, lista para leer Graph.
+ *
+ * Devuelve el token DESCIFRADO, así que vive aquí y no en una ruta: lo llaman
+ * `src/channels/metaads.ts` y nada más. Ninguna respuesta HTTP lo cruza.
+ *
+ * `null` cuando no hay cuenta, cuando la fila quedó a medias (sin `external_id`
+ * el usuario nunca eligió) o cuando el sobre no abre — un token cifrado con
+ * otra llave es exactamente lo mismo que no tener token, nunca un "úsalo igual".
+ */
+export async function metaAdsCuenta(project: Project): Promise<CuentaMetaAds | null> {
+  const rows = await db
+    .select()
+    .from(socialAccounts)
+    .where(
+      and(
+        eq(socialAccounts.orgId, project.orgId),
+        eq(socialAccounts.campaignId, project.id),
+        eq(socialAccounts.platform, 'metaads'),
+        eq(socialAccounts.status, 'connected'),
+      ),
+    )
+    .limit(1);
+  const row = rows[0];
+  if (!row?.externalId) return null;
+  const meta = (row.metadata ?? {}) as MetaAdsMeta;
+  const token = open(meta.user_token ?? null);
+  if (!token) return null;
+  return {
+    accountId: row.externalId,
+    nombre: row.label ?? row.externalHandle ?? row.externalId,
+    business: meta.business ?? null,
+    currency: meta.currency ?? null,
+    token,
+    verifiedAt: row.verifiedAt ?? null,
+  };
+}
+
+/**
+ * Borra el permiso de Meta Ads de nuestra base.
+ *
+ * `revokeConnection` apaga el estado y quita el `external_id`, pero el token
+ * cifrado vive en `metadata` y ahí se quedaría. Un permiso de 60 días del
+ * cliente guardado después de que el cliente lo quitó no es una conexión: es un
+ * secreto que ya no tenemos por qué tener. La bitácora de quién conectó y
+ * cuándo sí se queda — esa es la parte que sirve.
+ */
+export async function olvidarTokenMetaAds(orgId: string, projectId: string): Promise<void> {
+  const rows = await db
+    .select({ id: socialAccounts.id, metadata: socialAccounts.metadata })
+    .from(socialAccounts)
+    .where(
+      and(
+        eq(socialAccounts.orgId, orgId),
+        eq(socialAccounts.campaignId, projectId),
+        eq(socialAccounts.platform, 'metaads'),
+      ),
+    )
+    .limit(1);
+  if (!rows[0]) return;
+  const { user_token: _olvidado, candidates: _tampoco, ...resto } = (rows[0].metadata ??
+    {}) as MetaAdsMeta;
+  await db
+    .update(socialAccounts)
+    .set({ metadata: { ...resto, candidates: [] }, updatedAt: new Date() })
+    .where(eq(socialAccounts.id, rows[0].id));
 }
 
 /**
