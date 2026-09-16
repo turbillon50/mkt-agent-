@@ -7,7 +7,7 @@
  * env de Vercel — ver lib/project-secrets.ts. Idempotente: si ya existe, actualiza
  * los canales y deja las reglas que ya tenga.
  */
-import 'dotenv/config';
+import '../src/env';
 import { eq } from 'drizzle-orm';
 import { db } from '../src/db/client';
 import { campaigns, users } from '../src/db/schema';

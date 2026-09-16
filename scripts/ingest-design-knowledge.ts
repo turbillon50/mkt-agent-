@@ -24,7 +24,7 @@
  * organización. Esto es de la aplicación y vive en `design_knowledge` con
  * `scope='global'`.
  */
-import 'dotenv/config';
+import '../src/env';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';

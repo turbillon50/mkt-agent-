@@ -15,7 +15,7 @@
  * valida el mismo JWT y la app se pinta igual que en producción. Playwright lo
  * pone en el contexto, así que viaja también en los `fetch` del navegador.
  */
-import 'dotenv/config';
+import '../src/env';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { eq, inArray } from 'drizzle-orm';

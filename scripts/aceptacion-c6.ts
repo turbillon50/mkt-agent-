@@ -18,7 +18,7 @@
  *   4. La ingesta: N archivos, M pedazos, re-corrida = 0 nuevos.
  *   5. (El deploy y las capturas van aparte.)
  */
-import 'dotenv/config';
+import '../src/env';
 import sharp from 'sharp';
 import { getProjectById } from '../src/sales/projects';
 import { getBrandKit, kitCompleto, saveBrandKit } from '../src/creative/brand-kit';

@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env';
 
 const truthy = (v: unknown) => /^(1|true|yes|on)$/i.test(String(v ?? '').trim());
 

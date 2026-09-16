@@ -12,7 +12,7 @@
  * tienen auth administrada y cuáles no. Los que no, salen "Próximamente" en la
  * pantalla; no se inventa una forma de conectarlos.
  */
-import 'dotenv/config';
+import '../src/env';
 import {
   CONNECTORS,
   managedComposioSlugs,

@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../env';
 import { Client } from 'pg';
 import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';

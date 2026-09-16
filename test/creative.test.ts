@@ -25,7 +25,7 @@
  *
  * Todo lo que crea en la base se borra al final, pase o falle.
  */
-import 'dotenv/config';
+import '../src/env';
 import sharp from 'sharp';
 import { eq, inArray } from 'drizzle-orm';
 import { db } from '../src/db/client';

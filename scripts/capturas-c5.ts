@@ -18,7 +18,7 @@
  * `127.0.0.1` la cookie dispara el handshake de Clerk (307 en bucle, medido en
  * la corrida 2). Con el encabezado, el middleware valida el mismo JWT.
  */
-import 'dotenv/config';
+import '../src/env';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { eq, inArray } from 'drizzle-orm';

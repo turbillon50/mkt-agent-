@@ -10,6 +10,7 @@ import type { Project } from '../db/schema';
 import {
   cuerpo,
   proxy,
+  proxyConEncabezados,
   run,
   verifyChannel,
   type ChannelAdapter,
@@ -203,18 +204,52 @@ export const linkedin: ChannelAdapter = {
   verify: (project) => verifyChannel(project, 'linkedin'),
 
   /**
+   * Publicar en LinkedIn va por la llamada CRUDA, no por la tool de Composio.
+   *
+   * No es capricho. `LINKEDIN_CREATE_LINKED_IN_POST` manda un encabezado
+   * `LinkedIn-Version` de 2024 y LinkedIn contesta **426 NONEXISTENT_VERSION**
+   * (medido el 16-sep-2026 con la cuenta real de MOMENTUM). LinkedIn caduca sus
+   * versiones de API cada pocos meses y esa tool se quedó atrás; esperar a que
+   * Composio la actualice deja a los clientes sin publicar mientras tanto.
+   *
+   * Por el proxy sale la MISMA conexión del proyecto —el token nunca toca a
+   * Goossip— y el encabezado de versión lo ponemos nosotros. Es exactamente lo
+   * que ya se hacía con los formularios de lead ads de Facebook.
+   *
    * `author` es obligatorio: LinkedIn no asume "publica como quien está
    * conectado". Se saca el URN en el momento y no se cachea — publicar en la
    * cuenta equivocada es el peor error posible aquí.
    */
   async publish(project: Project, input: PublishInput): Promise<PublishResult> {
     const urn = input.target ?? (await urnDeLinkedIn(project));
-    const data: any = cuerpo(await run(project, 'linkedin', 'LINKEDIN_CREATE_LINKED_IN_POST', {
-      author: urn,
-      commentary: input.texto,
-      visibility: 'PUBLIC',
-    }));
-    const id = data?.id ?? data?.postId ?? data?.shareId ?? null;
+    const { data, headers } = await proxyConEncabezados(project, 'linkedin', {
+      endpoint: 'https://api.linkedin.com/rest/posts',
+      method: 'POST',
+      parameters: [
+        { name: 'LinkedIn-Version', value: LINKEDIN_VERSION, type: 'header' },
+        { name: 'X-Restli-Protocol-Version', value: '2.0.0', type: 'header' },
+      ],
+      body: {
+        author: urn,
+        commentary: input.texto,
+        visibility: 'PUBLIC',
+        distribution: {
+          feedDistribution: 'MAIN_FEED',
+          targetEntities: [],
+          thirdPartyDistributionChannels: [],
+        },
+        lifecycleState: 'PUBLISHED',
+        isReshareDisabledByAuthor: false,
+      },
+    });
+
+    /**
+     * LinkedIn devuelve el id en el encabezado `x-restli-id` y el cuerpo VACÍO.
+     * Sin leer el encabezado, la publicación sale bien y Goossip contesta que
+     * no sabe dónde quedó — que para el usuario es igual que un fallo.
+     */
+    const id: string | null = headers['x-restli-id'] ?? (data as any)?.id ?? null;
+
     return {
       toolkit: 'linkedin',
       id,
@@ -223,9 +258,26 @@ export const linkedin: ChannelAdapter = {
   },
 };
 
+/**
+ * La versión de la API de LinkedIn que se declara en cada llamada.
+ *
+ * LinkedIn obliga a mandarla y caduca las viejas: sin esto contesta 426. Se
+ * sube aquí —o por entorno— cuando toque, sin esperar a nadie.
+ */
+export const LINKEDIN_VERSION = process.env.LINKEDIN_API_VERSION || '202609';
+
+/**
+ * El URN de la persona con la que publica ESTE proyecto.
+ *
+ * `author_id` va primero porque es lo que LinkedIn devuelve de verdad, y ya
+ * viene con el prefijo puesto (`urn:li:person:AaAf8dE53o`, medido 16-sep-2026).
+ * Los otros nombres se quedan como red: el día que Composio cambie el campo, la
+ * publicación no se cae — y si ninguno está, se dice en español.
+ */
 export async function urnDeLinkedIn(project: Project): Promise<string> {
   const data: any = cuerpo(await run(project, 'linkedin', 'LINKEDIN_GET_MY_INFO', {}));
-  const raw: string | undefined = data?.id ?? data?.sub ?? data?.author ?? data?.personUrn;
+  const raw: string | undefined =
+    data?.author_id ?? data?.id ?? data?.sub ?? data?.author ?? data?.personUrn;
   if (!raw) throw new Error('No se pudo leer tu identidad de LinkedIn. Vuelve a conectarlo.');
   return raw.startsWith('urn:li:person:') ? raw : `urn:li:person:${raw}`;
 }

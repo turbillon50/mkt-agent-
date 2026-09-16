@@ -25,7 +25,7 @@
  *
  * Todo lo que crea —en la base y en Composio— se borra al final, pase o falle.
  */
-import 'dotenv/config';
+import '../src/env';
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../src/db/client';
 import {
