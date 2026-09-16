@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -75,6 +75,27 @@ interface Evento {
   detalle: Record<string, unknown>;
 }
 
+async function copiarTexto(texto: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return true;
+  } catch {
+    // Safari y algunos navegadores bloquean Clipboard después de un fetch. El
+    // fallback conserva el clic manual sin mandar el Connect Link a ningún
+    // servicio intermedio.
+    const campo = document.createElement('textarea');
+    campo.value = texto;
+    campo.setAttribute('readonly', '');
+    campo.style.position = 'fixed';
+    campo.style.opacity = '0';
+    document.body.appendChild(campo);
+    campo.select();
+    const copiado = document.execCommand('copy');
+    campo.remove();
+    return copiado;
+  }
+}
+
 export function ConnectionsBoard({
   projectId,
   compact = false,
@@ -93,6 +114,18 @@ export function ConnectionsBoard({
   const [trabajando, setTrabajando] = useState<string | null>(null);
   const [cambioX, setCambioX] = useState<{ card: Card; replace: boolean } | null>(null);
   const [xHandle, setXHandle] = useState('');
+  const [xOAuthUrl, setXOAuthUrl] = useState<string | null>(null);
+  const [xEsperando, setXEsperando] = useState(false);
+  const composioPollRef = useRef<number | null>(null);
+
+  const detenerPollingComposio = useCallback(() => {
+    if (composioPollRef.current !== null) {
+      window.clearInterval(composioPollRef.current);
+      composioPollRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => detenerPollingComposio, [detenerPollingComposio]);
 
   const cargar = useCallback(async () => {
     try {
@@ -158,8 +191,68 @@ export function ConnectionsBoard({
   }
 
   function prepararConexionX(card: Card, replace: boolean) {
+    detenerPollingComposio();
     setXHandle(String(card.data.expectedHandle ?? ''));
+    setXOAuthUrl(null);
+    setXEsperando(false);
     setCambioX({ card, replace });
+  }
+
+  function vigilarConexionComposio(canal: string, ventana: Window | null) {
+    detenerPollingComposio();
+    const inicio = Date.now();
+    composioPollRef.current = window.setInterval(async () => {
+      if (Date.now() - inicio > 5 * 60 * 1000) {
+        detenerPollingComposio();
+        setTrabajando(null);
+        if (canal === 'twitter') setXEsperando(false);
+        push({ title: 'No se completó la conexión. Genera un enlace nuevo.', variant: 'error' });
+        return;
+      }
+      try {
+        const r = await fetch(
+          `/api/connections/composio/status?project=${projectId}&canal=${encodeURIComponent(canal)}`,
+          { cache: 'no-store' },
+        );
+        const s = await r.json();
+        if (s.terminal) {
+          detenerPollingComposio();
+          try {
+            ventana?.close();
+          } catch {
+            // La identidad ya fue rechazada del lado del servidor.
+          }
+          setTrabajando(null);
+          if (canal === 'twitter') {
+            setXEsperando(false);
+            setXOAuthUrl(null);
+          }
+          push({ title: s.error ?? 'X abrió una cuenta distinta.', variant: 'error' });
+          void cargar();
+          router.refresh();
+          return;
+        }
+        if (s.connected) {
+          detenerPollingComposio();
+          try {
+            ventana?.close();
+          } catch {
+            // Si el navegador no deja cerrarla, no pasa nada: ya está conectada.
+          }
+          setTrabajando(null);
+          if (canal === 'twitter') {
+            setXEsperando(false);
+            setXOAuthUrl(null);
+            setCambioX(null);
+          }
+          push({ title: 'Cuenta conectada', variant: 'success' });
+          void cargar();
+          router.refresh();
+        }
+      } catch {
+        // Un tropiezo de red no cancela la espera: se vuelve a preguntar.
+      }
+    }, 3000);
   }
 
   async function conectarConComposio(
@@ -174,6 +267,11 @@ export function ConnectionsBoard({
       );
       if (!ok) return;
     }
+    if (canal === 'twitter') {
+      detenerPollingComposio();
+      setXOAuthUrl(null);
+      setXEsperando(false);
+    }
     setTrabajando(canal);
     try {
       const res = await fetch('/api/connections/composio/start', {
@@ -184,11 +282,36 @@ export function ConnectionsBoard({
       const data = await res.json();
       if (res.ok && data.alreadyConnected) {
         setTrabajando(null);
+        if (canal === 'twitter') {
+          setXOAuthUrl(null);
+          setXEsperando(false);
+          setCambioX(null);
+        }
         push({ title: 'Ya estaba conectado.', variant: 'success' });
         router.refresh();
         return;
       }
       if (!res.ok || !data.redirectUrl) throw new Error(data.error ?? 'No se pudo.');
+
+      // X no ofrece un parámetro confiable para forzar el selector de cuenta:
+      // reutiliza las cookies del navegador. Por eso su Connect Link se deja
+      // visible y copiable, para abrirlo en incógnito con la identidad correcta.
+      // La ventana original sigue preguntando al servidor y valida el @ real.
+      if (canal === 'twitter') {
+        setXOAuthUrl(data.redirectUrl);
+        setXEsperando(true);
+        setTrabajando(null);
+        vigilarConexionComposio(canal, null);
+        void copiarTexto(data.redirectUrl).then((copiado) => {
+          push({
+            title: copiado
+              ? 'Enlace copiado. Pégalo en una ventana de incógnito.'
+              : 'Enlace listo. Cópialo y ábrelo en una ventana de incógnito.',
+            variant: copiado ? 'success' : 'info',
+          });
+        });
+        return;
+      }
 
       // La ventana de permisos se abre APARTE y esta pantalla se queda donde
       // está. Quien conecta no pierde su lugar, y si el proveedor manda a la
@@ -205,51 +328,8 @@ export function ConnectionsBoard({
         window.location.href = data.redirectUrl;
         return;
       }
-
       // La verdad de si quedó es de Composio, no del navegador: se pregunta.
-      const inicio = Date.now();
-      const cada = window.setInterval(async () => {
-        if (Date.now() - inicio > 5 * 60 * 1000) {
-          window.clearInterval(cada);
-          setTrabajando(null);
-          push({ title: 'No se completó la conexión. Inténtalo otra vez.', variant: 'error' });
-          return;
-        }
-        try {
-          const r = await fetch(
-            `/api/connections/composio/status?project=${projectId}&canal=${encodeURIComponent(canal)}`,
-            { cache: 'no-store' },
-          );
-          const s = await r.json();
-          if (s.terminal) {
-            window.clearInterval(cada);
-            try {
-              ventana.close();
-            } catch {
-              // La identidad ya fue rechazada del lado del servidor.
-            }
-            setTrabajando(null);
-            push({ title: s.error ?? 'X abrió una cuenta distinta.', variant: 'error' });
-            void cargar();
-            router.refresh();
-            return;
-          }
-          if (s.connected) {
-            window.clearInterval(cada);
-            try {
-              ventana.close();
-            } catch {
-              // Si el navegador no deja cerrarla, no pasa nada: ya está conectada.
-            }
-            setTrabajando(null);
-            push({ title: 'Cuenta conectada', variant: 'success' });
-            void cargar();
-            router.refresh();
-          }
-        } catch {
-          // Un tropiezo de red no cancela la espera: se vuelve a preguntar.
-        }
-      }, 3000);
+      vigilarConexionComposio(canal, ventana);
     } catch (e) {
       push({ title: e instanceof Error ? e.message : 'Error', variant: 'error' });
       setTrabajando(null);
@@ -337,9 +417,19 @@ export function ConnectionsBoard({
         <XAccountSwitchDialog
           currentHandle={cambioX.card.detail}
           expectedHandle={xHandle}
+          oauthUrl={xOAuthUrl}
           busy={trabajando === 'twitter'}
+          waiting={xEsperando}
           onExpectedHandleChange={setXHandle}
           onCancel={() => setCambioX(null)}
+          onCopy={async () => {
+            if (!xOAuthUrl) return;
+            const copiado = await copiarTexto(xOAuthUrl);
+            push({
+              title: copiado ? 'Enlace copiado.' : 'No pude copiarlo; selecciónalo manualmente.',
+              variant: copiado ? 'success' : 'error',
+            });
+          }}
           onContinue={() => {
             const expected = normalizeXHandle(xHandle);
             if (!expected) {
@@ -347,7 +437,6 @@ export function ConnectionsBoard({
               return;
             }
             const intent = cambioX;
-            setCambioX(null);
             void conectarConComposio('twitter', intent.replace, expected);
           }}
         />
@@ -438,16 +527,22 @@ export function ConnectionsBoard({
 function XAccountSwitchDialog({
   currentHandle,
   expectedHandle,
+  oauthUrl,
   busy,
+  waiting,
   onExpectedHandleChange,
   onCancel,
+  onCopy,
   onContinue,
 }: {
   currentHandle: string | null;
   expectedHandle: string;
+  oauthUrl: string | null;
   busy: boolean;
+  waiting: boolean;
   onExpectedHandleChange: (value: string) => void;
   onCancel: () => void;
+  onCopy: () => void;
   onContinue: () => void;
 }) {
   const normalized = normalizeXHandle(expectedHandle);
@@ -462,16 +557,17 @@ function XAccountSwitchDialog({
         if (event.currentTarget === event.target && !busy) onCancel();
       }}
     >
-      <div className="w-full max-w-md space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-2xl">
+      <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md space-y-4 overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-2xl">
         <div className="space-y-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
             Cuenta exacta
           </p>
           <h2 id="x-account-title" className="text-lg font-semibold">
-            Cambiar la cuenta de X
+            Conectar la cuenta correcta de X
           </h2>
           <p className="text-sm text-[var(--color-muted-foreground)]">
-            X reutiliza la sesión abierta y no muestra un selector. Primero cambia la sesión; después Goossip comprobará el @ antes de aceptarlo.
+            X reutiliza la sesión abierta del navegador. Para que no vuelva a entrar otra cuenta,
+            abre la autorización en incógnito.
           </p>
         </div>
 
@@ -488,34 +584,96 @@ function XAccountSwitchDialog({
             autoFocus
             autoComplete="off"
             spellCheck={false}
+            disabled={busy || Boolean(oauthUrl)}
             value={expectedHandle}
             placeholder="@usuario"
             onChange={(event) => onExpectedHandleChange(event.target.value)}
           />
         </label>
 
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={() => {
-              window.open('https://x.com/logout', 'goossip-cambiar-cuenta-x', 'width=720,height=820,noopener=no');
-            }}
-          >
-            1. Cambiar sesión en X
-          </Button>
-          <Button type="button" className="btn-brand" disabled={busy || !normalized} onClick={onContinue}>
-            2. Conectar {normalized ?? 'esa cuenta'}
-          </Button>
-        </div>
+        {!oauthUrl ? (
+          <>
+            <Button
+              type="button"
+              className="btn-brand w-full"
+              disabled={busy || !normalized}
+              onClick={onContinue}
+            >
+              {busy ? 'Generando enlace…' : `Generar enlace para ${normalized ?? 'esa cuenta'}`}
+            </Button>
+            <p className="text-[11px] text-[var(--color-muted-foreground)]">
+              Goossip comprobará el @ real antes de aceptar la conexión. Si X devuelve otro,
+              lo rechazará y retirará automáticamente.
+            </p>
+          </>
+        ) : (
+          <div className="space-y-3">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/45 p-3">
+              <ol className="space-y-2 text-xs">
+                <li>
+                  <span className="font-semibold">1.</span> Abre una ventana de incógnito con{' '}
+                  <kbd className="rounded border border-[var(--color-border)] px-1 py-0.5 font-mono">
+                    Ctrl + Shift + N
+                  </kbd>
+                  .
+                </li>
+                <li>
+                  <span className="font-semibold">2.</span> Pega el enlace e inicia sesión
+                  únicamente con <span className="font-semibold">{normalized}</span>.
+                </li>
+                <li>
+                  <span className="font-semibold">3.</span> Antes de autorizar, confirma que X
+                  muestre <span className="font-semibold">{normalized}</span> arriba.
+                </li>
+              </ol>
+            </div>
 
-        <p className="text-[11px] text-[var(--color-muted-foreground)]">
-          Si X devuelve otro @, Goossip lo rechazará y lo desconectará automáticamente.
-        </p>
+            <label className="block space-y-1.5 text-xs font-medium" htmlFor="x-oauth-link">
+              Enlace privado de autorización
+              <Input
+                id="x-oauth-link"
+                readOnly
+                value={oauthUrl}
+                className="font-mono text-[11px]"
+                onFocus={(event) => event.currentTarget.select()}
+              />
+            </label>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button type="button" className="btn-brand" onClick={onCopy}>
+                <IconCopy className="mr-2 size-4" />
+                Copiar enlace
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => window.open(oauthUrl, '_blank', 'noopener,noreferrer')}
+              >
+                Abrir autorización
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2 rounded-xl bg-[var(--color-accent)]/55 px-3 py-2 text-xs">
+              <span className="size-2 shrink-0 animate-pulse rounded-full bg-[var(--color-primary)]" />
+              {waiting
+                ? 'Esperando la autorización; esta pantalla verificará la cuenta automáticamente.'
+                : 'El enlace está listo. Puedes generar uno nuevo si expiró.'}
+            </div>
+
+            <p className="text-[11px] text-[var(--color-muted-foreground)]">
+              Si al terminar la ventana de incógnito pide iniciar sesión en Goossip, ciérrala y
+              vuelve aquí: esta pantalla completa la verificación. No autorices si X muestra otro
+              @usuario.
+            </p>
+
+            <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={onContinue}>
+              Generar otro enlace
+            </Button>
+          </div>
+        )}
 
         <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={onCancel}>
-          Cancelar
+          Cerrar
         </Button>
       </div>
     </div>
