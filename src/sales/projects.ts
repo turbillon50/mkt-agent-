@@ -68,9 +68,27 @@ export interface ProjectInput {
   sellerPersona?: string | null;
   audience?: string | null;
   brandLanguage?: string | null;
+  /** Perfil del negocio (paso 1 del alta). */
+  website?: string | null;
+  city?: string | null;
+  country?: string | null;
   channels?: ProjectChannels;
   rules?: ProjectRules;
   mcpSources?: McpSource[];
+}
+
+/** Acepta "vliving.site" y guarda "https://vliving.site". Vacío → null. */
+export function cleanWebsite(raw: unknown): string | null {
+  const s = String(raw ?? '').trim();
+  if (!s) return null;
+  const withScheme = /^https?:\/\//i.test(s) ? s : `https://${s}`;
+  try {
+    return new URL(withScheme).toString().replace(/\/$/, '');
+  } catch {
+    // Lo que escribió el usuario no es una URL. Se guarda tal cual en vez de
+    // tirarlo: es un dato suyo, no una validación de vida o muerte.
+    return s.slice(0, 200);
+  }
 }
 
 function cleanKind(kind: unknown): ProjectKind {
@@ -107,6 +125,12 @@ export function sanitizeChannels(raw: unknown): ProjectChannels {
   return out;
 }
 
+/** Texto de usuario: recortado y sin vacíos disfrazados de cadena. */
+function texto(v: unknown, max: number): string | undefined {
+  const s = String(v ?? '').trim();
+  return s ? s.slice(0, max) : undefined;
+}
+
 export function sanitizeRules(raw: unknown): ProjectRules {
   const src = (raw ?? {}) as Record<string, unknown>;
   const num = (v: unknown) => {
@@ -127,6 +151,10 @@ export function sanitizeRules(raw: unknown): ProjectRules {
     twilio_mode: src.twilio_mode === 'paid' ? 'paid' : src.twilio_mode === 'trial' ? 'trial' : undefined,
     first_contact_template: String(src.first_contact_template ?? '').trim() || undefined,
     owner_phone: String(src.owner_phone ?? '').trim() || undefined,
+    seller_tone: texto(src.seller_tone, 120),
+    never_promises: texto(src.never_promises, 600),
+    business_hours: texto(src.business_hours, 200),
+    escalate_to: texto(src.escalate_to, 200),
   };
   for (const k of Object.keys(out) as Array<keyof ProjectRules>) {
     if (out[k] === undefined) delete out[k];
@@ -174,10 +202,19 @@ export async function getProjectById(id: string): Promise<Project | null> {
   return rows[0] ?? null;
 }
 
+/**
+ * Alta de proyecto.
+ *
+ * `owner` (el clerk_id de quien lo crea) es opcional solo porque los scripts de
+ * seed no tienen sesión. Cuando viene, el creador queda de DUEÑO en
+ * `project_members` en el mismo movimiento: un proyecto sin dueño es un
+ * proyecto al que nadie puede invitar a nadie.
+ */
 export async function createProject(
   orgId: string,
   userId: string,
   input: ProjectInput,
+  owner?: { clerkUserId: string; email?: string | null },
 ): Promise<Project> {
   const name = input.name.trim();
   const slug = await uniqueSlug(orgId, name);
@@ -193,6 +230,9 @@ export async function createProject(
       audience: input.audience ?? null,
       brandLanguage: input.brandLanguage ?? 'es',
       kind: cleanKind(input.kind),
+      website: cleanWebsite(input.website),
+      city: input.city?.trim() || null,
+      country: input.country?.trim() || null,
       sellerPersona: input.sellerPersona ?? null,
       channels: sanitizeChannels(input.channels),
       rules: sanitizeRules(input.rules),
@@ -200,6 +240,30 @@ export async function createProject(
     })
     .returning();
   if (!row) throw new Error('No se pudo crear el proyecto.');
+
+  if (owner) {
+    // Import diferido: `members.ts` y este archivo se necesitan mutuamente a
+    // nivel de tipos y un import arriba cerraría el círculo.
+    const { upsertProjectMember } = await import('../projects/members');
+    const { logProjectEvent } = await import('../projects/events');
+    await upsertProjectMember({
+      orgId,
+      projectId: row.id,
+      clerkUserId: owner.clerkUserId,
+      email: owner.email ?? null,
+      role: 'dueño',
+      status: 'activo',
+      invitedBy: owner.clerkUserId,
+    });
+    await logProjectEvent({
+      orgId,
+      projectId: row.id,
+      type: 'project_created',
+      actor: owner.clerkUserId,
+      actorEmail: owner.email ?? null,
+      payload: { nombre: row.name, tipo: row.kind },
+    });
+  }
   return row;
 }
 
@@ -214,6 +278,9 @@ export async function updateProject(
   if (input.audience !== undefined) patch.audience = input.audience;
   if (input.brandLanguage !== undefined) patch.brandLanguage = input.brandLanguage;
   if (input.kind !== undefined) patch.kind = cleanKind(input.kind);
+  if (input.website !== undefined) patch.website = cleanWebsite(input.website);
+  if (input.city !== undefined) patch.city = input.city?.trim() || null;
+  if (input.country !== undefined) patch.country = input.country?.trim() || null;
   if (input.sellerPersona !== undefined) patch.sellerPersona = input.sellerPersona;
   if (input.channels !== undefined) patch.channels = sanitizeChannels(input.channels);
   if (input.rules !== undefined) patch.rules = sanitizeRules(input.rules);

@@ -4,7 +4,6 @@ import { isClerkConfigured } from '@/lib/clerk-config';
 import { getOrCreateUser, ensureSocialAccounts } from '@/lib/users';
 import { resolveOrg } from '@/lib/org';
 import { listProjects } from '@/lib/projects';
-import { OnboardingForm } from '@/components/projects/onboarding-form';
 import { CreateOrgStep } from '@/components/orgs/create-org-step';
 
 export const dynamic = 'force-dynamic';
@@ -14,11 +13,11 @@ export const dynamic = 'force-dynamic';
  *
  *   1. ORGANIZACIÓN — es el tenant. Sin ella no hay dónde colgar nada; la
  *      migración 0013 dejó `org_id NOT NULL` en todas las tablas de datos.
- *   2. PRIMER PROYECTO — nombre, tipo y persona del vendedor. Lo mínimo:
- *      ley de Luis, primero se entra y se navega, los canales se conectan
- *      después.
+ *   2. PRIMER PROYECTO — se manda al asistente de tres pasos (`/projects/new`),
+ *      que es donde vive el alta desde la corrida 3. Aquí ya no hay formulario:
+ *      dos altas distintas del mismo objeto terminan separándose.
  *
- * Con las dos cosas listas, a /dashboard.
+ * Con las dos cosas listas, a su proyecto.
  */
 export default async function OnboardingPage() {
   if (!isClerkConfigured()) {
@@ -85,7 +84,7 @@ export default async function OnboardingPage() {
   }
 
   // --- paso 2: hay organización, ¿y proyecto? --------------------------------
-  const { orgId, org } = resolution.ctx;
+  const { orgId } = resolution.ctx;
   await ensureSocialAccounts(orgId, user.id).catch(() => undefined);
 
   const projects = await listProjects(orgId).catch(() => []);
@@ -93,31 +92,10 @@ export default async function OnboardingPage() {
     redirect('/dashboard');
   }
 
-  return (
-    <Marco>
-      <div className="w-full max-w-lg space-y-6 text-center">
-        <Logo />
-        <div>
-          <h1 className="text-2xl font-semibold">{org.name}</h1>
-          <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-            Un proyecto es un negocio con su propio vendedor: sus canales, sus campañas y sus
-            leads. Crea el primero — puedes entrar y navegar todo el panel antes de conectar nada.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 text-left card-glow">
-          <OnboardingForm />
-        </div>
-
-        <p className="text-xs text-[var(--color-muted-foreground)]">
-          ¿Prefieres explorar primero?{' '}
-          <a href="/dashboard" className="text-[var(--color-primary)] hover:underline">
-            Ir al dashboard
-          </a>
-        </p>
-      </div>
-    </Marco>
-  );
+  // Ya hay organización y no hay proyectos: el alta de proyecto es una pantalla
+  // de tres pasos con nombre propio, no un formulario incrustado aquí. Se manda
+  // allá en vez de mantener dos formularios de alta que se van a ir separando.
+  redirect('/projects/new');
 }
 
 function Marco({ children }: { children: React.ReactNode }) {

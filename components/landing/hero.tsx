@@ -9,18 +9,18 @@ export function Hero() {
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-28 lg:py-36">
         <div className="fade-up mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--color-border-strong)] bg-[var(--color-card)]/60 px-3.5 py-1.5 text-xs text-[var(--color-foreground-muted)] backdrop-blur">
           <IconSignal className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-          <span>Tu agente social autónomo · 24/7</span>
+          <span>Tu vendedor, contestando · 24/7</span>
         </div>
 
         <h1 className="fade-up delay-100 text-balance text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
-          Tu marca, en redes,
+          Tus leads, atendidos,
           <br className="hidden sm:block" />{' '}
-          <span className="brand-gradient">sin que muevas un dedo</span>
+          <span className="brand-gradient">antes de que se enfríen</span>
         </h1>
 
         <p className="fade-up delay-200 mx-auto mt-6 max-w-2xl text-balance text-base text-[var(--color-foreground-muted)] sm:mt-8 sm:text-lg lg:text-xl">
-          Goossip planea, redacta, publica y conversa por ti en X, LinkedIn y WhatsApp.
-          Aprende tu voz, evita repetirse y opera con la estrategia que tú defines.
+          Goossip recibe a la gente de tus anuncios, la califica, le contesta con tu tono y te
+          avisa cuando alguien está listo para comprar. Un proyecto, sus canales y su equipo.
         </p>
 
         <div className="fade-up delay-300 relative z-20 mt-10 flex flex-col items-stretch justify-center gap-3 sm:mt-12 sm:flex-row sm:items-center">
@@ -41,7 +41,7 @@ export function Hero() {
         </div>
 
         <p className="fade-up delay-400 mt-7 text-xs text-[var(--color-muted-foreground)]">
-          Sin tarjeta · X · LinkedIn · WhatsApp · Tu copy, tu plan, tu marca
+          Sin tarjeta · Facebook e Instagram · WhatsApp · Tu voz, tus precios, tus reglas
         </p>
       </div>
     </section>

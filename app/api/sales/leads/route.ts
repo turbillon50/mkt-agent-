@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiOrg } from '@/lib/org';
+import { requireProjectCapability } from '@/lib/project-access';
 import { getProject } from '@/lib/projects';
 import { activeProject, pipeline } from '@/lib/sales';
 import { ingestLead } from '@/src/sales/ingest';
@@ -15,6 +16,10 @@ export async function GET(req: NextRequest) {
   const wanted = req.nextUrl.searchParams.get('projectId');
   const project = wanted ? await getProject(orgId, wanted) : await activeProject(orgId, activeProjectId);
   if (!project) return NextResponse.json({ leads: [], project: null });
+
+  // El pipeline de un proyecto es de quien tiene acceso a ESE proyecto.
+  const negado = await requireProjectCapability(project.id, 'ver');
+  if (negado) return negado;
 
   const leads = await pipeline(orgId, project.id);
   return NextResponse.json({
@@ -34,6 +39,9 @@ export async function POST(req: NextRequest) {
     ? await getProject(orgId, body.projectId)
     : await activeProject(orgId, activeProjectId);
   if (!project) return NextResponse.json({ error: 'Primero crea un proyecto.' }, { status: 400 });
+
+  const negado = await requireProjectCapability(project.id, 'operar');
+  if (negado) return negado;
 
   const phone = String(body?.phone ?? '').trim();
   const fullName = String(body?.fullName ?? '').trim();

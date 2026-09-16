@@ -103,6 +103,50 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      /**
+       * Aceptaron la invitación a un PROYECTO (corrida 3).
+       *
+       * La invitación la manda Clerk con `{ project_id, project_role }` en la
+       * metadata pública; aquí se cierra la fila local de `project_members`.
+       * Con esto el invitado entra a la org como `org:member` y solo ve ESE
+       * proyecto con ESE rol.
+       *
+       * El evento trae la invitación, no siempre el usuario: cuando no viene,
+       * la fila se cierra sola la primera vez que la persona entra con ese
+       * correo (`claimPendingInvitations`). Este webhook es el camino rápido,
+       * no el único.
+       */
+      case 'organizationInvitation.accepted': {
+        const invitationId = String(data.id ?? '');
+        const clerkUserId = String(
+          data.public_user_data?.user_id ?? data.user_id ?? data.accepted_by ?? '',
+        );
+        if (!invitationId) throw new Error('invitación sin id');
+        if (!clerkUserId) {
+          await logWebhook({
+            source: 'clerk',
+            event: type,
+            status: 'ok',
+            detail: 'invitación aceptada sin user_id: se cierra al entrar',
+          });
+          return NextResponse.json({ ok: true, type, pendiente: true });
+        }
+        const { acceptInvitation } = await import('@/src/projects/members');
+        const { logProjectEvent } = await import('@/src/projects/events');
+        const filas = await acceptInvitation(invitationId, clerkUserId);
+        for (const fila of filas) {
+          await logProjectEvent({
+            orgId: fila.orgId,
+            projectId: fila.projectId,
+            type: 'member_joined',
+            actor: clerkUserId,
+            actorEmail: fila.email,
+            payload: { rol: fila.role },
+          });
+        }
+        break;
+      }
+
       default:
         await logWebhook({ source: 'clerk', event: type, status: 'ok', detail: 'evento ignorado' });
         return NextResponse.json({ ok: true, ignorado: type });

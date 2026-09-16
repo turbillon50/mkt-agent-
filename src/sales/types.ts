@@ -6,8 +6,17 @@
  * canales, sus reglas, su vendedor y sus leads.
  */
 
-export const PROJECT_KINDS = ['real_estate', 'mlm', 'marketplace', 'servicios'] as const;
+export const PROJECT_KINDS = ['real_estate', 'mlm', 'marketplace', 'servicios', 'otro'] as const;
 export type ProjectKind = (typeof PROJECT_KINDS)[number];
+
+/** Un solo diccionario de etiquetas: antes cada pantalla traía el suyo. */
+export const PROJECT_KIND_LABEL: Record<ProjectKind, string> = {
+  real_estate: 'Inmobiliario',
+  mlm: 'Redes / MLM',
+  marketplace: 'Marketplace',
+  servicios: 'Servicios',
+  otro: 'Otro',
+};
 
 export const LEAD_STAGES = [
   'nuevo',
@@ -85,6 +94,15 @@ export interface ProjectRules {
   first_contact_template?: string;
   /** Teléfono E.164 del dueño para notify_owner. */
   owner_phone?: string;
+  // --- cómo vende (paso 2 del alta, corrida 3) ------------------------------
+  /** Tono del vendedor: "cercano y directo", "formal". */
+  seller_tone?: string;
+  /** Lo que NO promete. Va al system del agente como prohibición dura. */
+  never_promises?: string;
+  /** Horario de atención en palabras: "lunes a viernes 9 a 19, sábado 10 a 14". */
+  business_hours?: string;
+  /** A quién le pasa la bola cuando escala: nombre y teléfono o correo. */
+  escalate_to?: string;
 }
 
 export interface McpSource {

@@ -50,9 +50,17 @@ export interface LeadgenFields {
  * Trae el lead completo por Graph. Meta solo manda el leadgen_id en el webhook;
  * los datos del formulario hay que pedirlos.
  */
-export async function fetchLeadgen(slug: string, leadgenId: string): Promise<LeadgenFields> {
-  const token = projectSecret(slug, 'META_PAGE_TOKEN');
-  if (!token) throw new Error('El proyecto no tiene META_PAGE_TOKEN en env.');
+export async function fetchLeadgen(
+  slug: string,
+  leadgenId: string,
+  /**
+   * Token de la página. Desde la corrida 3 lo trae el OAuth del proyecto; si no
+   * viene, se cae al de env, que es como funcionaba antes.
+   */
+  pageToken?: string | null,
+): Promise<LeadgenFields> {
+  const token = pageToken?.trim() || projectSecret(slug, 'META_PAGE_TOKEN');
+  if (!token) throw new Error('Este proyecto todavía no tiene conectado Facebook.');
 
   const url = new URL(`${GRAPH}/${encodeURIComponent(leadgenId)}`);
   url.searchParams.set('fields', 'id,created_time,field_data,platform,form_id');

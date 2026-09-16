@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiOrg } from '@/lib/org';
+import { requireProjectCapability } from '@/lib/project-access';
 import { getProject } from '@/lib/projects';
 import { activeProject, ownedLead } from '@/lib/sales';
 import { draftReply, sellerMode } from '@/src/agent/seller';
@@ -25,6 +26,9 @@ export async function POST(req: NextRequest) {
     ? await getProject(orgId, body.projectId)
     : await activeProject(orgId, activeProjectId);
   if (!project) return NextResponse.json({ error: 'Primero crea un proyecto.' }, { status: 400 });
+
+  const negado = await requireProjectCapability(project.id, 'operar');
+  if (negado) return negado;
 
   const lead = body?.leadId ? (await ownedLead(orgId, body.leadId))?.lead ?? null : null;
 

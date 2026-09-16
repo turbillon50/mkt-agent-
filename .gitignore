@@ -12,3 +12,8 @@ data/
 next-env.d.ts
 *.tsbuildinfo
 services/baileys/sessions-goossip/
+
+# Capturas de QA: viven en el servidor, no en el repo (15 MB de PNG).
+# El resumen medido sí se versiona.
+capturas-c3/*
+!capturas-c3/resumen.json
