@@ -61,6 +61,7 @@ import {
 import { alFormatoDeLaRed, componer, partirEnRenglones } from '../src/creative/compose';
 import { partirMarkdown, buscarDiseno, contarDiseno, hashOf } from '../src/design/knowledge';
 import { pendientesDelProyecto } from '../src/assistant/guia';
+import { avisoDeImagen, detectarPedidoDeImagen } from '../src/assistant/intencion';
 import { toolsParaProyecto } from '../src/agent/project-tools';
 import { fichaDelProyecto, identidadDeCanal } from '../src/agent/project-context';
 import { ratioParaGemini } from '../src/creative/gemini';
@@ -492,6 +493,67 @@ async function pruebaAsistente(project: Project, kit: Awaited<ReturnType<typeof 
 }
 
 // ---------------------------------------------------------------------------
+// 5b. "Hazme una imagen de…" en lenguaje normal
+// ---------------------------------------------------------------------------
+
+/**
+ * Viene de un arreglo que Luis metió a `main` sobre el chat global. Esta
+ * corrida se lleva ese chat, así que el comportamiento se trae aquí — y con
+ * prueba, que allá no tenía.
+ */
+function pruebaPedidoDeImagen() {
+  const si = [
+    'hazme una imagen del departamento modelo',
+    'Hazme una pieza para Instagram del open house',
+    '¿puedes crear un banner para la campaña?',
+    'necesito una foto de producto',
+    'genérame una miniatura para el video',
+    '/imagen atardecer en Polanco',
+    'diséñame un flyer del evento',
+  ];
+  for (const t of si) {
+    const p = detectarPedidoDeImagen(t);
+    ok(`"${t.slice(0, 32)}…" es un pedido de imagen`, p !== null);
+    if (p) ok(`  y trae descripción`, p.brief.length >= 3, p.brief);
+  }
+
+  const no = [
+    'hola, ¿cómo vamos?',
+    '¿qué medidas lleva un reel?',
+    'publica en LinkedIn: hoy abrimos el departamento modelo',
+    'cuántos leads tengo sin contactar',
+  ];
+  for (const t of no) {
+    ok(`"${t.slice(0, 32)}…" NO es un pedido de imagen`, detectarPedidoDeImagen(t) === null);
+  }
+
+  // La red y el formato, cuando el usuario los dice, se le hacen caso.
+  const conRed = detectarPedidoDeImagen('hazme una historia para instagram del open house');
+  ok('saca la red que dijo el usuario', conRed?.red === 'instagram', String(conRed?.red));
+  ok('y la pista de formato', conRed?.formato === 'historia', String(conRed?.formato));
+
+  const li = detectarPedidoDeImagen('créame una imagen cuadrada para LinkedIn');
+  ok('reconoce LinkedIn', li?.red === 'linkedin', String(li?.red));
+  ok('y "cuadrada"', li?.formato === 'cuadrado', String(li?.formato));
+
+  // El verbo de arranque se quita, la descripción se respeta.
+  const limpio = detectarPedidoDeImagen('hazme una imagen de un atardecer en Polanco');
+  ok(
+    'quita el verbo y deja lo que describió el usuario',
+    limpio?.brief === 'una imagen de un atardecer en Polanco',
+    String(limpio?.brief),
+  );
+
+  // Y el comando de siempre sigue sirviendo, marcado como explícito.
+  const cmd = detectarPedidoDeImagen('/imagen un gato en la azotea');
+  ok('el comando /imagen sigue vivo', cmd?.explicito === true);
+  ok('y su brief es lo que iba después', cmd?.brief === 'un gato en la azotea', String(cmd?.brief));
+
+  // Que el aviso al modelo nombre la herramienta correcta.
+  ok('el aviso nombra hacer-pieza', avisoDeImagen(limpio!).includes('hacer-pieza'));
+}
+
+// ---------------------------------------------------------------------------
 // 6. La guía activa
 // ---------------------------------------------------------------------------
 
@@ -549,6 +611,7 @@ async function main() {
     const kit = await pruebaKit(conKit);
     await pruebaCompositor(conKit, kit);
     await pruebaAsistente(conKit, kit);
+    pruebaPedidoDeImagen();
     await pruebaGuia(nuevo, conKit, kit);
     await pruebaHiggsfield();
   } catch (e) {

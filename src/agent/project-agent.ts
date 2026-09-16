@@ -21,6 +21,7 @@ import { askGeminiVision } from '../../lib/gemini-vision';
 import { fichaDelProyecto, type AgentContext } from './project-context';
 import { toolsParaProyecto } from './project-tools';
 import { guiaComoTexto, pendientesDelProyecto } from '../assistant/guia';
+import { avisoDeImagen, detectarPedidoDeImagen, type PedidoDeImagen } from '../assistant/intencion';
 
 function buildModel() {
   if (!config.openrouter.apiKey) throw new Error('MESH_API_KEY no está puesta.');
@@ -127,9 +128,17 @@ export async function preguntarAlAsistente(input: {
     ...(memory ? { memory } : {}),
   } as never);
 
+  // "Hazme una imagen de…" en lenguaje normal. Si lo pidió, se le avisa al
+  // modelo dentro del turno para que llame a `hacer-pieza` a la primera y no
+  // conteste con un párrafo describiendo la imagen que haría.
+  const pedido = detectarPedidoDeImagen(input.mensaje);
+
   const mensajes = [
     ...input.historia.map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user' as const, content: input.mensaje },
+    {
+      role: 'user' as const,
+      content: pedido ? `${input.mensaje}\n\n[${avisoDeImagen(pedido)}]` : input.mensaje,
+    },
   ];
 
   const opciones: Record<string, unknown> = { ...MODEL_SETTINGS };
@@ -140,11 +149,67 @@ export async function preguntarAlAsistente(input: {
   }
 
   const resultado = await agente.generate(mensajes as never, opciones as never);
+  let piezas = extraerPiezas(resultado);
+  let texto = extraerTexto(resultado);
+
+  /**
+   * La red.
+   *
+   * Si el usuario pidió una imagen y el turno acabó sin una sola, se hace
+   * igual. Es la garantía que traía el arreglo del chat global: quien pide una
+   * imagen recibe una imagen, aunque al modelo se le olvide llamar a la
+   * herramienta. Lo que cambia respecto de aquel es que ahora sale por el motor
+   * del PROYECTO —con su kit, su lienzo y tres opciones— en vez de por una
+   * llamada suelta a Gemini.
+   */
+  if (pedido && piezas.length === 0 && ctx.puedeOperar) {
+    const deRespaldo = await piezaDeRespaldo(ctx, pedido).catch(() => null);
+    if (deRespaldo && deRespaldo.piezas.length > 0) {
+      piezas = deRespaldo.piezas;
+      texto = texto?.trim()
+        ? `${texto}\n\n${deRespaldo.nota}`
+        : deRespaldo.nota;
+    }
+  }
+
+  return { texto, piezas, publicado: extraerPublicado(resultado) };
+}
+
+/** Hace la pieza por el camino normal cuando el modelo no llamó a la tool. */
+async function piezaDeRespaldo(
+  ctx: AgentContext,
+  pedido: PedidoDeImagen,
+): Promise<{ piezas: RespuestaAsistente['piezas']; nota: string }> {
+  const { esRed } = await import('../creative/specs');
+  const { generarPiezas } = await import('../creative/engine');
+  const { guardarLote } = await import('../creative/repo');
+
+  // Sin red dicha, Instagram: es la que más piezas pide y su lienzo (4:5) se
+  // reencuadra a las demás mejor que al revés.
+  const red = esRed(pedido.red) ? pedido.red : 'instagram';
+
+  const resultado = await generarPiezas({
+    project: ctx.project,
+    kit: ctx.kit,
+    red,
+    formatoPista: pedido.formato,
+    brief: pedido.brief,
+  });
+  const filas = await guardarLote({
+    project: ctx.project,
+    kit: ctx.kit,
+    red,
+    brief: pedido.brief,
+    resultado,
+  });
 
   return {
-    texto: extraerTexto(resultado),
-    piezas: extraerPiezas(resultado),
-    publicado: extraerPublicado(resultado),
+    piezas: filas.map((f) => ({
+      id: f.id,
+      url: f.url ?? '',
+      angulo: String((f.metadata as any)?.angulo ?? 'opción'),
+    })),
+    nota: `Te dejé ${filas.length} opciones en ${resultado.formato.label} (${resultado.formato.ancho} × ${resultado.formato.alto} px). Dime cuál te gusta y la guardo como la buena.`,
   };
 }
 
