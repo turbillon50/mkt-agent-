@@ -47,6 +47,20 @@
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /*
+    Corte de las TRES COLUMNAS (corrida 8). El spec dice "escritorio ≥ 1280" y
+    esto son 1250 a propósito, no por descuido:
+
+    una media query mide el viewport de MAQUETA, que NO incluye la barra de
+    desplazamiento. En una ventana de exactamente 1280 px con una página que
+    scrollea —o sea, casi todas— el navegador reporta 1263 px, y con `xl`
+    (1280) el panel DESAPARECÍA justo en el ancho que el spec promete. Medido
+    en WebKit el 16-sep-2026: a 1280 la pantalla de Conexiones se quedaba sin
+    tercera columna al navegar, y la de Leads no, porque una scrollea y la otra
+    no. 1250 = 1280 menos una barra clásica con holgura.
+  */
+  --breakpoint-panel: 1250px;
 }
 
 html, body {
@@ -401,4 +415,91 @@ html[data-sidebar-drag='si'] .sidebar-aside {
   html[data-sidebar='plegado'] .org-switcher .cl-organizationSwitcherTriggerIcon {
     display: none;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Panel de Goossip — la tercera columna (corrida 8)
+
+   Mismo patrón que el menú lateral y por lo mismo: el ANCHO es una variable
+   del `<html>` que escribe un script antes del primer pintado, y el PLEGADO lo
+   pinta CSS mirando `html[data-asistente]`. Con estado de React, cada
+   navegación pintaría el panel de 360 px y luego saltaría.
+
+   Todo vive dentro de `min-width: 1280px`. Abajo de eso no hay tres columnas:
+   manda el cajón de celular, que esta corrida no toca.
+--------------------------------------------------------------------------- */
+
+/* El tirador del borde IZQUIERDO del panel. Invisible hasta que lo tocas. */
+.asistente-grip {
+  position: absolute;
+  top: 0;
+  left: -3px;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  touch-action: none;
+  z-index: 20;
+}
+.asistente-grip::after {
+  content: '';
+  position: absolute;
+  inset: 0 2px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.asistente-grip:hover::after,
+.asistente-grip[data-arrastrando='si']::after {
+  opacity: 0.55;
+}
+
+/* Mientras se arrastra, el cursor manda en toda la ventana y nada se
+   selecciona: si no, el puntero acaba agarrando el texto del hilo. */
+html[data-asistente-drag='si'],
+html[data-asistente-drag='si'] * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+/* Plegar y desplegar se anima; arrastrar NO — una transición sobre el ancho
+   hace que el borde vaya siempre atrás del dedo. */
+.asistente-aside {
+  transition: width 160ms ease;
+}
+html[data-asistente-drag='si'] .asistente-aside {
+  transition: none;
+}
+
+/* Las respuestas ricas dentro del panel.
+
+   Una tabla de markdown no conoce el ancho de su caja: crece con su contenido
+   y, en una columna de 360 px, se sale del panel y se va por debajo del borde
+   de la ventana. Se vio en la captura de la respuesta con el brochure, donde
+   las tres ideas de publicación venían en tabla.
+
+   `display: block` sobre la tabla es lo que permite que la caja scrollee en
+   horizontal sin arrastrar consigo el resto del mensaje. */
+.respuesta-rica table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.respuesta-rica td,
+.respuesta-rica th {
+  white-space: normal;
+  min-width: 8rem;
+}
+/* Una URL larga sin espacios también se sale. */
+.respuesta-rica a,
+.respuesta-rica code {
+  overflow-wrap: anywhere;
+}
+/* Un bloque de código con renglones largos: scroll suyo, no del panel. */
+.respuesta-rica pre {
+  max-width: 100%;
+  overflow-x: auto;
 }

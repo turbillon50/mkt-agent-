@@ -33,3 +33,9 @@ capturas-c6/*
 # MEDICIÓN: cuántas pantallas, con qué código y qué contó la máquina.
 capturas-c7/*
 !capturas-c7/resumen.json
+
+# Igual para las de la corrida 8. El resumen y la aceptación sí se versionan:
+# son la medición, no la foto.
+capturas-c8/*
+!capturas-c8/resumen.json
+!capturas-c8/aceptacion.json

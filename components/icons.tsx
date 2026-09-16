@@ -357,3 +357,65 @@ export const IconTikTok: React.FC<IconProps> = ({ className }) => (
     <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.1v12.4a2.59 2.59 0 1 1-1.79-2.46V9.78a5.72 5.72 0 1 0 4.9 5.66V9.01a7.35 7.35 0 0 0 4.3 1.38V7.29a4.29 4.29 0 0 1-3.25-1.47z" />
   </svg>
 );
+
+/* ---------------------------------------------------------------------------
+   Corrida 8 — lo que necesita la barra del compose y el panel de tres columnas.
+   Mismo trazo que el resto: 24×24, `currentColor`, 1.75 de grosor. Nada de
+   traerse una librería de íconos por seis dibujos.
+--------------------------------------------------------------------------- */
+
+/** Dictar. */
+export const IconMic: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <rect x="9" y="2" width="6" height="11" rx="3" />
+    <path d="M5 11a7 7 0 0 0 14 0M12 18v4M8 22h8" />
+  </svg>
+);
+
+/** Adjuntar una imagen. */
+export const IconImage: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <circle cx="8.5" cy="9.5" r="1.5" />
+    <path d="m4 17 4.5-4.5a2 2 0 0 1 2.8 0L20 21" />
+  </svg>
+);
+
+/** Adjuntar un video. */
+export const IconVideo: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <rect x="2" y="5" width="14" height="14" rx="2" />
+    <path d="m16 10 6-3v10l-6-3z" />
+  </svg>
+);
+
+/** El historial de conversaciones. */
+export const IconHistory: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <path d="M3 3v5h5M12 7v5l3 2" />
+  </svg>
+);
+
+/** Plegar el panel de la derecha. */
+export const IconPanelRight: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M15 4v16" />
+  </svg>
+);
+
+/** Buscar. */
+export const IconSearch: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </svg>
+);
+
+/** Parar lo que está contestando. */
+export const IconStop: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <rect x="6" y="6" width="12" height="12" rx="2" />
+  </svg>
+);
