@@ -20,6 +20,13 @@
  *     Se mide el brillo de la franja donde va a caer y se decide el color del
  *     texto y la opacidad del velo con ese número, no a ojo.
  */
+// ESTE IMPORT VA ARRIBA DEL DE SHARP Y NO SE MUEVE.
+//
+// fontconfig se inicializa una sola vez por proceso, en la primera vez que
+// librsvg rasteriza un SVG. Si esa primera vez pasa sin `FONTCONFIG_FILE`
+// puesto, la lambda entera se queda pintando cajitas vacías y ya no hay forma de
+// arreglarlo en caliente. Ver src/creative/fuentes.ts.
+import { pilaDeFuentes, prepararFuentes } from './fuentes';
 import sharp from 'sharp';
 import { bajarImagen } from './media';
 import { zonaSeguraPx, type FormatoSpec } from './specs';
@@ -36,6 +43,15 @@ export interface ResultadoComposicion {
   alto: number;
   /** Qué se acabó pintando encima, para poder contarlo en la entrega. */
   puso: { titular: boolean; cta: boolean; logo: boolean };
+  /**
+   * Con qué fuentes se pintó el texto.
+   *
+   * No es telemetría de adorno: `listo:false` es EXACTAMENTE el estado en el que
+   * salieron las 18 piezas de MOMENTUM con cajitas vacías. Que viaje en el
+   * resultado permite que la pantalla y la entrega lo digan con nombre y
+   * apellido en vez de que alguien tenga que abrir el JPG para enterarse.
+   */
+  fuentes: { listo: boolean; familia: string; falta: string[] };
 }
 
 /** XML no perdona: un "&" en el copy del cliente rompe el SVG entero. */
@@ -113,6 +129,10 @@ export async function componer(input: {
   const W = formato.ancho;
   const H = formato.alto;
 
+  // Cinturón además de tirantes: el import de arriba ya lo dejó listo, pero si
+  // alguien reordena los imports esto sigue salvando la pieza.
+  const fuentes = prepararFuentes();
+
   // 1. Al tamaño exacto de la red. `cover` recorta al centro en vez de
   //    deformar: una cara estirada es peor que una cara recortada.
   const base = sharp(input.baseBuf).resize(W, H, { fit: 'cover', position: 'centre' });
@@ -124,6 +144,16 @@ export async function componer(input: {
 
   const capas: sharp.OverlayOptions[] = [];
   const puso = { titular: false, cta: false, logo: false };
+
+  // La familia del kit al frente y, detrás, la pila que fontconfig SÍ puede
+  // resolver con las fuentes que viajan en el bundle. Antes esto terminaba en
+  // `Helvetica, Arial, sans-serif` y en Vercel eso no existe: librsvg no
+  // encontraba nada y pintaba una cajita por letra.
+  const familia = pilaDeFuentes(
+    kit?.tipografias.find((f) => f.rol === 'titulos')?.familia ??
+      kit?.tipografias[0]?.familia ??
+      null,
+  );
 
   const titular = (textos.titular ?? '').trim();
   const cta = (textos.cta ?? '').trim();
@@ -160,15 +190,10 @@ export async function componer(input: {
     const primario = colorDe(kit, 'primario') ?? '#0B5FFF';
     const textoCta = claro ? '#FFFFFF' : '#0B0B0F';
 
-    const familia =
-      kit?.tipografias.find((f) => f.rol === 'titulos')?.familia ??
-      kit?.tipografias[0]?.familia ??
-      'Helvetica, Arial, sans-serif';
-
     let y = top + tamTitular;
     const lineas = renglones
       .map((r) => {
-        const el = `<text x="${margen}" y="${y}" font-family="${escapar(familia)}, Helvetica, Arial, sans-serif" font-size="${tamTitular}" font-weight="700" fill="${colorTexto}">${escapar(r)}</text>`;
+        const el = `<text x="${margen}" y="${y}" font-family="${escapar(familia)}" font-size="${tamTitular}" font-weight="700" fill="${colorTexto}">${escapar(r)}</text>`;
         y += Math.round(tamTitular * 1.22);
         return el;
       })
@@ -181,7 +206,7 @@ export async function componer(input: {
       const yBoton = y + Math.round(tamCta * 0.4);
       botones =
         `<rect x="${margen}" y="${yBoton}" rx="${Math.round(altoBoton / 2)}" width="${anchoBoton}" height="${altoBoton}" fill="${primario}"/>` +
-        `<text x="${margen + anchoBoton / 2}" y="${yBoton + altoBoton / 2 + tamCta * 0.36}" text-anchor="middle" font-family="${escapar(familia)}, Helvetica, Arial, sans-serif" font-size="${tamCta}" font-weight="600" fill="${textoCta}">${escapar(cta)}</text>`;
+        `<text x="${margen + anchoBoton / 2}" y="${yBoton + altoBoton / 2 + tamCta * 0.36}" text-anchor="middle" font-family="${escapar(familia)}" font-size="${tamCta}" font-weight="600" fill="${textoCta}">${escapar(cta)}</text>`;
       puso.cta = true;
     }
 
@@ -234,7 +259,13 @@ export async function componer(input: {
     ? await sharp(lienzo).composite(capas).png().toBuffer()
     : lienzo;
 
-  return { buf, ancho: W, alto: H, puso };
+  return {
+    buf,
+    ancho: W,
+    alto: H,
+    puso,
+    fuentes: { listo: fuentes.listo, familia, falta: fuentes.falta },
+  };
 }
 
 /** Instagram por la API solo come JPEG. Esto lo deja en el formato de la red. */

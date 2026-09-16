@@ -189,12 +189,35 @@ export function ProjectSettings({
                 onChange={(e) => setRule('no_reply_sms_hours', Number(e.target.value))}
               />
             </Campo>
-            <Campo label="Tu teléfono" ayuda="A donde llegan los avisos.">
+            {/*
+              Las DOS vías del aviso, juntas y con su ayuda.
+
+              La QA del 16-sep encontró los 4 avisos de MOMENTUM en `failed`
+              porque este proyecto no tenía teléfono y no había ningún otro
+              camino. Ahora hay dos y Goossip baja al que exista — pero alguien
+              tiene que poder llenarlos, y este es el lugar.
+            */}
+            <Campo
+              label="Tu teléfono"
+              ayuda="A donde llegan los avisos por SMS. Con lada del país."
+            >
               <Input
                 disabled={ro}
                 value={v.rules.owner_phone ?? ''}
                 onChange={(e) => setRule('owner_phone', e.target.value)}
                 placeholder="+52 1 998 000 0000"
+              />
+            </Campo>
+            <Campo
+              label="Tu correo"
+              ayuda="El respaldo: si el SMS no sale, el aviso llega aquí."
+            >
+              <Input
+                disabled={ro}
+                type="email"
+                value={v.rules.owner_email ?? ''}
+                onChange={(e) => setRule('owner_email', e.target.value)}
+                placeholder="tu@empresa.com"
               />
             </Campo>
           </div>

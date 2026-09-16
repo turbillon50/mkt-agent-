@@ -557,9 +557,26 @@ export const conversations = pgTable('conversations', {
   orgId: text('org_id').notNull(),
   campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'cascade' }),
   leadId: uuid('lead_id').references(() => salesLeads.id, { onDelete: 'set null' }),
-  channel: text('channel').$type<'whatsapp' | 'sms' | 'email'>().notNull().default('whatsapp'),
+  /**
+   * `messenger` e `instagram` entran en la corrida 13. La columna siempre fue
+   * `text` sin CHECK, así que ampliarla no costó migración de tipo.
+   */
+  channel: text('channel')
+    .$type<'whatsapp' | 'sms' | 'email' | 'messenger' | 'instagram'>()
+    .notNull()
+    .default('whatsapp'),
   externalThreadId: text('external_thread_id').notNull(),
   status: text('status').$type<'open' | 'escalated' | 'closed'>().notNull().default('open'),
+  /** Quién escribe, cuando no es un lead del CRM (0020). */
+  contactName: text('contact_name'),
+  /**
+   * El PSID/IGSID de la persona. NO es el id del hilo: Meta pide el de la
+   * PERSONA para contestar. Sin esto se puede leer y no se puede responder.
+   */
+  contactExternalId: text('contact_external_id'),
+  /** Lo que dice el proveedor, no lo que deducimos de lo que alcanzamos a bajar. */
+  unreadCount: integer('unread_count').notNull().default(0),
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
   lastInboundAt: timestamp('last_inbound_at', { withTimezone: true }),
   lastOutboundAt: timestamp('last_outbound_at', { withTimezone: true }),
   windowExpiresAt: timestamp('window_expires_at', { withTimezone: true }),
@@ -568,6 +585,7 @@ export const conversations = pgTable('conversations', {
 }, (t) => ({
   leadIdx: index('conversations_lead_idx').on(t.leadId),
   campaignStatusIdx: index('conversations_campaign_status_idx').on(t.campaignId, t.status),
+  recientesIdx: index('conversations_project_recientes_idx').on(t.campaignId, t.updatedAt),
 }));
 
 export const messages = pgTable('messages', {

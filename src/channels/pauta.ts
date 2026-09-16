@@ -74,6 +74,11 @@ export interface GoogleAdsCampaign {
   id: string;
   name: string;
   status: string;
+  /** Qué tipo de anuncio es: búsqueda, display, video… */
+  channelType: string;
+  /** El presupuesto DIARIO configurado, en micros. */
+  budgetMicros: string | null;
+  /** Lo GASTADO en los últimos 30 días, en micros. No es lo mismo que el presupuesto. */
   costMicros: string | null;
   impressions: string | null;
   clicks: string | null;
@@ -90,8 +95,12 @@ export const googleads: ChannelAdapter = {
     if (customerId.length !== 10) {
       throw new Error('El ID de cliente de Google Ads debe tener 10 dígitos (123-456-7890).');
     }
+    // `advertising_channel_type` y `campaign_budget.amount_micros` se suman en
+    // la corrida 13: la pantalla los pinta, y sin ellos salía "unknown · —/día"
+    // en cada renglón.
     const query = `
       SELECT campaign.id, campaign.name, campaign.status,
+             campaign.advertising_channel_type, campaign_budget.amount_micros,
              metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions
       FROM campaign
       WHERE segments.date DURING LAST_30_DAYS
@@ -109,6 +118,8 @@ export const googleads: ChannelAdapter = {
         id: String(r.campaign?.id ?? ''),
         name: r.campaign?.name ?? '(sin nombre)',
         status: r.campaign?.status ?? 'UNKNOWN',
+        channelType: r.campaign?.advertisingChannelType ?? 'UNKNOWN',
+        budgetMicros: r.campaignBudget?.amountMicros ?? null,
         costMicros: r.metrics?.costMicros ?? null,
         impressions: r.metrics?.impressions ?? null,
         clicks: r.metrics?.clicks ?? null,
@@ -122,3 +133,97 @@ export const googleads: ChannelAdapter = {
     return run(project, 'googleads', 'GOOGLEADS_GET_CUSTOMER_LISTS', {});
   },
 };
+
+/**
+ * Las cuentas de Google Ads a las que llega el permiso del proyecto.
+ *
+ * La QA midió que **son descubribles** (`customers:listAccessibleCustomers` →
+ * `3715754231`, `7745650752`) y que aun así la pantalla de Campañas le pedía al
+ * usuario teclear el ID de cliente a mano, con guiones y todo. Pedirle a alguien
+ * un dato que la API ya sabe es una forma barata de perder a un cliente en el
+ * primer minuto.
+ */
+export async function clientesDeGoogleAds(project: Project): Promise<string[]> {
+  const data = await proxy(project, 'googleads', {
+    endpoint: `${GOOGLE_ADS_API}/customers:listAccessibleCustomers`,
+    method: 'GET',
+    parameters: [{ name: 'developer-token', value: developerToken(), type: 'header' }],
+  });
+  return (data?.resourceNames ?? []).map((r: string) => String(r).replace('customers/', ''));
+}
+
+/**
+ * Prender o apagar una campaña en la cuenta del cliente.
+ *
+ * Es una mutación en la cuenta de Google Ads de alguien más: se hace con la
+ * conexión del proyecto y nunca con una cuenta de la casa.
+ */
+export async function cambiarEstadoDeCampana(
+  project: Project,
+  input: { customerId: string; campaignId: string; estado: 'ENABLED' | 'PAUSED' },
+): Promise<void> {
+  const customerId = input.customerId.replace(/[^0-9]/g, '');
+  if (customerId.length !== 10) {
+    throw new Error('El ID de cliente de Google Ads debe tener 10 dígitos (123-456-7890).');
+  }
+  await proxy(project, 'googleads', {
+    endpoint: `${GOOGLE_ADS_API}/customers/${customerId}/campaigns:mutate`,
+    method: 'POST',
+    parameters: [{ name: 'developer-token', value: developerToken(), type: 'header' }],
+    body: {
+      operations: [
+        {
+          update: {
+            resourceName: `customers/${customerId}/campaigns/${input.campaignId}`,
+            status: input.estado,
+          },
+          updateMask: 'status',
+        },
+      ],
+    },
+  });
+}
+
+/**
+ * El ID de cliente que usa ESTE proyecto: el que ya se eligió, o el primero al
+ * que llegue el permiso. Se guarda para no volver a preguntarle a Google en cada
+ * carga de pantalla.
+ */
+export async function clienteDeGoogleAdsDelProyecto(
+  project: Project,
+): Promise<{ customerId: string | null; disponibles: string[] }> {
+  const { and, eq } = await import('drizzle-orm');
+  const { db } = await import('../db/client');
+  const { socialAccounts } = await import('../db/schema');
+
+  const filas = await db
+    .select()
+    .from(socialAccounts)
+    .where(
+      and(
+        eq(socialAccounts.orgId, project.orgId),
+        eq(socialAccounts.campaignId, project.id),
+        eq(socialAccounts.platform, 'googleads'),
+      ),
+    )
+    .limit(1);
+  const fila = filas[0] ?? null;
+  const guardado = (fila?.metadata as { customer_id?: string } | null)?.customer_id ?? null;
+
+  const disponibles = await clientesDeGoogleAds(project).catch(() => [] as string[]);
+  if (guardado && (disponibles.length === 0 || disponibles.includes(guardado))) {
+    return { customerId: guardado, disponibles };
+  }
+
+  const elegido = disponibles[0] ?? null;
+  if (elegido && fila) {
+    await db
+      .update(socialAccounts)
+      .set({
+        metadata: { ...(fila.metadata ?? {}), customer_id: elegido },
+        updatedAt: new Date(),
+      })
+      .where(eq(socialAccounts.id, fila.id));
+  }
+  return { customerId: elegido, disponibles };
+}

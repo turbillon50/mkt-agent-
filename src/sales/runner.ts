@@ -55,19 +55,36 @@ async function projectsById(ids: string[]): Promise<Map<string, Project>> {
 // Ejecutores por tipo de acción
 // ---------------------------------------------------------------------------
 
+/**
+ * Avisarle al dueño. Ya no muere por falta de `owner_phone`.
+ *
+ * Toda la escalera (SMS → Gmail del proyecto → Resend de la casa) vive en
+ * `./aviso-al-dueno.ts`, con el porqué de cada peldaño. Aquí solo queda la
+ * traducción a `ExecOutcome`, y lo importante es la última rama: sin ningún
+ * canal configurado la acción se queda **`pending`** con el motivo, no `failed`.
+ * Un `failed` invita a reintentar algo que nunca va a salir; un `pending` que
+ * dice "pon tu correo en Ajustes" se arregla solo en cuanto alguien lo pone.
+ */
 async function execNotifyOwner(project: Project, action: QueuedAction): Promise<ExecOutcome> {
   const rules = resolveRules(project.rules);
-  const to = rules.owner_phone ?? process.env.OWNER_PHONE ?? '';
-  const from = project.channels?.twilio_number ?? process.env.TWILIO_FROM ?? '';
   const text = String(action.payload?.text ?? `Goossip · ${project.name}: acción pendiente.`);
 
-  if (!to) return { ok: false, reason: 'el proyecto no tiene owner_phone en sus reglas' };
+  const { avisarAlDueno } = await import('./aviso-al-dueno');
+  const r = await avisarAlDueno({
+    project,
+    texto: text,
+    // En trial el SMS a un número no verificado no sale: probarlo primero solo
+    // gasta el tiempo del cron.
+    preferirCorreo: rules.twilio_mode === 'trial' && Boolean(rules.owner_email),
+  });
 
-  // El dueño SÍ tiene su número verificado en el trial de Twilio.
-  const res = await sendSms({ slug: project.slug, from, to, body: text, mode: rules.twilio_mode, toVerifiedNumber: true });
-  if (res.ok) return { ok: true, detail: { sid: res.sid } };
-  if (res.skipped) return { ok: false, skipped: true, reason: 'twilio_trial' };
-  return { ok: false, reason: res.error };
+  if (r.ok) return { ok: true, detail: { via: r.via, intentos: r.intentos, ...(r.detalle ?? {}) } };
+  return {
+    ok: false,
+    skipped: true,
+    reason: r.motivo ?? 'no se pudo avisar por ninguna vía',
+    detail: { intentos: r.intentos },
+  };
 }
 
 async function execSendTemplate(project: Project, action: QueuedAction): Promise<ExecOutcome> {
@@ -317,7 +334,11 @@ export async function runQueue(now = new Date()): Promise<RunReport> {
       report.byKind[action.kind] = (report.byKind[action.kind] ?? 0) + 1;
     } else if (outcome.skipped) {
       // Se queda esperando. No es falla: es que todavía no se puede.
-      await setStatus(action.id, 'pending', { result: { esperando: outcome.reason } });
+      // El detalle va junto al motivo: sin él, "no salió por ninguna vía" no
+      // dice CUÁL se intentó ni por qué, que es lo único útil para arreglarlo.
+      await setStatus(action.id, 'pending', {
+        result: { esperando: outcome.reason, ...(outcome.detail ?? {}) },
+      });
       report.skipped++;
       report.waiting.push({ id: action.id, kind: action.kind, reason: outcome.reason ?? 'sin motivo' });
     } else {

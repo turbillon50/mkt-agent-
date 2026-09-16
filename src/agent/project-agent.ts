@@ -22,8 +22,12 @@ import { fichaDelProyecto, type AgentContext } from './project-context';
 import { toolsParaProyecto } from './project-tools';
 import { guiaComoTexto, pendientesDelProyecto } from '../assistant/guia';
 import { autonomiaEfectiva, type Autonomia } from '../assistant/autonomia';
+// La regla dura vive aparte y sin imports, para poder probarla con tsx sin
+// levantar Mastra ni `server-only`. Ver src/agent/verdad.ts.
+import { garantizarVerdad, SIN_ENLACE } from './verdad';
 
 export type { Autonomia };
+export { garantizarVerdad, SIN_ENLACE };
 
 function buildModel() {
   if (!config.openrouter.apiKey) throw new Error('MESH_API_KEY no está puesta.');
@@ -65,11 +69,29 @@ ${fichaDelProyecto(ctx)}
 - Si te piden publicar en una red que este proyecto no tiene conectada, dilo
   claro: "${ctx.project.name} no tiene esa red conectada" y manda a Conexiones.
   No lo intentes por otro lado.
-- Cuando escribas un post, OFRECE la pieza. Siempre. Un post sin imagen rinde la
-  mitad y el usuario no tiene por qué saber que se la puedes hacer.
+- Cuando escribas un post, OFRECE la pieza. Un post sin imagen rinde la mitad y
+  el usuario no tiene por qué saber que se la puedes hacer. **Pero ofrecer no es
+  esperar**: si el usuario ya dijo "hazlo ya", "no me preguntes más" o "publícalo
+  de una vez", PUBLICA en ese mismo turno y menciona la imagen después. Pedir
+  permiso a quien acaba de decir que no se lo pidas es desobedecer, no ser
+  prudente.
 - Nunca des UNA sola opción de pieza. Siempre son dos o tres y el usuario elige.
 - Si te preguntan medidas de una red, usa la herramienta y CITA la fuente con su
-  fecha. No las digas de memoria.`;
+  fecha. No las digas de memoria.
+- Respeta el bloque de Autonomía de este turno: en PROPONE exige aprobación del
+  texto y la pieza; en PUBLICA SOLO ejecuta lo pedido sin volver a preguntar.
+
+## La regla dura: lo que diga la herramienta
+
+Tu respuesta final se construye con el RESULTADO de las herramientas, no con lo
+que te parezca que pasó.
+
+- Si \`publicar-post\` devolvió \`publicado: true\`, **se publicó**. Di que se
+  publicó y pega la \`externalUrl\`. Está prohibido decir que falló, que hubo un
+  error, que era contenido duplicado o cualquier variante: quien lea eso va a
+  volver a publicar y le va a salir doble.
+- Si una herramienta lanzó un error, di ESE error, no uno inventado.
+- Nunca narres un resultado que no viste en una herramienta.`;
 }
 
 /** El selector de autonomía del compose, convertido en regla. */
@@ -268,10 +290,13 @@ export async function preguntarAlAsistente(
   const agente = armarAgente(ctx, instrucciones);
   const resultado = await agente.generate(armarMensajes(input) as never, armarOpciones(input) as never);
 
+  const publicado = extraerPublicado(resultado);
   return {
-    texto: extraerTexto(resultado),
+    // La instrucción de arriba pide la verdad; esto la GARANTIZA. Un system
+    // prompt es una petición, y la QA ya midió al modelo ignorándola.
+    texto: garantizarVerdad(extraerTexto(resultado), publicado),
     piezas: extraerPiezas(resultado),
-    publicado: extraerPublicado(resultado),
+    publicado,
   };
 }
 
@@ -427,10 +452,20 @@ function extraerPiezas(resultado: unknown): Array<{ id: string; url: string; ang
   return out;
 }
 
+/**
+ * La URL de lo que se publicó en este turno, o null.
+ *
+ * Manda `publicado`, no `url`: LinkedIn y Facebook siempre devuelven enlace,
+ * pero Instagram puede publicar y no dar permalink en la misma llamada. Con la
+ * versión vieja —que solo miraba `url`— un post real de Instagram se contaba
+ * como "no se publicó", que es la misma mentira al revés.
+ */
 function extraerPublicado(resultado: unknown): string | null {
   for (const c of llamadas(resultado).slice().reverse()) {
     const p = c?.payload;
-    if (p?.toolName === 'publicarPost' && p.result?.url) return String(p.result.url);
+    if (p?.toolName !== 'publicarPost') continue;
+    const r = p.result;
+    if (r?.publicado === true || r?.url) return String(r?.externalUrl ?? r?.url ?? '') || SIN_ENLACE;
   }
   return null;
 }

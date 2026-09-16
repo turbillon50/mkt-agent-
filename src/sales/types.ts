@@ -151,6 +151,15 @@ export interface ProjectRules {
   first_contact_template?: string;
   /** Teléfono E.164 del dueño para notify_owner. */
   owner_phone?: string;
+  /**
+   * Correo del dueño para `notify_owner`.
+   *
+   * La QA del 16-sep midió las 4 acciones `notify_owner` de MOMENTUM en
+   * `failed` con "el proyecto no tiene owner_phone en sus reglas" — teniendo
+   * Gmail conectado y mandando correo de verdad. Un aviso que no llega porque
+   * falta UN campo es un lead grado A que nadie atiende.
+   */
+  owner_email?: string;
   // --- cómo vende (paso 2 del alta, corrida 3) ------------------------------
   /** Tono del vendedor: "cercano y directo", "formal". */
   seller_tone?: string;
