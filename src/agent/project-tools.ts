@@ -109,6 +109,7 @@ export function toolsParaProyecto(ctx: AgentContext) {
             .filter(Boolean),
           language: project.brandLanguage,
         },
+        projectId: project.id,
       });
 
       const prohibidas = palabrasProhibidasEn(ctx.kit, texto);
@@ -291,7 +292,7 @@ export function toolsParaProyecto(ctx: AgentContext) {
   const publicarPost = createTool({
     id: 'publicar-post',
     description:
-      'Publica de verdad en la red que el usuario aprobó, CON LA CUENTA DE ESTE PROYECTO. Úsala solo cuando el usuario ya dijo que sí al texto. Si hay una pieza aprobada para esa red, se adjunta sola.',
+      'Publica de verdad en la red que el usuario aprobó, CON LA CUENTA DE ESTE PROYECTO. Úsala sólo cuando el usuario aprobó texto Y arte. Toda publicación necesita una pieza aprobada y propia de esa red; nunca publiques el mismo arte reciclado ni un post huérfano sin imagen.',
     inputSchema: z.object({
       red: REDES_PUBLICABLES,
       texto: z.string().min(1),
@@ -333,9 +334,9 @@ export function toolsParaProyecto(ctx: AgentContext) {
         throw new Error(`Esa pieza es de ${pieza.red}; no se puede publicar como ${input.red}.`);
       }
 
-      if (input.red === 'instagram' && !pieza?.url) {
+      if (!pieza?.url) {
         throw new Error(
-          'Instagram no deja publicar sin imagen. Hazle la pieza primero con hacer-pieza y que el usuario elija una.',
+          `Antes de publicar en ${input.red}, haz una pieza propia de esa red y pide que el usuario apruebe una opción. No voy a publicar sin arte ni reciclar el de otra red.`,
         );
       }
 

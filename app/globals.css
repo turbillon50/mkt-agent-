@@ -521,6 +521,40 @@ html[data-asistente-drag='si'] .asistente-aside {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.pieza-card-toggle {
+  display: none;
+}
+
+/* En celular se comporta como una ficha de Airbnb: foto compacta, estado a la
+   derecha y el resto bajo demanda. No hay que recorrer una portada de 600 px
+   para llegar a la siguiente pieza. */
+@container (max-width: 33.99rem) {
+  .pieza-card-contenido {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    align-items: start;
+    gap: 0.65rem;
+  }
+
+  .pieza-card-imagen {
+    grid-row: span 2;
+    height: 7.5rem !important;
+  }
+
+  .pieza-card-toggle {
+    display: block;
+  }
+
+  .pieza-card-extra {
+    display: none;
+    grid-column: 1 / -1;
+  }
+
+  .pieza-card[data-expanded='true'] .pieza-card-extra {
+    display: block;
+  }
+}
+
 @container (min-width: 34rem) {
   .piezas-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

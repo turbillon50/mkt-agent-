@@ -121,3 +121,42 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     );
   }
 }
+
+/** Borrado definitivo, separado de "Rechazar" para que la intención sea clara. */
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string; pieceId: string }> }) {
+  const { id, pieceId } = await ctx.params;
+  const gate = await apiProject(id, { section: 'contenido', capability: 'operar' });
+  if (!gate.ok) return gate.res;
+
+  const { eliminarPieza, PiezaProtegida } = await import('@/src/creative/repo');
+  try {
+    const pieza = await eliminarPieza(gate.ctx.orgId, id, pieceId);
+    if (!pieza) return NextResponse.json({ error: 'not found' }, { status: 404 });
+
+    const { borrarImagen } = await import('@/src/creative/media');
+    const archivoBorrado = await borrarImagen(pieza.url).catch(() => false);
+
+    const { logProjectEvent } = await import('@/src/projects/events');
+    await logProjectEvent({
+      orgId: gate.ctx.orgId,
+      projectId: id,
+      type: 'pieza_movida',
+      actor: gate.ctx.clerkUserId,
+      actorEmail: gate.ctx.user.email,
+      payload: {
+        piezaId: pieceId,
+        de: pieza.estado,
+        a: 'borrada',
+        red: pieza.red,
+        archivoBorrado,
+      },
+    }).catch(() => undefined);
+
+    return NextResponse.json({ ok: true, borrada: pieceId, archivoBorrado });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'No se pudo borrar la pieza.' },
+      { status: error instanceof PiezaProtegida ? 409 : 400 },
+    );
+  }
+}

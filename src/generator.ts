@@ -37,9 +37,11 @@ function systemPrompt(brand?: ProjectBrandVoice): string {
   ].join(' ');
 }
 
-async function buildContext(topic: string, platform: Platform): Promise<string> {
+async function buildContext(topic: string, platform: Platform, projectId?: string): Promise<string> {
   try {
-    const memories = await recall(`${platform} post about ${topic}`, { k: 5 });
+    const memories = (await recall(`${platform} post about ${topic}`, { k: projectId ? 25 : 5 }))
+      .filter((m) => !projectId || m.metadata?.projectId === projectId)
+      .slice(0, 5);
     if (memories.length === 0) return '';
     return [
       'Recent / similar prior posts (do not repeat phrasing, build on these):',
@@ -56,13 +58,15 @@ export interface GenerateInput {
   angle?: string;
   /** Marca DEL PROYECTO. Si falta, solo los procesos globales usan config.brand. */
   brand?: ProjectBrandVoice;
+  /** Evita que el copy de un cliente recuerde publicaciones de otro. */
+  projectId?: string;
 }
 
 export async function generatePost(input: GenerateInput): Promise<string> {
   const red = RED_DE_PLATAFORMA[input.platform] ?? 'twitter';
   const playbook = playbookDe(red);
   const limits = PLATFORM_LIMITS[input.platform] ?? PLATFORM_LIMITS.twitter;
-  const context = await buildContext(input.topic, input.platform);
+  const context = await buildContext(input.topic, input.platform, input.projectId);
 
   const user = [
     `Write a native ${red} post. It must not read like a recycled caption from another network.`,

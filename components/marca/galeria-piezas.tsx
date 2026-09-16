@@ -41,6 +41,8 @@ export interface PiezaUI {
   altText?: string | null;
   socialPackId?: string | null;
   source?: string | null;
+  qualityScore?: number | null;
+  qualityReasons?: string[];
   loteId: string | null;
   createdAt: string;
   /** Lo que pidieron al apretar "Pedir cambios" (corrida 7). */
@@ -100,10 +102,13 @@ export function GaleriaPiezas({
 }) {
   const toast = useToast();
   const [visor, setVisor] = useState<string | null>(null);
+  const [expandida, setExpandida] = useState<string | null>(null);
   const [piezas, setPiezas] = useState<PiezaUI[]>([]);
   const [porRed, setPorRed] = useState<Array<{ red: string; label: string; n: number }>>([]);
   const [filtro, setFiltro] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [archivo, setArchivo] = useState(false);
+  const [archivadas, setArchivadas] = useState(0);
 
   const [abierto, setAbierto] = useState(false);
   const [modo, setModo] = useState<'paquete' | 'una'>('paquete');
@@ -124,18 +129,22 @@ export function GaleriaPiezas({
     async (r: string | null) => {
       setCargando(true);
       try {
-        const url = r ? `/api/projects/${projectId}/piezas?red=${r}` : `/api/projects/${projectId}/piezas`;
+        const params = new URLSearchParams();
+        if (r) params.set('red', r);
+        if (archivo) params.set('archivo', '1');
+        const url = `/api/projects/${projectId}/piezas${params.size ? `?${params}` : ''}`;
         const res = await fetch(url, { cache: 'no-store' });
         const d = await res.json();
         setPiezas(d?.piezas ?? []);
         setPorRed(d?.porRed ?? []);
+        setArchivadas(Number(d?.archivadas ?? 0));
       } catch {
         setPiezas([]);
       } finally {
         setCargando(false);
       }
     },
-    [projectId],
+    [archivo, projectId],
   );
 
   useEffect(() => {
@@ -251,6 +260,29 @@ export function GaleriaPiezas({
     [mover, toast],
   );
 
+  const borrar = useCallback(
+    async (id: string) => {
+      const pieza = piezas.find((p) => p.id === id);
+      if (!window.confirm(`¿Borrar definitivamente esta pieza de ${pieza?.red ?? 'contenido'}? Esta acción no se puede deshacer.`)) return;
+      try {
+        const res = await fetch(`/api/projects/${projectId}/piezas/${id}`, { method: 'DELETE' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error ?? 'No se pudo borrar.');
+        setVisor((actual) => actual === id ? null : actual);
+        setExpandida((actual) => actual === id ? null : actual);
+        toast.push({ title: 'Pieza borrada', variant: 'success' });
+        await cargar(filtro);
+      } catch (error) {
+        toast.push({
+          title: 'No se pudo borrar',
+          description: error instanceof Error ? error.message : undefined,
+          variant: 'error',
+        });
+      }
+    },
+    [cargar, filtro, piezas, projectId, toast],
+  );
+
   const programar = useCallback(
     async (id: string) => {
       const cuando = window.prompt('¿Qué día y a qué hora sale? (2026-09-20 10:00)');
@@ -281,12 +313,27 @@ export function GaleriaPiezas({
             </Pestana>
           ))}
         </div>
-        {puedeEditar && (
-          <Button className="btn-brand" onClick={() => setAbierto((v) => !v)}>
-            <IconSparkles className="h-4 w-4" />
-            {abierto ? 'Cerrar' : 'Crear contenido'}
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setArchivo((v) => !v);
+              setFiltro(null);
+              setVisor(null);
+              setExpandida(null);
+              setAbierto(false);
+            }}
+          >
+            {archivo ? 'Volver a activas' : `Archivo · ${archivadas}`}
           </Button>
-        )}
+          {puedeEditar && !archivo && (
+            <Button className="btn-brand" onClick={() => setAbierto((v) => !v)}>
+              <IconSparkles className="h-4 w-4" />
+              {abierto ? 'Cerrar' : 'Crear contenido'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {!kitCompleto && (
@@ -470,23 +517,29 @@ export function GaleriaPiezas({
       ) : piezas.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-[var(--color-muted-foreground)]">
-            Todavía no hay piezas. Aprieta <strong>Crear contenido</strong> para empezar.
+            {archivo
+              ? 'El archivo está vacío.'
+              : <>Todavía no hay piezas activas. Aprieta <strong>Crear contenido</strong> para empezar.</>}
           </CardContent>
         </Card>
       ) : (
         <div className="piezas-grid grid gap-3">
           {piezas.map((p) => (
-            <Card key={p.id} className={cn(p.estado === 'descartada' && 'opacity-50')}>
-              <CardContent className="space-y-2.5 p-3">
+            <Card
+              key={p.id}
+              className="pieza-card overflow-hidden"
+              data-expanded={expandida === p.id ? 'true' : 'false'}
+            >
+              <CardContent className="pieza-card-contenido space-y-2.5 p-3">
                 {p.url && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={p.url}
                     alt={p.angulo ?? p.brief}
-                    className="h-40 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-accent)]/30 object-cover sm:h-44"
+                    className="pieza-card-imagen h-40 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-accent)]/30 object-cover sm:h-44"
                   />
                 )}
-                <div className="flex flex-wrap items-center gap-1.5">
+                <div className="pieza-card-resumen flex min-w-0 flex-wrap items-center gap-1.5">
                   <Badge variant="secondary" className="text-[10px]">
                     {REDES.find((r) => r.slug === p.red)?.label ?? p.red}
                   </Badge>
@@ -501,31 +554,43 @@ export function GaleriaPiezas({
                       {p.ancho} × {p.alto}
                     </span>
                   )}
+                  {typeof p.qualityScore === 'number' && (
+                    <span className="text-[10px] font-medium text-[var(--color-success)]">
+                      QA {p.qualityScore}
+                    </span>
+                  )}
                 </div>
-                {p.angulo && <p className="text-xs font-medium">{p.angulo}</p>}
-                {p.headline && <p className="line-clamp-1 text-xs font-semibold">{p.headline}</p>}
-                <p className="line-clamp-2 text-[11px] text-[var(--color-muted-foreground)]">
-                  {p.copy ?? p.brief}
-                </p>
-                {p.nota && (
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400">{p.nota}</p>
-                )}
-                {p.comentario && (
-                  <p className="rounded border-l-2 border-amber-500 bg-amber-500/10 py-1 pl-2 text-[10px] leading-snug">
-                    Pidieron: {p.comentario}
+                <button
+                  type="button"
+                  className="pieza-card-toggle text-left text-[11px] font-medium text-[var(--color-primary)]"
+                  aria-expanded={expandida === p.id}
+                  onClick={() => setExpandida((actual) => actual === p.id ? null : p.id)}
+                >
+                  {expandida === p.id ? 'Menos' : 'Detalles'}
+                </button>
+
+                <div className="pieza-card-extra space-y-2.5">
+                  {p.angulo && <p className="text-xs font-medium">{p.angulo}</p>}
+                  {p.headline && <p className="line-clamp-1 text-xs font-semibold">{p.headline}</p>}
+                  <p className="line-clamp-2 text-[11px] text-[var(--color-muted-foreground)]">
+                    {p.copy ?? p.brief}
                   </p>
-                )}
-                {p.programadaPara && (
-                  <p className="text-[10px] text-[var(--color-success)]">
-                    Sale el{' '}
-                    {new Date(p.programadaPara).toLocaleString('es-MX', {
-                      day: '2-digit',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </p>
-                )}
+                  {p.nota && (
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400">{p.nota}</p>
+                  )}
+                  {p.comentario && (
+                    <p className="rounded border-l-2 border-amber-500 bg-amber-500/10 py-1 pl-2 text-[10px] leading-snug">
+                      Motivo: {p.comentario}
+                    </p>
+                  )}
+                  {p.programadaPara && (
+                    <p className="text-[10px] text-[var(--color-success)]">
+                      Sale el{' '}
+                      {new Date(p.programadaPara).toLocaleString('es-MX', {
+                        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+                      })}
+                    </p>
+                  )}
 
                 {/*
                   El visor NO se abre dentro de la tarjeta.
@@ -609,8 +674,29 @@ export function GaleriaPiezas({
                         Quitar la fecha
                       </Button>
                     )}
+                    {p.estado === 'descartada' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-[11px]"
+                          onClick={() => void mover(p.id, 'propuesta')}
+                        >
+                          Restaurar como borrador
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-[11px] text-red-600"
+                          onClick={() => void borrar(p.id)}
+                        >
+                          Borrar definitivamente
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
+                </div>
               </CardContent>
             </Card>
           ))}

@@ -90,6 +90,8 @@ export async function construirPrompt(input: {
   formato: FormatoSpec;
   brief: string;
   opcion: OpcionCreativa;
+  /** Fuentes del negocio, documentos y correcciones de ESTE proyecto. */
+  contexto?: string;
   /** Lo que la memoria de diseño aporte. Se pasa hecho para no buscar 3 veces. */
   guiaDeDiseno?: string;
 }): Promise<BasePrompt> {
@@ -101,6 +103,7 @@ export async function construirPrompt(input: {
     `Encargo: ${brief}`,
     `Dirección visual — ${opcion.angulo}: ${opcion.direccion}.`,
     kitComoPrompt(kit, project),
+    input.contexto ? input.contexto : '',
   ];
 
   if (formato.zonaSegura) {
@@ -113,11 +116,16 @@ export async function construirPrompt(input: {
   // Lo que no se negocia, al final, porque es lo último que lee el modelo.
   partes.push(
     'SIN TEXTO, sin letras, sin palabras, sin logotipos y sin marcas de agua en la imagen: el texto y el logo se ponen encima después.',
+    'No dibujes códigos hex, pantallas falsas, dashboards inventados ni una industria distinta a la descrita en la verdad del proyecto.',
+    'Evita la estética de banco de imágenes: nada de apretones de manos, personas posando a una laptop, sonrisas corporativas ni oficinas genéricas salvo que el encargo lo exija con evidencia.',
+    'Evita también los clichés automáticos de IA: cristales o gemas luminosas, circuitos, cerebros, hologramas, portales, globos, cohetes, piezas de ajedrez y siluetas frente a una ciudad, salvo que el encargo los pida literalmente.',
+    'La imagen debe partir de un objeto, material, lugar, gesto o artefacto REAL del contexto del proyecto y convertirlo en una sola idea editorial inesperada pero físicamente creíble.',
+    'Calidad editorial premium: geometría, manos, rostros, arquitectura, perspectiva, iluminación y sombras físicamente coherentes.',
     'Deja una zona tranquila y de contraste parejo donde luego entre el titular.',
   );
 
   return {
-    prompt: partes.join('\n'),
+    prompt: partes.filter(Boolean).join('\n'),
     modelo: MODELO_IMAGEN,
     ratio: ratioParaGemini(formato),
     angulo: opcion.angulo,

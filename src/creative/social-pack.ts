@@ -6,6 +6,7 @@ import { elegirFormato } from './specs';
 import { generateSocialVariant, type SocialVariant } from './social-copy';
 import { esRedPublicable, type RedPublicable } from './social-playbooks';
 import { syncOfficialSocialSources } from './source-registry';
+import { contextoCreativoDelProyecto } from './context';
 
 export interface SocialPackNetworkResult {
   red: RedPublicable;
@@ -36,6 +37,11 @@ export async function generateSocialPack(input: {
   const redes = [...new Set(input.redes)].filter(esRedPublicable).slice(0, 6);
   if (!redes.length) throw new Error('Elige al menos una red publicable.');
   const packId = randomUUID();
+  const contexto = await contextoCreativoDelProyecto({
+    project: input.project,
+    kit: input.kit,
+    brief: input.brief,
+  });
   await syncOfficialSocialSources(redes).catch(() => undefined);
 
   const runs = await Promise.allSettled(
@@ -48,6 +54,7 @@ export async function generateSocialPack(input: {
         brief: input.brief,
         angle: input.angle,
         requestedCta: input.cta,
+        contexto: contexto.texto,
       });
       const result = await generarPiezas({
         project: input.project,
@@ -56,8 +63,11 @@ export async function generateSocialPack(input: {
         formatoPista: formato.id,
         brief: variant.visualBrief,
         titular: variant.headline,
-        cta: variant.cta,
+        // En contenido orgánico el CTA vive en el copy. Pintar un botón que no
+        // se puede tocar hace que el arte parezca un anuncio barato.
+        cta: null,
         opciones: Math.min(3, Math.max(2, input.optionsPerNetwork ?? 2)),
+        contexto: contexto.texto,
       });
       const rows = await guardarLote({
         project: input.project,
@@ -73,6 +83,7 @@ export async function generateSocialPack(input: {
           altText: variant.altText,
           playbookVersion: variant.playbookVersion,
           source: variant.source,
+          contextSources: contexto.fuentes,
         },
       });
       return {

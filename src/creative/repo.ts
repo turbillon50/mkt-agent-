@@ -5,7 +5,7 @@
  * que la compuso y una FOTO del kit de marca de ese momento. Sin eso, una pieza
  * que salió bien no se puede repetir y una que salió mal no se puede explicar.
  */
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
 import { db } from '../db/client';
 import {
   creativePieces,
@@ -53,6 +53,7 @@ export async function guardarLote(input: {
         metadata: {
           angulo: p.angulo,
           nota: p.nota,
+          calidad: p.calidad ?? null,
           notaCompositor: resultado.notaCompositor,
           ...(input.metadata ?? {}),
         },
@@ -98,6 +99,8 @@ export interface FiltroPiezas {
   estado?: PieceState | null;
   loteId?: string | null;
   limite?: number;
+  /** Archivo separado: las rechazadas no ensucian el trabajo del día. */
+  archivo?: boolean;
 }
 
 export async function listarPiezas(
@@ -111,6 +114,8 @@ export async function listarPiezas(
   ];
   if (filtro.red) condiciones.push(eq(creativePieces.red, filtro.red));
   if (filtro.estado) condiciones.push(eq(creativePieces.estado, filtro.estado));
+  else if (filtro.archivo) condiciones.push(eq(creativePieces.estado, 'descartada'));
+  else condiciones.push(ne(creativePieces.estado, 'descartada'));
   if (filtro.loteId) condiciones.push(eq(creativePieces.loteId, filtro.loteId));
 
   return db
@@ -365,6 +370,39 @@ export async function descartarPieza(
   return fila ?? null;
 }
 
+export class PiezaProtegida extends Error {
+  constructor(estado: PieceState) {
+    super(
+      estado === 'publicada'
+        ? 'Una pieza publicada forma parte del historial y no se borra desde aquí.'
+        : 'Quita la programación antes de borrar esta pieza.',
+    );
+    this.name = 'PiezaProtegida';
+  }
+}
+
+/** Borrado real para borradores/archivo; publicaciones y agenda se protegen. */
+export async function eliminarPieza(
+  orgId: string,
+  projectId: string,
+  id: string,
+): Promise<CreativePiece | null> {
+  const pieza = await getPieza(orgId, projectId, id);
+  if (!pieza) return null;
+  if (pieza.estado === 'publicada' || pieza.estado === 'programada') {
+    throw new PiezaProtegida(pieza.estado);
+  }
+  const [borrada] = await db
+    .delete(creativePieces)
+    .where(and(
+      eq(creativePieces.id, id),
+      eq(creativePieces.orgId, orgId),
+      eq(creativePieces.projectId, projectId),
+    ))
+    .returning();
+  return borrada ?? null;
+}
+
 /** Al publicar: la pieza queda atada al post que salió con ella. */
 export async function marcarPublicada(id: string, postId: string | null): Promise<void> {
   await db
@@ -402,11 +440,18 @@ export async function piezaAprobadaDe(
 export async function contarPorRed(
   orgId: string,
   projectId: string,
+  opts: { archivo?: boolean } = {},
 ): Promise<Array<{ red: RedSlug; label: string; n: number }>> {
   const filas = await db
     .select({ red: creativePieces.red, estado: creativePieces.estado })
     .from(creativePieces)
-    .where(and(eq(creativePieces.orgId, orgId), eq(creativePieces.projectId, projectId)));
+    .where(and(
+      eq(creativePieces.orgId, orgId),
+      eq(creativePieces.projectId, projectId),
+      opts.archivo
+        ? eq(creativePieces.estado, 'descartada')
+        : ne(creativePieces.estado, 'descartada'),
+    ));
 
   const mapa = new Map<string, number>();
   for (const f of filas) mapa.set(f.red, (mapa.get(f.red) ?? 0) + 1);
@@ -418,4 +463,16 @@ export async function contarPorRed(
       n,
     }))
     .sort((a, b) => b.n - a.n);
+}
+
+export async function contarArchivadas(orgId: string, projectId: string): Promise<number> {
+  const [fila] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(creativePieces)
+    .where(and(
+      eq(creativePieces.orgId, orgId),
+      eq(creativePieces.projectId, projectId),
+      eq(creativePieces.estado, 'descartada'),
+    ));
+  return fila?.n ?? 0;
 }

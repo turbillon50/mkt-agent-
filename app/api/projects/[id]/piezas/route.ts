@@ -16,15 +16,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const gate = await apiProject(id, { section: 'contenido', capability: 'ver' });
   if (!gate.ok) return gate.res;
 
-  const { listarPiezas, contarPorRed } = await import('@/src/creative/repo');
+  const { listarPiezas, contarPorRed, contarArchivadas } = await import('@/src/creative/repo');
   const { esRed } = await import('@/src/creative/specs');
 
   const redParam = req.nextUrl.searchParams.get('red');
   const red = esRed(redParam) ? redParam : null;
+  const archivo = req.nextUrl.searchParams.get('archivo') === '1';
 
-  const [piezas, porRed] = await Promise.all([
-    listarPiezas(gate.ctx.orgId, id, { red }),
-    contarPorRed(gate.ctx.orgId, id),
+  const [piezas, porRed, archivadas] = await Promise.all([
+    listarPiezas(gate.ctx.orgId, id, { red, archivo }),
+    contarPorRed(gate.ctx.orgId, id, { archivo }),
+    contarArchivadas(gate.ctx.orgId, id),
   ]);
 
   return NextResponse.json({
@@ -48,12 +50,16 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       altText: (p.metadata as any)?.altText ?? null,
       socialPackId: (p.metadata as any)?.socialPackId ?? null,
       source: (p.metadata as any)?.source ?? null,
+      qualityScore: (p.metadata as any)?.calidad?.score ?? null,
+      qualityReasons: (p.metadata as any)?.calidad?.razones ?? [],
       loteId: p.loteId,
       comentario: p.comentario,
       programadaPara: p.programadaPara?.toISOString() ?? null,
       createdAt: p.createdAt.toISOString(),
     })),
     porRed,
+    archivadas,
+    vista: archivo ? 'archivo' : 'activas',
   });
 }
 
