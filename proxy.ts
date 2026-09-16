@@ -19,6 +19,11 @@ const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
   '/sign-up(.*)',
+  // Legales. Van abiertas a proposito: TikTok, X y Meta abren estas URLs con
+  // un robot sin sesion durante la revision de la app. Un redirect a /sign-in
+  // ahi significa revision rechazada.
+  '/terminos',
+  '/privacidad',
   '/api/cron/(.*)',
   // Mantenimiento con CRON_SECRET, no sesión. Se listan uno por uno: el
   // comodín dejaba abierto todo lo nuevo bajo /api/admin, que ahora es el
