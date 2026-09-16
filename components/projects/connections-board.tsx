@@ -611,7 +611,8 @@ function XAccountSwitchDialog({
             <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]/45 p-3">
               <ol className="space-y-2 text-xs">
                 <li>
-                  <span className="font-semibold">1.</span> Abre una ventana de incógnito con{' '}
+                  <span className="font-semibold">1.</span> Cierra todas las ventanas de incógnito y
+                  abre una nueva con{' '}
                   <kbd className="rounded border border-[var(--color-border)] px-1 py-0.5 font-mono">
                     Ctrl + Shift + N
                   </kbd>
@@ -663,7 +664,8 @@ function XAccountSwitchDialog({
             <p className="text-[11px] text-[var(--color-muted-foreground)]">
               Si al terminar la ventana de incógnito pide iniciar sesión en Goossip, ciérrala y
               vuelve aquí: esta pantalla completa la verificación. No autorices si X muestra otro
-              @usuario.
+              @usuario. Si X insiste con una sesión vieja, repite el enlace en un perfil Invitado
+              de Chrome.
             </p>
 
             <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={onContinue}>
