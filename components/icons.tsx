@@ -25,6 +25,16 @@ export const IconArrowLeft: React.FC<IconProps> = ({ className }) => (
   </svg>
 );
 
+/** Marca: la paleta del pintor. Corrida 6. */
+export const IconPalette: React.FC<IconProps> = ({ className }) => (
+  <svg className={className} {...base}>
+    <path d="M12 3a9 9 0 1 0 0 18c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.5-1.1-.3-.3-.4-.6-.4-1 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4.1-4-7.7-9-7.7Z" />
+    <circle cx="8" cy="11" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="11.5" cy="7.6" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="16" cy="9.4" r="1.1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 export const IconArrowUpRight: React.FC<IconProps> = ({ className }) => (
   <svg className={className} {...base}>
     <path d="M7 17 17 7M8 7h9v9" />

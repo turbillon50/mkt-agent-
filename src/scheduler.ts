@@ -12,8 +12,11 @@ export function start(): void {
   cron.schedule(postCron, async () => {
     try {
       await ensurePlan();
-      const results = await runOnce();
-      console.log(`[scheduler] posted ${results.length} item(s) at ${new Date().toISOString()}`);
+      const { publicados, saltados } = await runOnce();
+      console.log(
+        `[scheduler] ${publicados.length} publicado(s), ${saltados.length} saltado(s) a las ${new Date().toISOString()}`,
+      );
+      for (const s of saltados) console.log(`[scheduler]   ${s.projectName}: ${s.motivo}`);
     } catch (err: any) {
       console.error('[scheduler] post run failed:', err.message ?? err);
     }

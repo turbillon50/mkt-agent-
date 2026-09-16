@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, desc, eq, sql, gte } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/src/db/client';
 import { posts, planItems, knowledge } from '@/src/db/schema';
 
@@ -57,11 +57,31 @@ export async function getDashboardStats(orgId: string) {
   };
 }
 
-export async function listPosts(orgId: string, platform?: 'twitter' | 'linkedin') {
-  const where = platform
-    ? and(eq(posts.orgId, orgId), eq(posts.platform, platform))
-    : eq(posts.orgId, orgId);
-  return db.select().from(posts).where(where).orderBy(desc(posts.createdAt)).limit(100);
+/**
+ * Lo publicado.
+ *
+ * `projectId` (corrida 6) acota al proyecto. Sin él, la sección Contenido del
+ * cliente A le enseñaba lo publicado del cliente B de la misma agencia: los
+ * dos comparten `org_id`. Se incluyen las publicaciones sin proyecto —las de
+ * antes de la 0017— porque son de esa organización y esconderlas sería perder
+ * el historial del cliente.
+ */
+export async function listPosts(
+  orgId: string,
+  platform?: 'twitter' | 'linkedin',
+  projectId?: string,
+) {
+  const condiciones = [eq(posts.orgId, orgId)];
+  if (platform) condiciones.push(eq(posts.platform, platform));
+  if (projectId) {
+    condiciones.push(or(eq(posts.projectId, projectId), isNull(posts.projectId))!);
+  }
+  return db
+    .select()
+    .from(posts)
+    .where(and(...condiciones))
+    .orderBy(desc(posts.createdAt))
+    .limit(100);
 }
 
 export async function listPlanItems(orgId: string) {

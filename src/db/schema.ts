@@ -92,6 +92,12 @@ export type WebhookLogRow = typeof webhookLog.$inferSelect;
 export const posts = pgTable('posts', {
   id: uuid('id').primaryKey().defaultRandom(),
   orgId: text('org_id').notNull(),
+  /**
+   * De qué PROYECTO salió (0017). Nullable: las publicaciones anteriores a la
+   * corrida 6 no lo saben y adivinárselo sería inventar. La sección Contenido
+   * filtra por él — sin esto, el cliente A veía lo publicado del cliente B.
+   */
+  projectId: uuid('project_id'),
   platform: text('platform').notNull(),
   text: text('text').notNull(),
   topic: text('topic'),
@@ -636,6 +642,116 @@ export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
 export type QueuedAction = typeof actionQueue.$inferSelect;
 export type NewQueuedAction = typeof actionQueue.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Corrida 6: memoria de diseño, kit de marca y piezas (migración 0017).
+// ---------------------------------------------------------------------------
+
+/**
+ * La memoria de diseño de Goossip. Es de la APLICACIÓN, no de un proyecto:
+ * cómo se diseña para Instagram no cambia de cliente a cliente, y copiarlo por
+ * proyecto sería pagar el mismo embedding N veces. De ahí `scope` en vez de
+ * `orgId`.
+ */
+export const designKnowledge = pgTable('design_knowledge', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  scope: text('scope').notNull().default('global'),
+  category: text('category').$type<DesignCategory>().notNull(),
+  title: text('title'),
+  content: text('content').notNull(),
+  /** Ruta en skills-vault, o la URL oficial cuando es una spec de red. */
+  sourcePath: text('source_path').notNull(),
+  /** SHA-256 del archivo COMPLETO: si no cambió, no se re-ingiere. */
+  sourceHash: text('source_hash').notNull(),
+  chunkIndex: integer('chunk_index').notNull().default(0),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+  embedding: vector('embedding', { dimensions: 1024 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  categoryIdx: index('design_knowledge_category_idx').on(t.category),
+  hashIdx: index('design_knowledge_hash_idx').on(t.sourceHash),
+  vecIdx: index('design_knowledge_vec_idx').using('hnsw', sql`${t.embedding} vector_cosine_ops`),
+}));
+
+export type DesignCategory = 'higgsfield' | 'diseno' | 'marca' | 'spec-red' | 'playbook' | 'brain';
+export type DesignKnowledge = typeof designKnowledge.$inferSelect;
+export type NewDesignKnowledge = typeof designKnowledge.$inferInsert;
+
+export interface PaletteEntry {
+  rol: 'primario' | 'secundario' | 'fondo' | 'texto' | 'acento';
+  hex: string;
+  nombre?: string;
+}
+
+export interface FontEntry {
+  rol: 'titulos' | 'texto';
+  familia: string;
+  peso?: string;
+}
+
+/** Una fila por proyecto. Todo lo que Goossip genere para él lee de aquí. */
+export const projectBrandKit = pgTable('project_brand_kit', {
+  projectId: uuid('project_id').primaryKey().references(() => campaigns.id, { onDelete: 'cascade' }),
+  orgId: text('org_id').notNull(),
+  logoUrl: text('logo_url'),
+  logoOscuroUrl: text('logo_oscuro_url'),
+  paleta: jsonb('paleta').$type<PaletteEntry[]>().notNull().default([]),
+  tipografias: jsonb('tipografias').$type<FontEntry[]>().notNull().default([]),
+  tono: text('tono'),
+  palabrasProhibidas: jsonb('palabras_prohibidas').$type<string[]>().notNull().default([]),
+  ejemplos: jsonb('ejemplos').$type<Array<{ url: string; nota?: string }>>().notNull().default([]),
+  /** Soul ID de Higgsfield, si el cliente entrenó su persona visual. */
+  soulId: text('soul_id'),
+  /** Lo que propuso Gemini al ver el logo, antes de que el usuario corrigiera. */
+  propuesta: jsonb('propuesta').$type<Record<string, unknown>>(),
+  aprobadoPor: text('aprobado_por'),
+  aprobadoEn: timestamp('aprobado_en', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  orgIdx: index('project_brand_kit_org_idx').on(t.orgId),
+}));
+
+export type ProjectBrandKit = typeof projectBrandKit.$inferSelect;
+export type NewProjectBrandKit = typeof projectBrandKit.$inferInsert;
+
+export type PieceState = 'propuesta' | 'aprobada' | 'descartada' | 'publicada';
+export type PieceEngine = 'gemini' | 'canva' | 'sharp' | 'higgsfield';
+
+export const creativePieces = pgTable('creative_pieces', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  red: text('red').notNull(),
+  formato: text('formato').notNull(),
+  tipo: text('tipo').notNull().default('imagen'),
+  brief: text('brief').notNull(),
+  /** El prompt completo. Sin esto, una pieza que salió bien no se repite. */
+  prompt: text('prompt').notNull(),
+  modelo: text('modelo'),
+  motor: text('motor').$type<PieceEngine>().notNull().default('gemini'),
+  url: text('url'),
+  ancho: integer('ancho'),
+  alto: integer('alto'),
+  /** Foto del kit con el que se generó: la marca de hoy no explica la pieza de ayer. */
+  kitUsado: jsonb('kit_usado').$type<Record<string, unknown>>().notNull().default({}),
+  estado: text('estado').$type<PieceState>().notNull().default('propuesta'),
+  aprobadaPor: text('aprobada_por'),
+  aprobadaEn: timestamp('aprobada_en', { withTimezone: true }),
+  postId: uuid('post_id').references(() => posts.id, { onDelete: 'set null' }),
+  /** Las 2-3 opciones de un mismo brief comparten lote. */
+  loteId: uuid('lote_id'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('creative_pieces_project_idx').on(t.projectId, t.createdAt),
+  redIdx: index('creative_pieces_red_idx').on(t.projectId, t.red),
+  loteIdx: index('creative_pieces_lote_idx').on(t.loteId),
+}));
+
+export type CreativePiece = typeof creativePieces.$inferSelect;
+export type NewCreativePiece = typeof creativePieces.$inferInsert;
 
 /** Alias de dominio: en la base es `campaigns`, en la app es un proyecto. */
 export const projects = campaigns;

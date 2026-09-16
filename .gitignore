@@ -24,3 +24,7 @@ capturas-c4/*
 # Igual para las de la corrida 5 (8 MB de PNG).
 capturas-c5/*
 !capturas-c5/resumen.json
+
+# Igual para las de la corrida 6.
+capturas-c6/*
+!capturas-c6/resumen.json
