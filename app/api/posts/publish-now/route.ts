@@ -49,10 +49,20 @@ export async function POST(req: NextRequest) {
       // Multi-tenant real: si el usuario tiene su propio LinkedIn conectado
       // via Composio, publica en SU cuenta. Nunca asumimos que es la cuenta
       // de la casa solo porque alguien dio click.
+      // La identidad del canal es la del PROYECTO activo (project:<id>), nunca
+      // la del usuario: la cuenta pertenece al proyecto y la comparte su equipo.
       const { isConnected, postLinkedInForUser } = await import('@/lib/composio');
-      const connected = await isConnected(clerkUserId, 'linkedin').catch(() => false);
-      if (connected) {
-        const out = await postLinkedInForUser(clerkUserId, text);
+      const { composioUserId } = await import('@/src/projects/connections');
+      const { users } = await import('@/src/db/schema');
+      const { eq } = await import('drizzle-orm');
+      const [me] = dbUser
+        ? await db.select({ active: users.activeCampaignId }).from(users).where(eq(users.id, dbUser.id)).limit(1)
+        : [];
+      const projectId = typeof body?.project === 'string' && body.project ? body.project : me?.active ?? null;
+      const canalId = projectId ? composioUserId(projectId) : null;
+      const connected = canalId ? await isConnected(canalId, 'linkedin').catch(() => false) : false;
+      if (connected && canalId) {
+        const out = await postLinkedInForUser(canalId, text);
         externalId = out.id;
         externalUrl = out.url;
       } else if (dbUser?.isAdmin) {
@@ -63,7 +73,7 @@ export async function POST(req: NextRequest) {
         externalUrl = out.url;
       } else {
         return NextResponse.json(
-          { error: 'Conecta tu cuenta de LinkedIn en Integraciones antes de publicar.' },
+          { error: 'Este proyecto no tiene LinkedIn conectado. Conéctalo en Conexiones del proyecto.' },
           { status: 400 },
         );
       }
