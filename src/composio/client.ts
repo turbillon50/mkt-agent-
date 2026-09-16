@@ -292,13 +292,21 @@ export async function executeTool<T = any>(
  * que es de donde salen los leads del cliente. Sale por la misma conexión del
  * proyecto, así que el token nunca toca a Goossip.
  */
-export async function proxyExecute(input: {
+export interface ProxyResponse {
+  data: any;
+  /** Los encabezados que devolvió el PROVEEDOR, en minúsculas. */
+  headers: Record<string, string>;
+  status: number | null;
+}
+
+/** La llamada cruda, con todo lo que contestó el proveedor. */
+export async function proxyExecuteFull(input: {
   connectedAccountId: string;
   endpoint: string;
   method: 'GET' | 'POST' | 'DELETE';
   parameters?: Array<{ name: string; value: string; type: 'header' | 'query' }>;
   body?: unknown;
-}): Promise<any> {
+}): Promise<ProxyResponse> {
   const key = composioKey();
   if (!key) throw new ComposioError('Falta la llave de Composio en este entorno.', 503);
   const res = await fetch('https://backend.composio.dev/api/v3.1/tools/execute/proxy', {
@@ -314,11 +322,38 @@ export async function proxyExecute(input: {
     cache: 'no-store',
   });
   const json: any = await res.json().catch(() => null);
-  if (!res.ok || json?.error) {
+
+  /**
+   * El proveedor puede contestar 4xx con HTTP 200 del lado de Composio: el
+   * error viaja DENTRO, en `data.status` y `data.message`. Sin mirarlo, una
+   * publicación rechazada por LinkedIn se leía como publicada.
+   */
+  const dentro = json?.data;
+  const estadoProveedor: number | null =
+    typeof json?.status === 'number' ? json.status : typeof dentro?.status === 'number' ? dentro.status : null;
+
+  if (!res.ok || json?.error || (estadoProveedor !== null && estadoProveedor >= 400)) {
     throw new ComposioError(
-      json?.error?.message ?? json?.data?.message ?? 'La llamada al proveedor falló.',
-      res.status,
+      json?.error?.message ?? dentro?.message ?? 'La llamada al proveedor falló.',
+      estadoProveedor ?? res.status,
     );
   }
-  return json?.data ?? json;
+
+  const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries(json?.headers ?? {})) {
+    headers[k.toLowerCase()] = String(v);
+  }
+
+  return { data: dentro ?? json, headers, status: estadoProveedor };
+}
+
+export async function proxyExecute(input: {
+  connectedAccountId: string;
+  endpoint: string;
+  method: 'GET' | 'POST' | 'DELETE';
+  parameters?: Array<{ name: string; value: string; type: 'header' | 'query' }>;
+  body?: unknown;
+}): Promise<any> {
+  const r = await proxyExecuteFull(input);
+  return r.data;
 }

@@ -14,10 +14,10 @@ import {
   IconFolder,
   IconHome,
   IconMegaphone,
+  IconPalette,
   IconPlug,
   IconPlus,
   IconSettings,
-  IconSparkles,
   IconTarget,
   IconUsers,
 } from '@/components/icons';
@@ -48,6 +48,7 @@ const SECTION_ICON: Record<ProjectSection, React.ElementType> = {
   // secciones con el mismo ícono se leen como la misma cosa.
   campanas: IconMegaphone,
   contenido: IconFile,
+  marca: IconPalette,
   automatizaciones: IconBolt,
   conocimiento: IconBrain,
   conexiones: IconPlug,
@@ -62,6 +63,7 @@ const SECCIONES: ProjectSection[] = [
   'conversaciones',
   'campanas',
   'contenido',
+  'marca',
   'automatizaciones',
   'conocimiento',
 ];
@@ -164,20 +166,12 @@ export function ProjectNav({ onNavigate }: { onNavigate?: () => void }) {
             ))}
 
             {/*
-              El chat es una sección más, no un botón gigante arriba del menú.
-              Un `conector` no lo ve: entra a conectar el Facebook de su cliente
-              y no tiene por qué hablar con el vendedor de nadie.
+              El Asistente ya NO es un renglón del menú (corrida 6). Vive en el
+              cajón de la derecha de TODAS las pantallas, con ⌘K. Mandarlo a su
+              propia ruta obligaba a salirte de donde estabas para preguntarle
+              algo, y —lo grave— el chat de esa ruta era global: no sabía de qué
+              cliente le estaban hablando y publicaba con la cuenta de la casa.
             */}
-            {canSeeSection(active.role, 'conversaciones') && (
-              <Fila
-                href="/chat"
-                label="Asistente"
-                Icon={IconSparkles}
-                activo={activo('/chat')}
-                onNavigate={onNavigate}
-              />
-            )}
-
             <Etiqueta>Proyecto</Etiqueta>
             {DEL_PROYECTO.filter((s) => canSeeSection(active.role, s)).map((s) => (
               <Fila

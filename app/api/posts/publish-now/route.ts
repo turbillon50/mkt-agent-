@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { isClerkConfigured } from '@/lib/clerk-config';
 
 export const runtime = 'nodejs';
@@ -8,210 +7,140 @@ export const maxDuration = 60;
 /**
  * Publicar de verdad, ahora mismo.
  *
- * Desde la corrida 5 el camino normal es el del PROYECTO por Composio: se
- * publica en la cuenta que el cliente autorizó para ese proyecto. El camino
- * viejo —las cuentas de la casa con tokens en el entorno— solo se usa con
- * `META_OWN_APP=true`, que está apagado. Así nadie llama a Graph con
- * credenciales nuestras sin que alguien lo encienda a propósito.
+ * CORRIDA 6: ya no hay camino alterno. Antes esta ruta tenía dos mitades —la
+ * del proyecto por Composio y la de las "cuentas de la casa" con tokens del
+ * entorno, que se encendía con `META_OWN_APP=true` y que además daba al `admin`
+ * un atajo para publicar en la página de Goossip desde cualquier proyecto—.
+ * Esa segunda mitad se fue entera.
+ *
+ * Por qué se fue y no se dejó apagada: era la única forma que le quedaba a un
+ * click en la app de salir por una cuenta que no es la del cliente, y el
+ * pendiente que Luis dictó para esta corrida es exactamente ese. Una bandera
+ * apagada sigue siendo una bandera que alguien enciende. El código de
+ * `src/posters/*` sigue existiendo para el modo de una sola marca del CLI, que
+ * es otro producto y no toca a los clientes.
+ *
+ * Regla que se cumple sola ahora: la identidad de canal siempre es
+ * `composioUserId(project.id)`, porque `publishTo` no sabe salir por otro lado.
  */
 const TOOLKIT_DE: Record<string, string> = {
   meta: 'facebook',
+  facebook: 'facebook',
   instagram: 'instagram',
   linkedin: 'linkedin',
   twitter: 'twitter',
+  tiktok: 'tiktok',
+  youtube: 'youtube',
 };
 
 export async function POST(req: NextRequest) {
-  let dbUser: { id: string; isAdmin: boolean } | null = null;
-  let clerkUserId: string | null = null;
-  // `posts.org_id` es NOT NULL desde la migración 0013: sin org activa no hay
-  // dónde guardar la publicación.
-  let orgId: string | null = null;
-  let activeProjectId: string | null = null;
-
-  if (isClerkConfigured()) {
-    try {
-      const { apiOrg } = await import('@/lib/org');
-      const gate = await apiOrg();
-      if (!gate.ok) return gate.res;
-      dbUser = { id: gate.ctx.user.id, isAdmin: gate.ctx.user.isAdmin };
-      orgId = gate.ctx.orgId;
-      activeProjectId = gate.ctx.activeProjectId ?? null;
-      const { userId } = await auth();
-      clerkUserId = userId;
-    } catch {
-      return NextResponse.json({ error: 'auth failed' }, { status: 401 });
-    }
+  if (!isClerkConfigured()) {
+    return NextResponse.json({ error: 'No hay sesión en este entorno.' }, { status: 401 });
   }
-  if (!orgId) {
-    return NextResponse.json({ error: 'sin organización activa' }, { status: 403 });
+
+  let orgId: string;
+  let activeProjectId: string | null;
+  let quien: string | null;
+
+  try {
+    const { apiOrg } = await import('@/lib/org');
+    const gate = await apiOrg();
+    if (!gate.ok) return gate.res;
+    orgId = gate.ctx.orgId;
+    activeProjectId = gate.ctx.activeProjectId ?? null;
+    quien = gate.ctx.user.email ?? gate.ctx.clerkUserId;
+  } catch {
+    return NextResponse.json({ error: 'auth failed' }, { status: 401 });
   }
 
   const body = await req.json().catch(() => ({}));
-  const platform = body?.platform === 'linkedin' ? 'linkedin' : body?.platform === 'twitter' ? 'twitter' : body?.platform === 'meta' ? 'meta' : body?.platform === 'instagram' ? 'instagram' : null;
+  const red = typeof body?.platform === 'string' ? TOOLKIT_DE[body.platform] : null;
   const text = typeof body?.text === 'string' ? body.text.trim() : '';
-  const topic = typeof body?.topic === 'string' ? body.topic : undefined;
-  const imageUrl = typeof body?.imageUrl === 'string' ? body.imageUrl : undefined;
+  const topic = typeof body?.topic === 'string' ? body.topic : null;
+  const piezaId = typeof body?.piezaId === 'string' ? body.piezaId : null;
 
-  if (!platform) return NextResponse.json({ error: 'platform inválido' }, { status: 400 });
-  if (!text) return NextResponse.json({ error: 'texto vacío' }, { status: 400 });
+  if (!red) return NextResponse.json({ error: 'Esa red no existe.' }, { status: 400 });
+  if (!text) return NextResponse.json({ error: 'El texto está vacío.' }, { status: 400 });
 
-  // --- Camino normal: la cuenta del proyecto, por Composio -----------------
-  const { metaOwnAppEnabled } = await import('@/src/projects/catalog');
-  if (!metaOwnAppEnabled()) {
-    if (!activeProjectId) {
-      return NextResponse.json(
-        { error: 'Entra a un proyecto para publicar: las cuentas son del proyecto.' },
-        { status: 400 },
-      );
-    }
-    const { getProject } = await import('@/src/sales/projects');
-    const project = await getProject(orgId, activeProjectId);
-    if (!project) {
-      return NextResponse.json({ error: 'no encontramos tu proyecto activo' }, { status: 404 });
-    }
-    const { requireProjectCapability } = await import('@/lib/project-access');
-    const denied = await requireProjectCapability(project.id, 'operar');
-    if (denied) return denied;
-
-    try {
-      const { publishTo } = await import('@/src/channels');
-      const out = await publishTo(project, TOOLKIT_DE[platform], {
-        texto: text,
-        media: imageUrl ?? null,
-      });
-      const { db } = await import('@/src/db/client');
-      const { posts } = await import('@/src/db/schema');
-      const [row] = await db
-        .insert(posts)
-        .values({
-          orgId,
-          platform,
-          text,
-          topic: topic ?? null,
-          externalId: out.id,
-          externalUrl: out.url,
-          publishedAt: new Date(),
-        })
-        .returning({ id: posts.id });
-      return NextResponse.json({ ok: true, externalUrl: out.url, postId: row?.id ?? null });
-    } catch (e) {
-      return NextResponse.json(
-        { error: e instanceof Error ? e.message : 'No se pudo publicar.' },
-        { status: 400 },
-      );
-    }
+  // El proyecto puede venir en el cuerpo (desde una pantalla de proyecto) o ser
+  // el activo. En los dos casos se vuelve a pasar por la puerta de permisos: un
+  // id en el cuerpo lo cambia cualquiera desde el navegador.
+  const projectId = typeof body?.projectId === 'string' && body.projectId ? body.projectId : activeProjectId;
+  if (!projectId) {
+    return NextResponse.json(
+      { error: 'Entra a un proyecto para publicar: las cuentas son del proyecto.' },
+      { status: 400 },
+    );
   }
 
-  // --- Camino viejo: cuentas de la casa, solo con META_OWN_APP=true --------
+  const { apiProject } = await import('@/lib/project-access');
+  const gate = await apiProject(projectId, { capability: 'operar' });
+  if (!gate.ok) return gate.res;
+  const project = gate.ctx.project;
+
+  const { activeAccountFor } = await import('@/src/projects/composio-connections');
+  const cuenta = await activeAccountFor(project, red).catch(() => null);
+  if (!cuenta) {
+    return NextResponse.json(
+      {
+        error: `${project.name} no tiene esa red conectada. Conéctala en Conexiones del proyecto y vuelve.`,
+      },
+      { status: 400 },
+    );
+  }
+
   try {
-    const { db } = await import('@/src/db/client');
-    const { posts } = await import('@/src/db/schema');
+    const { getPieza, piezaAprobadaDe, marcarPublicada } = await import('@/src/creative/repo');
+    const { esRed } = await import('@/src/creative/specs');
 
-    let externalId: string | undefined;
-    let externalUrl: string | undefined;
+    const pieza = piezaId
+      ? await getPieza(orgId, project.id, piezaId)
+      : esRed(red)
+        ? await piezaAprobadaDe(orgId, project.id, red)
+        : null;
 
-    if (platform === 'linkedin' && clerkUserId) {
-      // Multi-tenant real: si el usuario tiene su propio LinkedIn conectado
-      // via Composio, publica en SU cuenta. Nunca asumimos que es la cuenta
-      // de la casa solo porque alguien dio click.
-      // La identidad del canal es la del PROYECTO activo (project:<id>), nunca
-      // la del usuario: la cuenta pertenece al proyecto y la comparte su equipo.
-      const { isConnected, postLinkedInForUser } = await import('@/lib/composio');
-      const { composioUserId } = await import('@/src/projects/connections');
-      const { users } = await import('@/src/db/schema');
-      const { eq } = await import('drizzle-orm');
-      const [me] = dbUser
-        ? await db.select({ active: users.activeCampaignId }).from(users).where(eq(users.id, dbUser.id)).limit(1)
-        : [];
-      const projectId = typeof body?.project === 'string' && body.project ? body.project : me?.active ?? null;
-      const canalId = projectId ? composioUserId(projectId) : null;
-      const connected = canalId ? await isConnected(canalId, 'linkedin').catch(() => false) : false;
-      if (connected && canalId) {
-        const out = await postLinkedInForUser(canalId, text);
-        externalId = out.id;
-        externalUrl = out.url;
-      } else if (dbUser?.isAdmin) {
-        // Fallback: solo para el owner, usando la cuenta de la casa (env vars).
-        const { getPoster } = await import('@/src/posters/index');
-        const out = await getPoster('linkedin').post(text);
-        externalId = out.id;
-        externalUrl = out.url;
-      } else {
-        return NextResponse.json(
-          { error: 'Este proyecto no tiene LinkedIn conectado. Conéctalo en Conexiones del proyecto.' },
-          { status: 400 },
-        );
-      }
-    } else if (platform === 'twitter') {
-      // X/Twitter aun no tiene auth_config multi-tenant en Composio (requiere
-      // app propia de Twitter Developer por usuario). Solo el owner puede
-      // publicar por ahora, usando la cuenta de la casa.
-      if (dbUser?.isAdmin) {
-        const { getPoster } = await import('@/src/posters/index');
-        const out = await getPoster('twitter').post(text);
-        externalId = out.id;
-        externalUrl = out.url;
-      } else {
-        return NextResponse.json(
-          { error: 'X todavía no soporta cuentas por usuario — contacta al admin.' },
-          { status: 400 },
-        );
-      }
-    } else if (platform === 'meta') {
-      // Meta (Facebook/Instagram) es una sola pagina de la casa via
-      // Graph API oficial (token de pagina, se refresca solo). Solo el
-      // owner puede publicar por ahora; el flujo por-usuario (cada quien
-      // conecta su propio Facebook) es trabajo futuro.
-      if (dbUser?.isAdmin) {
-        const { getPoster } = await import('@/src/posters/index');
-        const out = await getPoster('meta').post(text, imageUrl);
-        externalId = out.id;
-        externalUrl = out.url;
-      } else {
-        return NextResponse.json(
-          { error: 'Meta todavía no soporta cuentas por usuario — contacta al admin.' },
-          { status: 400 },
-        );
-      }
-    } else if (platform === 'instagram') {
-      if (!imageUrl) {
-        return NextResponse.json(
-          { error: 'Instagram necesita una imagen — sube una foto antes de publicar.' },
-          { status: 400 },
-        );
-      }
-      if (dbUser?.isAdmin) {
-        const { postInstagram } = await import('@/src/posters/meta');
-        const out = await postInstagram(imageUrl, text);
-        externalId = out.id;
-        externalUrl = 'https://instagram.com';
-      } else {
-        return NextResponse.json(
-          { error: 'Instagram todavía no soporta cuentas por usuario — contacta al admin.' },
-          { status: 400 },
-        );
-      }
-    } else {
-      return NextResponse.json({ error: 'No se pudo identificar tu sesión.' }, { status: 401 });
+    const media = pieza?.url ?? (typeof body?.imageUrl === 'string' ? body.imageUrl : null);
+
+    if (red === 'instagram' && !media) {
+      return NextResponse.json(
+        { error: 'Instagram no deja publicar sin imagen. Hazle la pieza primero.' },
+        { status: 400 },
+      );
     }
 
-    const [row] = await db
+    const { publishTo } = await import('@/src/channels');
+    const out = await publishTo(project, red, { texto: text, media });
+
+    const { db } = await import('@/src/db/client');
+    const { posts } = await import('@/src/db/schema');
+    const [fila] = await db
       .insert(posts)
       .values({
         orgId,
-        platform,
+        projectId: project.id,
+        platform: red,
         text,
-        topic: topic ?? null,
-        externalId: externalId ?? null,
-        externalUrl: externalUrl ?? null,
+        topic,
+        externalId: out.id,
+        externalUrl: out.url,
         publishedAt: new Date(),
+        metadata: { publicadoPor: quien, piezaId: pieza?.id ?? null },
       })
       .returning({ id: posts.id });
 
-    return NextResponse.json({ ok: true, externalUrl: externalUrl ?? null, postId: row?.id ?? null });
+    if (pieza) await marcarPublicada(pieza.id, fila?.id ?? null);
+
+    return NextResponse.json({
+      ok: true,
+      externalUrl: out.url,
+      postId: fila?.id ?? null,
+      cuenta: `la cuenta de ${project.name}`,
+      conImagen: Boolean(media),
+    });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'No se pudo publicar.';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : 'No se pudo publicar.' },
+      { status: 400 },
+    );
   }
 }

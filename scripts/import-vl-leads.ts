@@ -10,7 +10,7 @@
  * Es idempotente: `sales_leads_campaign_source_ref_uniq` impide duplicados, así
  * que se puede volver a correr sin miedo.
  */
-import 'dotenv/config';
+import '../src/env';
 import { Client } from 'pg';
 import { eq, or } from 'drizzle-orm';
 import { db } from '../src/db/client';

@@ -20,7 +20,7 @@
  * Todo lo que crea (2 usuarios, 2 orgs, sus proyectos y sus leads) se borra al
  * final, pase o falle.
  */
-import 'dotenv/config';
+import '../src/env';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../src/db/client';
 import {

@@ -24,7 +24,7 @@
  *
  * Todo lo que crea se borra al final, pase o falle.
  */
-import 'dotenv/config';
+import '../src/env';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { and, eq, sql } from 'drizzle-orm';

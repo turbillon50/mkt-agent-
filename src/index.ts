@@ -40,8 +40,11 @@ async function main(): Promise<void> {
   switch (cmd) {
     case 'run': {
       const dryRun = rest.includes('--dry');
-      const results = await runOnce({ dryRun });
-      for (const r of results) console.log(`\n--- ${r.platform} ---\n${r.text}\n${JSON.stringify(r.posted)}`);
+      const { publicados, saltados } = await runOnce({ dryRun });
+      for (const r of publicados) {
+        console.log(`\n--- ${r.projectName} · ${r.channel} ---\n${r.text}\n${JSON.stringify(r.posted)}`);
+      }
+      for (const s of saltados) console.log(`\n(saltado) ${s.projectName}: ${s.motivo}`);
       break;
     }
     case 'plan': {

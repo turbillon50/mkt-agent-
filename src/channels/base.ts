@@ -11,7 +11,7 @@
  * había antes y es lo que no se entiende.
  */
 import type { Project } from '../db/schema';
-import { executeTool, proxyExecute, type ToolResult } from '../composio/client';
+import { executeTool, proxyExecute, proxyExecuteFull, type ToolResult } from '../composio/client';
 import { activeAccountFor, verifyAccount } from '../projects/composio-connections';
 import { composioAccountsOf } from '../projects/composio-connections';
 import { connectorOrThrow } from '../projects/catalog';
@@ -37,13 +37,20 @@ export async function cuentaDe(project: Project, toolkit: string): Promise<Cuent
 /**
  * El cuerpo útil de una respuesta de Composio.
  *
- * Muchos toolkits devuelven `{ response_data: { … } }` y otros el objeto pelón.
+ * Los toolkits devuelven el objeto envuelto y no siempre con el mismo nombre:
+ * unos usan `response_data`, otros `response_dict`, otros lo mandan pelón.
  * Sin esto, leer `data.records` de Airtable da `undefined` y la importación
- * trae cero documentos sin que nadie se entere — pasó, y por eso existe esta
- * función y la prueba que la cuida.
+ * trae cero documentos sin que nadie se entere — pasó en la corrida 5.
+ *
+ * `response_dict` se sumó en la corrida 6 y NO es cosmético: es el envoltorio
+ * que usa LinkedIn. Con solo `response_data`, `LINKEDIN_GET_MY_INFO` devolvía
+ * un objeto donde no estaba el autor, y publicar en LinkedIn moría con
+ * "No se pudo leer tu identidad. Vuelve a conectarlo." — un mensaje que manda
+ * al usuario a reconectar una cuenta que estaba perfectamente conectada. Solo
+ * se ve publicando de verdad, y por eso no salió hasta esta corrida.
  */
 export function cuerpo<T = any>(data: any): T {
-  return (data?.response_data ?? data) as T;
+  return (data?.response_data ?? data?.response_dict ?? data) as T;
 }
 
 /** Ejecuta una tool de Composio con la cuenta del proyecto. */
@@ -79,6 +86,28 @@ export async function proxy(
 ): Promise<any> {
   const cuenta = await cuentaDe(project, toolkit);
   return proxyExecute({ connectedAccountId: cuenta.connectedAccountId, ...input });
+}
+
+/**
+ * Igual, pero con los ENCABEZADOS que devolvió el proveedor.
+ *
+ * Existe por LinkedIn: al publicar contesta el cuerpo vacío y el id del post
+ * en `x-restli-id`. Con la versión de arriba, la publicación salía bien y
+ * Goossip no sabía dónde había quedado.
+ */
+export async function proxyConEncabezados(
+  project: Project,
+  toolkit: string,
+  input: {
+    endpoint: string;
+    method: 'GET' | 'POST' | 'DELETE';
+    body?: unknown;
+    parameters?: Array<{ name: string; value: string; type: 'header' | 'query' }>;
+  },
+): Promise<{ data: any; headers: Record<string, string> }> {
+  const cuenta = await cuentaDe(project, toolkit);
+  const r = await proxyExecuteFull({ connectedAccountId: cuenta.connectedAccountId, ...input });
+  return { data: r.data, headers: r.headers };
 }
 
 export interface ChannelStatus {

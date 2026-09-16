@@ -1,0 +1,86 @@
+{
+  "corrida": "c6",
+  "base": "http://127.0.0.1:3100",
+  "capturas": 7,
+  "limpias": 7,
+  "http200": 7,
+  "erroresJs": 0,
+  "notasInternas": 0,
+  "panel": {
+    "abierto": true,
+    "sugerencias": 3,
+    "botones": [
+      "Ver los leads",
+      "Conectar un canal",
+      "Ver las piezas"
+    ],
+    "texto": "Asistente\n\nMOMENTUM\n\n0 conectados\n1 sin contactar\nMarca cargada\n\nHay 1 lead sin contactar. Un lead que espera más de un día se enfría.\n\nVer los leads\n\nTodavía no hay ningún canal conectado. Sin eso no entran leads y no se puede publicar con la cuenta de este cliente.\n\nConectar un canal\n\nHay 3 piezas esperando que elijas cuáles sirven.\n\nVer las piezas\n\nPregúntame lo que quieras de MOMENTUM: qué publicar, qué medidas lleva un reel, o pídeme que te haga la pieza.",
+    "siguePintadoElFondo": true,
+    "cerro": true
+  },
+  "detalle": [
+    {
+      "pantalla": "02-marca",
+      "ruta": "/projects/22b0eead-ef80-4350-ba50-9e9b8fbd1ce1/marca",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c6/02-marca-escritorio.png"
+    },
+    {
+      "pantalla": "02-marca",
+      "ruta": "/projects/22b0eead-ef80-4350-ba50-9e9b8fbd1ce1/marca",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c6/02-marca-movil.png"
+    },
+    {
+      "pantalla": "03-contenido",
+      "ruta": "/projects/22b0eead-ef80-4350-ba50-9e9b8fbd1ce1/contenido",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c6/03-contenido-escritorio.png"
+    },
+    {
+      "pantalla": "03-contenido",
+      "ruta": "/projects/22b0eead-ef80-4350-ba50-9e9b8fbd1ce1/contenido",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c6/03-contenido-movil.png"
+    },
+    {
+      "pantalla": "04-inicio",
+      "ruta": "/projects/22b0eead-ef80-4350-ba50-9e9b8fbd1ce1",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c6/04-inicio-escritorio.png"
+    },
+    {
+      "pantalla": "04-inicio",
+      "ruta": "/projects/22b0eead-ef80-4350-ba50-9e9b8fbd1ce1",
+      "tamano": "movil",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c6/04-inicio-movil.png"
+    },
+    {
+      "pantalla": "05-galeria-filtrada",
+      "ruta": "/projects/22b0eead-ef80-4350-ba50-9e9b8fbd1ce1/contenido",
+      "tamano": "escritorio",
+      "status": 200,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c6/05-galeria-filtrada-escritorio.png"
+    }
+  ]
+}

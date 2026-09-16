@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../src/env';
 import { config } from '../src/config.js';
 import { getClient as openrouterClient } from '../src/openrouter.js';
 import { twitter, linkedin } from '../src/posters/index.js';

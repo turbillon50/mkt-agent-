@@ -15,7 +15,7 @@
  * Y se vuelve a preguntar a la Backend API por el branding, en vez de copiar la
  * conclusión de la corrida 3.
  */
-import 'dotenv/config';
+import '../src/env';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 

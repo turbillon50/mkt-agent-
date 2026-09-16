@@ -50,6 +50,10 @@ export const PROJECT_SECTIONS = [
   'conversaciones',
   'campanas',
   'contenido',
+  // Corrida 6. Va junto a Contenido y no bajo "Proyecto" porque el kit de
+  // marca se toca todo el tiempo mientras se hacen piezas, no una vez al dar
+  // de alta el proyecto.
+  'marca',
   'automatizaciones',
   'conocimiento',
   'conexiones',
@@ -64,6 +68,7 @@ export const PROJECT_SECTION_LABEL: Record<ProjectSection, string> = {
   conversaciones: 'Conversaciones',
   campanas: 'Campañas',
   contenido: 'Contenido',
+  marca: 'Marca',
   automatizaciones: 'Automatizaciones',
   conocimiento: 'Conocimiento',
   conexiones: 'Conexiones',

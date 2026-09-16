@@ -23,7 +23,9 @@
     "test:projects": "tsx test/projects.test.ts",
     "test:campanas": "tsx test/campanas.test.ts",
     "test:composio": "tsx test/composio.test.ts",
-    "composio:bootstrap": "tsx scripts/composio-bootstrap.ts"
+    "composio:bootstrap": "tsx scripts/composio-bootstrap.ts",
+    "ingest:diseno": "tsx scripts/ingest-design-knowledge.ts",
+    "test:creative": "tsx test/creative.test.ts"
   },
   "engines": {
     "node": ">=20"
@@ -56,6 +58,7 @@
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "sharp": "^0.33.5",
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
     "twitter-api-v2": "^1.18.2",

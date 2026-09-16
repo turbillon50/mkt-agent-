@@ -6,6 +6,7 @@ import { IconClose, IconLogoMark } from '@/components/icons';
 import { Sidebar } from './sidebar';
 import { BottomTabBar } from './bottom-tab-bar';
 import { ProjectsProvider } from './projects-provider';
+import { AssistantDrawer } from './assistant/assistant-drawer';
 import { SIDEBAR_BOOT } from './sidebar-prefs';
 import { cn } from '@/lib/utils';
 
@@ -110,6 +111,14 @@ export function AppShell({
         <main className="flex-1 overflow-x-hidden px-4 py-6 pb-28 lg:p-8 lg:pb-8">{children}</main>
 
         <BottomTabBar onMore={() => setOpen(true)} />
+
+        {/*
+          El Asistente vive AQUÍ, en el shell, y no en una sección: por eso está
+          en las diez pantallas y por eso se abre con ⌘K sin perder de vista lo
+          que estabas mirando. Va dentro del `ProjectsProvider` porque siempre
+          es el Asistente de un proyecto — el activo.
+        */}
+        <AssistantDrawer />
       </div>
     </ProjectsProvider>
   );
