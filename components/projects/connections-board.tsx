@@ -154,13 +154,20 @@ export function ConnectionsBoard({
     if (r) push({ title: `${label} desconectado`, variant: 'success' });
   }
 
-  async function conectarConComposio(canal: string) {
+  async function conectarConComposio(canal: string, replace = false) {
+    if (replace) {
+      const card = cards.find((c) => c.id === canal);
+      const ok = window.confirm(
+        `¿Cambiar la cuenta de ${card?.label ?? canal}? La cuenta actual dejará de usarse y el proveedor te pedirá elegir otra.`,
+      );
+      if (!ok) return;
+    }
     setTrabajando(canal);
     try {
       const res = await fetch('/api/connections/composio/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: projectId, toolkit: canal }),
+        body: JSON.stringify({ project: projectId, toolkit: canal, replace }),
       });
       const data = await res.json();
       if (res.ok && data.alreadyConnected) {
@@ -332,6 +339,7 @@ export function ConnectionsBoard({
                   onAbrir={() => setAbierta(abierta === card.id ? null : card.id)}
                   onCerrar={() => setAbierta(null)}
                   onConectarComposio={() => void conectarConComposio(card.id)}
+                  onCambiarCuenta={() => void conectarConComposio(card.id, true)}
                   onConectarMetaAds={() => void conectarConMetaAds()}
                   onDesconectar={() => void desconectar(card.id, card.label)}
                   onPedir={pedir}
@@ -379,6 +387,7 @@ function Tarjeta({
   onAbrir,
   onCerrar,
   onConectarComposio,
+  onCambiarCuenta,
   onConectarMetaAds,
   onDesconectar,
   onPedir,
@@ -391,6 +400,7 @@ function Tarjeta({
   onAbrir: () => void;
   onCerrar: () => void;
   onConectarComposio: () => void;
+  onCambiarCuenta: () => void;
   onConectarMetaAds: () => void;
   onDesconectar: () => void;
   onPedir: (canal: string, url: string, init: RequestInit) => Promise<any>;
@@ -440,6 +450,14 @@ function Tarjeta({
           </p>
         )}
 
+        {card.state === 'conectado' && card.data.capability?.ready && (
+          <p className="text-[11px] text-[var(--color-success)]">
+            Publicación verificada
+            {card.data.capability.image ? ' · imagen' : ''}
+            {card.data.capability.video ? ' · video' : ''}
+          </p>
+        )}
+
         {card.pending && (
           <p className="rounded-lg bg-[var(--color-accent)]/60 px-3 py-2 text-[11px] text-[var(--color-foreground)]">
             {card.pending}
@@ -457,6 +475,12 @@ function Tarjeta({
                     {abierto ? 'Cerrar' : 'Ajustar'}
                   </Button>
                 )}
+                {card.via === 'composio' &&
+                  ['facebook', 'instagram', 'linkedin', 'twitter'].includes(card.id) && (
+                    <Button size="sm" variant="outline" disabled={trabajando} onClick={onCambiarCuenta}>
+                      Cambiar cuenta
+                    </Button>
+                  )}
                 <Button size="sm" variant="ghost" disabled={trabajando} onClick={onDesconectar}>
                   Quitar
                 </Button>

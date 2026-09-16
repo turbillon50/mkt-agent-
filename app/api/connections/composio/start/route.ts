@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
   const projectId = String(body?.project ?? '');
   // `canal` es como lo llamaba la corrida 3; se acepta para no romper nada.
   const toolkit = String(body?.toolkit ?? body?.canal ?? '');
+  const replace = body?.replace === true;
 
   const connector = connectorBySlug(toolkit);
   if (!connector || connector.via !== 'composio') {
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
       connectedBy: gate.ctx.clerkUserId,
       userId: gate.ctx.user.id,
       baseUrl: appOrigin(req),
+      replace,
     });
 
     await logProjectEvent({
@@ -57,7 +59,11 @@ export async function POST(req: NextRequest) {
       type: 'channel_connected',
       actor: gate.ctx.clerkUserId,
       actorEmail: gate.ctx.user.email,
-      payload: { canal: toolkit, paso: 'permiso solicitado', cuenta: connectedAccountId },
+      payload: {
+        canal: toolkit,
+        paso: replace ? 'cambio de cuenta solicitado' : 'permiso solicitado',
+        cuenta: connectedAccountId,
+      },
     });
 
     if (alreadyConnected) return NextResponse.json({ alreadyConnected: true });

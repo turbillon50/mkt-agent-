@@ -118,6 +118,8 @@ export interface StartInput {
   baseUrl: string;
   /** Token del enlace de un solo uso, cuando la conexión la hace alguien de fuera. */
   linkToken?: string | null;
+  /** Revoca la cuenta actual y abre OAuth para elegir otra. Solo tras confirmación explícita. */
+  replace?: boolean;
 }
 
 export interface StartResult {
@@ -160,7 +162,7 @@ export async function startComposioConnection(input: StartInput): Promise<StartR
     toolkitSlug: c.slug,
   }).catch(() => [] as ConnectedAccount[]);
   const activa = previas.find((a) => a.status === 'ACTIVE');
-  if (activa) {
+  if (activa && !input.replace) {
     await saveConnection({
       orgId: input.project.orgId,
       projectId: input.project.id,
@@ -198,6 +200,7 @@ export async function startComposioConnection(input: StartInput): Promise<StartR
     connectedBy: input.connectedBy,
     userId: input.userId ?? null,
     status: 'connecting',
+    resetIdentity: input.replace === true,
     metadata: {
       connected_account_id: link.connected_account_id,
       auth_config_id: auth.authConfigId,

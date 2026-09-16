@@ -7,11 +7,13 @@
  * argumentos también: `required` e `input_parameters` de cada tool.
  */
 import type { Project } from '../db/schema';
+import { assertPublicMediaUrl } from './media-url';
 import {
   cuerpo,
   proxy,
   proxyConEncabezados,
   run,
+  runWithFiles,
   verifyChannel,
   type ChannelAdapter,
   type PublishInput,
@@ -263,8 +265,33 @@ export const twitter: ChannelAdapter = {
   verify: (project) => verifyChannel(project, 'twitter'),
 
   async publish(project: Project, input: PublishInput): Promise<PublishResult> {
+    const mediaIds: string[] = [];
+    if (input.media) {
+      assertPublicMediaUrl(input.media);
+      const subida: any = cuerpo(
+        await runWithFiles(
+          project,
+          'twitter',
+          'TWITTER_UPLOAD_MEDIA',
+          { media: input.media, media_category: 'tweet_image' },
+          '20260812_00',
+        ),
+      );
+      const mediaId =
+        subida?.media_id_string ??
+        subida?.media_id ??
+        subida?.data?.media_id_string ??
+        subida?.data?.media_id ??
+        subida?.id;
+      if (!mediaId) throw new Error('X recibió la imagen, pero no devolvió su identificador.');
+      mediaIds.push(String(mediaId));
+    }
+
     const data: any = cuerpo(
-      await run(project, 'twitter', 'TWITTER_CREATION_OF_A_POST', { text: input.texto }),
+      await run(project, 'twitter', 'TWITTER_CREATION_OF_A_POST', {
+        text: input.texto,
+        ...(mediaIds.length ? { media_media_ids: mediaIds } : {}),
+      }),
     );
     const id = data?.id ?? data?.data?.id ?? null;
     return { toolkit: 'twitter', id, url: id ? `https://x.com/i/status/${id}` : null };

@@ -182,12 +182,37 @@ function baseCard(c: Connector, account: SocialAccount | null, opts: CardOptions
  */
 function composioCard(c: Connector, account: SocialAccount | null, opts: CardOptions): ChannelCard {
   const base = baseCard(c, account, opts);
-  const meta = (account?.metadata ?? {}) as { motivo?: string; connected_account_id?: string };
+  const meta = (account?.metadata ?? {}) as {
+    motivo?: string;
+    connected_account_id?: string;
+    public_identity?: Record<string, unknown>;
+    publish_capability?: { ready?: boolean; reason?: string | null; text?: boolean; image?: boolean; video?: boolean; checkedAt?: string };
+  };
   const status = (account?.status ?? 'disconnected') as AccountStatus;
 
   if (status === 'connected') {
     if (verificacionFresca(account?.verifiedAt, opts.ahora)) {
-      return { ...base, state: 'conectado', detail: account?.label ?? account?.externalHandle ?? null };
+      if (meta.publish_capability?.ready === false) {
+        return {
+          ...base,
+          state: 'reconectar',
+          detail: account?.externalHandle ?? account?.label ?? null,
+          pending: meta.publish_capability.reason ?? 'La cuenta está conectada, pero no puede publicar.',
+          data: {
+            identity: meta.public_identity ?? null,
+            capability: meta.publish_capability,
+          },
+        };
+      }
+      return {
+        ...base,
+        state: 'conectado',
+        detail: account?.externalHandle ?? account?.label ?? null,
+        data: {
+          identity: meta.public_identity ?? null,
+          capability: meta.publish_capability ?? null,
+        },
+      };
     }
     // Hubo conexión pero hace más de un día que nadie la confirma. No se pinta
     // de verde: verde es una promesa, y esta no tiene con qué respaldarse.
@@ -562,6 +587,10 @@ export async function projectConnections(
       apagados: r.apagados,
       ...(r.error ? { error: r.error } : {}),
     };
+
+    // OAuth ACTIVE no alcanza: se comprueba identidad y capacidad de publicar.
+    const { refreshPublishingCapabilities } = await import('./publishing-capabilities');
+    await refreshPublishingCapabilities(project).catch(() => undefined);
   }
 
   const [accounts, logos] = await Promise.all([
@@ -667,6 +696,8 @@ export async function stageConnection(input: {
   userId?: string | null;
   metadata: Record<string, unknown>;
   status?: AccountStatus;
+  /** Al cambiar de cuenta, no heredar identidad ni tokens de la anterior. */
+  resetIdentity?: boolean;
 }): Promise<void> {
   const now = new Date();
   const status = input.status ?? 'disconnected';
@@ -687,7 +718,12 @@ export async function stageConnection(input: {
       .update(socialAccounts)
       .set({
         status,
-        metadata: { ...(existing[0].metadata ?? {}), ...input.metadata },
+        metadata: input.resetIdentity
+          ? input.metadata
+          : { ...(existing[0].metadata ?? {}), ...input.metadata },
+        ...(input.resetIdentity
+          ? { label: null, externalHandle: null, externalId: null, verifiedAt: null }
+          : {}),
         connectedBy: input.connectedBy,
         updatedAt: now,
       })

@@ -26,6 +26,7 @@ export async function guardarLote(input: {
   red: RedSlug;
   brief: string;
   resultado: ResultadoMotor;
+  metadata?: Record<string, unknown>;
 }): Promise<CreativePiece[]> {
   const { project, kit, red, brief, resultado } = input;
   if (resultado.piezas.length === 0) return [];
@@ -53,6 +54,7 @@ export async function guardarLote(input: {
           angulo: p.angulo,
           nota: p.nota,
           notaCompositor: resultado.notaCompositor,
+          ...(input.metadata ?? {}),
         },
       })),
     )
