@@ -15,6 +15,8 @@ export function LandingFooter() {
           <Link href="/sign-up" className="hover:text-[var(--color-foreground)]">Crear cuenta</Link>
           <a href="#features" className="hover:text-[var(--color-foreground)]">Funciones</a>
           <a href="#pricing" className="hover:text-[var(--color-foreground)]">Precio</a>
+          <Link href="/terminos" className="hover:text-[var(--color-foreground)]">Términos</Link>
+          <Link href="/privacidad" className="hover:text-[var(--color-foreground)]">Privacidad</Link>
           <a
             href="https://wa.me/529984292748"
             className="hover:text-[var(--color-primary)]"
