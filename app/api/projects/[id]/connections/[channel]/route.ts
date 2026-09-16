@@ -8,7 +8,9 @@ import {
   saveConnection,
 } from '@/src/projects/connections';
 import { logProjectEvent } from '@/src/projects/events';
-import { channelSpec, isConnectionChannel, type ConnectionChannel } from '@/src/projects/types';
+import { connectorBySlug, connectorMode } from '@/src/projects/catalog';
+import { revokeComposioConnection } from '@/src/projects/composio-connections';
+import { isConnectionChannel, type ConnectionChannel } from '@/src/projects/types';
 import { sanitizeChannels, sanitizeMcpSources } from '@/src/sales/projects';
 
 export const runtime = 'nodejs';
@@ -31,8 +33,7 @@ export async function POST(
   if (!gate.ok) return gate.res;
   const { orgId, project, clerkUserId, user } = gate.ctx;
 
-  const spec = channelSpec(channel);
-  if (spec.mode === 'oauth') {
+  if (connectorMode(channel) === 'oauth') {
     return NextResponse.json(
       { error: 'este canal se conecta desde su propia ventana' },
       { status: 400 },
@@ -167,7 +168,17 @@ export async function DELETE(
   if (!gate.ok) return gate.res;
   const { orgId, project, clerkUserId, user } = gate.ctx;
 
-  await revokeConnection(orgId, id, channel);
+  // Lo de Composio se borra TAMBIÉN allá. Quitarlo solo de nuestra tabla
+  // dejaría al cliente con un permiso vivo en Facebook que Goossip ya no
+  // enseña: lo peor de los dos mundos.
+  let borradaEnComposio = false;
+  if (connectorBySlug(channel)?.via === 'composio') {
+    ({ borradaEnComposio } = await revokeComposioConnection(project, channel).catch(() => ({
+      borradaEnComposio: false,
+    })));
+  } else {
+    await revokeConnection(orgId, id, channel);
+  }
 
   // Los ids públicos que vivían en el proyecto también se van: dejarlos haría
   // que el webhook siguiera resolviendo a un proyecto ya desconectado.
@@ -195,7 +206,7 @@ export async function DELETE(
     type: 'channel_revoked',
     actor: clerkUserId,
     actorEmail: user.email,
-    payload: { canal: channel },
+    payload: { canal: channel, en_composio: borradaEnComposio },
   });
 
   const fresh = await apiProject(id, { section: 'conexiones' });

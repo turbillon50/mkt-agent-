@@ -167,120 +167,50 @@ export const PROJECT_EVENT_LABEL: Record<ProjectEventType, string> = {
 // ---------------------------------------------------------------------------
 
 /**
- * Orden por VALOR para quien vende, no por orden alfabético ni por cuál fue más
- * fácil de programar: Meta trae los leads, WhatsApp los atiende, y de ahí para
- * abajo.
+ * El catálogo vive en `catalog.ts` desde la corrida 5 — una sola lista con los
+ * 21 conectores de Composio y los tres propios de Goossip. Aquí solo se
+ * reexporta lo que el resto de la app ya nombraba así, para que agregar un
+ * conector siga siendo tocar UN archivo.
  */
-export const CONNECTION_CHANNELS = [
-  'meta',
-  'whatsapp',
-  'google',
-  'linkedin',
-  'x',
-  'tiktok',
-  'sitio',
-  'mcp',
+export {
+  CONNECTORS,
+  CONNECTOR_GROUPS,
+  CONNECTOR_GROUP_LABEL,
+  CONNECTOR_GROUP_BLURB,
+  activeConnectors,
+  connectorBySlug,
+  connectorMode,
+  connectorShareable,
+  connectorOrThrow as channelSpec,
+  isCatalogSlug as isConnectionChannel,
+  metaOwnAppEnabled,
+  defaultLogo,
+  type Connector,
+  type ConnectorGroup,
+  type ConnectionMode,
+} from './catalog';
+import type { ConnectorSlug } from './catalog';
+
+/** El canal de una conexión: un slug del catálogo. */
+export type ConnectionChannel = ConnectorSlug;
+
+/**
+ * UN solo sistema de etiquetas en toda la app. La corrida 5 suma `reconectar`,
+ * que no es cosmético: una cuenta que el cliente revocó desde Facebook no está
+ * "sin conectar" —hubo algo y se cayó— y pintarla igual que una que nunca se
+ * enganchó esconde justo el problema que hay que arreglar.
+ */
+export const CONNECTION_STATES = [
+  'conectado',
+  'sin_conectar',
+  'reconectar',
+  'proximamente',
 ] as const;
-export type ConnectionChannel = (typeof CONNECTION_CHANNELS)[number];
-
-export function isConnectionChannel(value: unknown): value is ConnectionChannel {
-  return CONNECTION_CHANNELS.includes(value as ConnectionChannel);
-}
-
-/**
- * Cómo se conecta cada canal:
- *   oauth     — el usuario da permiso en la ventana del proveedor
- *   datos     — el usuario escribe un id público (WhatsApp, MCP)
- *   automatico— Goossip genera la conexión sola (el webhook del sitio)
- */
-export type ConnectionMode = 'oauth' | 'datos' | 'automatico';
-
-export interface ChannelSpec {
-  id: ConnectionChannel;
-  /** Lo que lee el usuario. Nada de nombres internos. */
-  label: string;
-  /** Una línea en español, sin jerga de desarrollo. */
-  description: string;
-  mode: ConnectionMode;
-  /** Se puede compartir por enlace de conexión a alguien de fuera. */
-  shareable: boolean;
-}
-
-export const CHANNEL_SPECS: readonly ChannelSpec[] = [
-  {
-    id: 'meta',
-    label: 'Facebook e Instagram',
-    description: 'Tus páginas y los formularios de anuncios. De aquí entran los leads.',
-    mode: 'oauth',
-    shareable: true,
-  },
-  {
-    id: 'whatsapp',
-    label: 'WhatsApp',
-    description: 'El número por el que tu vendedor contesta.',
-    mode: 'datos',
-    shareable: false,
-  },
-  {
-    id: 'google',
-    label: 'Google',
-    description: 'Correo y calendario para agendar citas.',
-    mode: 'oauth',
-    shareable: true,
-  },
-  {
-    id: 'linkedin',
-    label: 'LinkedIn',
-    description: 'Tu perfil o la página de la empresa.',
-    mode: 'oauth',
-    shareable: true,
-  },
-  {
-    id: 'x',
-    label: 'X',
-    description: 'La cuenta con la que publicas.',
-    mode: 'oauth',
-    shareable: true,
-  },
-  {
-    id: 'tiktok',
-    label: 'TikTok',
-    description: 'La cuenta con la que publicas.',
-    mode: 'oauth',
-    shareable: true,
-  },
-  {
-    id: 'sitio',
-    label: 'Tu sitio web',
-    description: 'Los formularios de tu página entran directo al pipeline.',
-    mode: 'automatico',
-    shareable: false,
-  },
-  {
-    id: 'mcp',
-    label: 'Tu catálogo',
-    description: 'Para que el vendedor cotice con precios y unidades reales.',
-    mode: 'datos',
-    shareable: false,
-  },
-];
-
-export function channelSpec(id: ConnectionChannel): ChannelSpec {
-  const spec = CHANNEL_SPECS.find((c) => c.id === id);
-  if (!spec) throw new Error(`Canal desconocido: ${id}`);
-  return spec;
-}
-
-/**
- * UN solo sistema de etiquetas en toda la app. Antes convivían "conectado",
- * "próximo", "en configuración", "soon" y puntitos de colores; ahora hay tres
- * estados y nada más.
- */
-export const CONNECTION_STATES = ['conectado', 'sin_conectar', 'proximamente'] as const;
 export type ConnectionState = (typeof CONNECTION_STATES)[number];
 
 export const CONNECTION_STATE_LABEL: Record<ConnectionState, string> = {
   conectado: 'Conectado',
   sin_conectar: 'Sin conectar',
+  reconectar: 'Reconectar',
   proximamente: 'Próximamente',
 };

@@ -17,8 +17,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const gate = await apiProject(id, { section: 'conexiones' });
   if (!gate.ok) return gate.res;
 
+  // `verificar` pregunta a Composio por cada cuenta ANTES de contestar: abrir
+  // la pantalla es el único momento en que alguien va a creerle al verde, así
+  // que es el momento de merecerlo. Regla del issue #33.
   const [connections, eventos] = await Promise.all([
-    projectConnections(gate.ctx.project),
+    projectConnections(gate.ctx.project, { verificar: true }),
     listProjectEvents(gate.ctx.orgId, id, 12),
   ]);
 

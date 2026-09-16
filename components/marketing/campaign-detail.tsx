@@ -14,7 +14,7 @@ import {
   type CampaignStatus,
   type CampaignSummary,
 } from '@/src/marketing/types';
-import { CHANNEL_SPECS } from '@/src/projects/types';
+import { CONNECTORS } from '@/src/projects/types';
 import { LEAD_STAGE_LABEL_ONE, type LeadStage } from '@/src/sales/types';
 import { CampaignStatusPill, formatBudget, formatWindow } from './campaign-bits';
 
@@ -135,7 +135,7 @@ export function CampaignDetail({
                 key={ch}
                 className="rounded-md bg-[var(--color-muted)] px-2 py-0.5 text-xs text-[var(--color-muted-foreground)]"
               >
-                {CHANNEL_SPECS.find((s) => s.id === ch)?.label ?? ch}
+                {CONNECTORS.find((s) => s.slug === ch)?.label ?? ch}
               </span>
             ))}
           </div>

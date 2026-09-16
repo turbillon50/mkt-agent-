@@ -1,0 +1,162 @@
+/**
+ * Lo común a todos los adaptadores de canal.
+ *
+ * Un adaptador NO habla con la API del proveedor: habla con Composio con el
+ * `user_id` del PROYECTO. Así ninguna acción de Goossip necesita un token
+ * nuestro ni una app de developer propia, y la cuenta que se usa es siempre la
+ * que el cliente autorizó para ESE proyecto.
+ *
+ * Regla de la corrida 5: si no hay cuenta viva, la acción NO se intenta y se
+ * dice en español qué falta. Fallar con el 401 crudo del proveedor es lo que
+ * había antes y es lo que no se entiende.
+ */
+import type { Project } from '../db/schema';
+import { executeTool, proxyExecute, type ToolResult } from '../composio/client';
+import { activeAccountFor, verifyAccount } from '../projects/composio-connections';
+import { composioAccountsOf } from '../projects/composio-connections';
+import { connectorOrThrow } from '../projects/catalog';
+
+export class CanalNoConectado extends Error {
+  constructor(readonly toolkit: string) {
+    super(`Conecta ${connectorOrThrow(toolkit).label} en Conexiones para poder hacer esto.`);
+    this.name = 'CanalNoConectado';
+  }
+}
+
+export interface Cuenta {
+  connectedAccountId: string;
+  userId: string;
+}
+
+export async function cuentaDe(project: Project, toolkit: string): Promise<Cuenta> {
+  const cuenta = await activeAccountFor(project, toolkit);
+  if (!cuenta) throw new CanalNoConectado(toolkit);
+  return cuenta;
+}
+
+/**
+ * El cuerpo útil de una respuesta de Composio.
+ *
+ * Muchos toolkits devuelven `{ response_data: { … } }` y otros el objeto pelón.
+ * Sin esto, leer `data.records` de Airtable da `undefined` y la importación
+ * trae cero documentos sin que nadie se entere — pasó, y por eso existe esta
+ * función y la prueba que la cuida.
+ */
+export function cuerpo<T = any>(data: any): T {
+  return (data?.response_data ?? data) as T;
+}
+
+/** Ejecuta una tool de Composio con la cuenta del proyecto. */
+export async function run<T = any>(
+  project: Project,
+  toolkit: string,
+  slug: string,
+  args: Record<string, unknown> = {},
+): Promise<T> {
+  const cuenta = await cuentaDe(project, toolkit);
+  const res: ToolResult<T> = await executeTool<T>(slug, {
+    userId: cuenta.userId,
+    connectedAccountId: cuenta.connectedAccountId,
+    arguments: args,
+  });
+  return (res.data ?? res) as T;
+}
+
+/**
+ * Llamada cruda a la API del proveedor con las credenciales que pone Composio.
+ * Solo donde el toolkit no trae tool para lo que Goossip necesita — hoy:
+ * formularios de lead ads de Facebook y el `search` de Google Ads.
+ */
+export async function proxy(
+  project: Project,
+  toolkit: string,
+  input: {
+    endpoint: string;
+    method: 'GET' | 'POST' | 'DELETE';
+    body?: unknown;
+    parameters?: Array<{ name: string; value: string; type: 'header' | 'query' }>;
+  },
+): Promise<any> {
+  const cuenta = await cuentaDe(project, toolkit);
+  return proxyExecute({ connectedAccountId: cuenta.connectedAccountId, ...input });
+}
+
+export interface ChannelStatus {
+  toolkit: string;
+  conectado: boolean;
+  estado: string;
+  motivo?: string;
+}
+
+/**
+ * `verify()` de un canal: le pregunta a Composio, no a nuestra base. Preguntar
+ * a la base contesta lo que nosotros escribimos la última vez, no lo que pasa
+ * en la cuenta del cliente.
+ */
+export async function verifyChannel(project: Project, toolkit: string): Promise<ChannelStatus> {
+  const cuentas = await composioAccountsOf(project);
+  const fila = cuentas.find((c) => c.platform === toolkit);
+  if (!fila) return { toolkit, conectado: false, estado: 'SIN_CONECTAR' };
+  const r = await verifyAccount(project, fila);
+  return { toolkit, conectado: r.ok, estado: r.status, motivo: r.motivo };
+}
+
+/** Lo que devuelve cualquier acción de publicar. */
+export interface PublishInput {
+  texto: string;
+  /** URL pública de la imagen o el video, cuando el canal lo admite. */
+  media?: string | null;
+  /** Enlace que acompaña al texto (Facebook, LinkedIn). */
+  link?: string | null;
+  /** Id de la página, canal o cuenta cuando el canal pide elegir. */
+  target?: string | null;
+}
+
+export interface PublishResult {
+  toolkit: string;
+  id: string | null;
+  url: string | null;
+}
+
+export interface KnowledgeDoc {
+  id: string;
+  titulo: string;
+  contenido: string;
+  fuente: string;
+}
+
+export interface ChannelAdapter {
+  toolkit: string;
+  /** Siempre: ¿sigue viva la cuenta del proyecto? */
+  verify(project: Project): Promise<ChannelStatus>;
+  /** Publicar un post. */
+  publish?(project: Project, input: PublishInput): Promise<PublishResult>;
+  /** Leer campañas, gasto y resultados de pauta. */
+  readCampaigns?(project: Project, input?: Record<string, unknown>): Promise<unknown>;
+  /** Leer filas o registros (hojas, bases). */
+  readRows?(project: Project, input: Record<string, unknown>): Promise<unknown>;
+  /** Traer documentos para la base de conocimiento. */
+  readDocs?(project: Project, input?: Record<string, unknown>): Promise<KnowledgeDoc[]>;
+  /** Contactos del CRM, en los dos sentidos. */
+  readContacts?(project: Project, input?: Record<string, unknown>): Promise<unknown>;
+  writeContact?(project: Project, input: Record<string, unknown>): Promise<unknown>;
+  /** Agenda. */
+  createEvent?(project: Project, input: Record<string, unknown>): Promise<unknown>;
+  /** Correo. */
+  sendEmail?(project: Project, input: { to: string; subject: string; body: string; html?: boolean }): Promise<unknown>;
+  /** Aviso al equipo. */
+  notify?(project: Project, input: { canal: string; texto: string }): Promise<unknown>;
+  /** Leads de formularios de anuncios. */
+  fetchLeads?(project: Project, input: { formIds: string[]; desde?: Date }): Promise<RawLead[]>;
+}
+
+/** Un lead tal como lo devuelve el proveedor, antes de entrar al pipeline. */
+export interface RawLead {
+  leadgenId: string;
+  formId: string;
+  createdAt: Date;
+  fullName: string | null;
+  phone: string | null;
+  email: string | null;
+  raw: Record<string, unknown>;
+}

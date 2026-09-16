@@ -4,7 +4,7 @@ import { IconFacebook, IconLogoMark } from '@/components/icons';
 import { isClerkConfigured } from '@/lib/clerk-config';
 import { currentUserOrNull } from '@/lib/users';
 import { resolveConnectionLink, type LinkProblem } from '@/src/projects/links';
-import { channelSpec } from '@/src/projects/types';
+import { channelSpec, defaultLogo } from '@/src/projects/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,23 +57,37 @@ export default async function ConectarPage({ params }: { params: Promise<{ token
   const spec = channelSpec(link.channel);
   const user = isClerkConfigured() ? await currentUserOrNull() : null;
 
+  // Todo lo del catálogo se conecta por Composio. El camino viejo de la app
+  // propia de Meta sigue ahí para los proyectos que ya lo usaban, detrás de su
+  // bandera: no se borra, se deja de usar.
+  const arranque =
+    spec.via === 'composio'
+      ? `/api/connections/composio/start?link=${encodeURIComponent(token)}&toolkit=${encodeURIComponent(link.channel)}`
+      : `/api/connections/meta/start?link=${encodeURIComponent(token)}`;
+
   return (
     <Marco>
       <h1 className="text-xl font-semibold">
         Conecta {spec.label} a {project.name}
       </h1>
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Das permiso a tu página y listo. No vas a ver ni administrar nada más de {project.name}, y
-        puedes quitar el permiso cuando quieras desde tu cuenta de Facebook.
+        Das permiso a tu cuenta y listo. No vas a ver ni administrar nada más de {project.name}, y
+        puedes quitar el permiso cuando quieras.
       </p>
 
       {user ? (
         <a
-          href={`/api/connections/meta/start?link=${encodeURIComponent(token)}`}
+          href={arranque}
           className="btn-brand inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
         >
-          <IconFacebook className="h-4 w-4" />
-          Continuar con Facebook
+          {spec.via === 'composio' ? (
+            // El logo sale del catálogo de Composio: así el botón enseña la
+            // marca de verdad y no el de Facebook para todo.
+            <img src={defaultLogo(spec.slug)} alt="" className="h-4 w-4 rounded-sm bg-white" />
+          ) : (
+            <IconFacebook className="h-4 w-4" />
+          )}
+          Continuar con {spec.label}
         </a>
       ) : isClerkConfigured() ? (
         <div className="space-y-2">

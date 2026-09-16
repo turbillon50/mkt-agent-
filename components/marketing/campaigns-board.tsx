@@ -17,7 +17,7 @@ import {
   type CampaignStatus,
   type CampaignSummary,
 } from '@/src/marketing/types';
-import { CHANNEL_SPECS, type ConnectionChannel } from '@/src/projects/types';
+import { CONNECTORS, type ConnectionChannel } from '@/src/projects/types';
 import { CampaignStatusPill, formatBudget, formatWindow } from './campaign-bits';
 
 /**
@@ -171,7 +171,7 @@ function TarjetaCampana({
       <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-muted-foreground)]">
         {campana.channels.map((ch) => (
           <span key={ch} className="rounded-md bg-[var(--color-muted)] px-1.5 py-0.5">
-            {CHANNEL_SPECS.find((s) => s.id === ch)?.label ?? ch}
+            {CONNECTORS.find((s) => s.slug === ch)?.label ?? ch}
           </span>
         ))}
         {campana.budget !== null && <span>{formatBudget(campana.budget)}</span>}
@@ -287,14 +287,14 @@ function NuevaCampana({
         <fieldset className="space-y-1.5">
           <legend className="text-xs font-medium">¿Dónde corre?</legend>
           <div className="flex flex-wrap gap-1.5">
-            {CHANNEL_SPECS.map((spec) => {
-              const elegido = canales.includes(spec.id);
-              const conectado = canalesConectados.includes(spec.id);
+            {CONNECTORS.map((spec) => {
+              const elegido = canales.includes(spec.slug);
+              const conectado = canalesConectados.includes(spec.slug);
               return (
                 <button
-                  key={spec.id}
+                  key={spec.slug}
                   type="button"
-                  onClick={() => setCanales((c) => alternar(c, spec.id))}
+                  onClick={() => setCanales((c) => alternar(c, spec.slug))}
                   className={cn(
                     'rounded-lg border px-2.5 py-1 text-xs transition-colors',
                     elegido

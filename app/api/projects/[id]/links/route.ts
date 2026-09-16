@@ -7,7 +7,7 @@ import {
   linkState,
   listConnectionLinks,
 } from '@/src/projects/links';
-import { channelSpec, isConnectionChannel } from '@/src/projects/types';
+import { channelSpec, connectorShareable, isConnectionChannel } from '@/src/projects/types';
 import { channelAvailable } from '@/src/projects/connections';
 import { appOrigin } from '@/app/api/connections/meta/start/route';
 
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'canal desconocido' }, { status: 400 });
   }
   const spec = channelSpec(canal);
-  if (!spec.shareable || !channelAvailable(canal)) {
+  if (!connectorShareable(canal) || !channelAvailable(canal)) {
     return NextResponse.json(
       { error: `${spec.label} no se puede conectar por enlace.` },
       { status: 400 },
