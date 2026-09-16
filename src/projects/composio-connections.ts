@@ -93,7 +93,11 @@ export function handleDeCuenta(account: ConnectedAccount): string | null {
 function connectorComposio(slug: string): Connector {
   const c = connectorOrThrow(slug);
   if (c.via !== 'composio') throw new Error(`${c.label} no se conecta por Composio.`);
-  if (!c.managed) throw new Error(`${c.label} todavía no se puede conectar.`);
+  // Sin app administrada también se puede conectar si Luis dio de alta la app
+  // propia en Composio (channelAvailable lo decide por COMPOSIO_CUSTOM_AUTH_TOOLKITS).
+  if (!c.managed && !channelAvailable(c.slug as ConnectionChannel)) {
+    throw new Error(`${c.label} todavía no se puede conectar.`);
+  }
   return c;
 }
 
