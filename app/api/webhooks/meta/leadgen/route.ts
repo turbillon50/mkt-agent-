@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fetchLeadgen, parseLeadgenWebhook, verifyChallenge, verifySignature } from '@/lib/meta-graph';
 import { resolveProjectByMeta } from '@/lib/projects';
 import { ingestLead } from '@/src/sales/ingest';
+import { logWebhook } from '@/src/orgs/repo';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
   // Hay que leer el cuerpo CRUDO: la firma es sobre los bytes exactos.
   const raw = await req.text();
   if (!verifySignature(raw, req.headers.get('x-hub-signature-256'), appSecret)) {
+    await logWebhook({ source: 'meta', event: 'leadgen', status: 'rejected', detail: 'firma inválida' });
     return NextResponse.json({ error: 'firma inválida' }, { status: 401 });
   }
 
@@ -39,6 +41,12 @@ export async function POST(req: NextRequest) {
       // 200 a propósito: si devolvemos error, Meta reintenta en bucle un lead
       // que nunca vamos a poder colocar. Queda registrado en la respuesta.
       results.push({ leadgen_id: change.leadgenId, error: 'ningún proyecto tiene esa página o formulario' });
+      await logWebhook({
+        source: 'meta',
+        event: 'leadgen',
+        status: 'error',
+        detail: `sin proyecto para page_id=${change.pageId ?? '?'} form_id=${change.formId ?? '?'}`,
+      });
       continue;
     }
 
@@ -65,13 +73,16 @@ export async function POST(req: NextRequest) {
         lookup: r.lookup,
         ms: Date.now() - t0,
       });
+      await logWebhook({ source: 'meta', event: 'leadgen', status: 'ok', orgId: project.orgId });
     } catch (e) {
+      const detail = e instanceof Error ? e.message : 'error';
       results.push({
         leadgen_id: change.leadgenId,
         project: project.slug,
-        error: e instanceof Error ? e.message : 'error',
+        error: detail,
         ms: Date.now() - t0,
       });
+      await logWebhook({ source: 'meta', event: 'leadgen', status: 'error', detail, orgId: project.orgId });
     }
   }
 

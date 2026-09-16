@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { CampaignEditForm } from '@/components/campaigns/edit-form';
 import { CampaignActions } from '@/components/campaigns/actions';
-import { getOrCreateUser } from '@/lib/users';
+import { orgContextOrNull } from '@/lib/org';
 import { getCampaign } from '@/lib/campaigns';
 import { formatDate } from '@/lib/utils';
 
@@ -13,12 +13,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await getOrCreateUser();
-  if (!user) notFound();
-  const campaign = await getCampaign(user.id, id);
+  const ctx = await orgContextOrNull();
+  if (!ctx) notFound();
+  const campaign = await getCampaign(ctx.orgId, id);
   if (!campaign) notFound();
 
-  const isActive = user.activeCampaignId === campaign.id;
+  const isActive = ctx.activeProjectId === campaign.id;
 
   return (
     <div className="space-y-6">

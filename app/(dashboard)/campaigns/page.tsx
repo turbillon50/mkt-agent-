@@ -3,7 +3,7 @@ import { IconPlus, IconCheckCircle } from '@/components/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CreateCampaignForm } from '@/components/campaigns/create-form';
-import { getOrCreateUser } from '@/lib/users';
+import { orgContextOrNull } from '@/lib/org';
 import { listCampaigns } from '@/lib/campaigns';
 import { formatDate } from '@/lib/utils';
 
@@ -11,9 +11,9 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function CampaignsPage() {
-  const user = await getOrCreateUser();
-  const items = user ? await listCampaigns(user.id) : [];
-  const activeId = user?.activeCampaignId ?? null;
+  const ctx = await orgContextOrNull();
+  const items = ctx ? await listCampaigns(ctx.orgId) : [];
+  const activeId = ctx?.activeProjectId ?? null;
 
   return (
     <div className="space-y-6">

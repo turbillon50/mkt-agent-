@@ -1,14 +1,12 @@
 import Link from 'next/link';
 import { IconPlus, IconFolder } from '@/components/icons';
 import { Card, CardContent } from '@/components/ui/card';
-import { getOrCreateUser } from '@/lib/users';
 import { listCampaigns } from '@/lib/campaigns';
 
-export async function ProjectsRow() {
+export async function ProjectsRow({ orgId }: { orgId: string | null }) {
   let campaigns: Awaited<ReturnType<typeof listCampaigns>> = [];
   try {
-    const user = await getOrCreateUser();
-    if (user) campaigns = await listCampaigns(user.id);
+    if (orgId) campaigns = await listCampaigns(orgId);
   } catch {
     campaigns = [];
   }

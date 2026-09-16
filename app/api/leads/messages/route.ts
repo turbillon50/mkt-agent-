@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrCreateUser } from '@/lib/users';
+import { apiOrg } from '@/lib/org';
 import { generateOutreachMessages } from '@/lib/leads';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const user = await getOrCreateUser();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  const gate = await apiOrg();
+  if (!gate.ok) return gate.res;
+  const { orgId, activeProjectId } = gate.ctx;
   try {
     const body = await req.json().catch(() => ({}));
     const leadIds = Array.isArray(body.leadIds) ? body.leadIds.filter((x: unknown) => typeof x === 'string') : [];
@@ -18,13 +19,13 @@ export async function POST(req: NextRequest) {
     }
 
     let brand: { name: string; voice?: string | null } | null = null;
-    if (user.activeCampaignId) {
-      const { getActiveCampaign } = await import('@/lib/campaigns');
-      const campaign = await getActiveCampaign(user.id);
+    if (activeProjectId) {
+      const { getCampaign } = await import('@/lib/campaigns');
+      const campaign = await getCampaign(orgId, activeProjectId);
       if (campaign) brand = { name: campaign.name, voice: campaign.brandVoice };
     }
 
-    const updated = await generateOutreachMessages(user.id, leadIds, prompt, brand);
+    const updated = await generateOutreachMessages(orgId, leadIds, prompt, brand);
     return NextResponse.json({ leads: updated });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'error' }, { status: 500 });

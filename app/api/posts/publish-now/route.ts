@@ -8,18 +8,25 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   let dbUser: { id: string; isAdmin: boolean } | null = null;
   let clerkUserId: string | null = null;
+  // `posts.org_id` es NOT NULL desde la migración 0013: sin org activa no hay
+  // dónde guardar la publicación.
+  let orgId: string | null = null;
 
   if (isClerkConfigured()) {
     try {
-      const { getOrCreateUser } = await import('@/lib/users');
-      const user = await getOrCreateUser();
-      if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-      dbUser = { id: user.id, isAdmin: user.isAdmin };
+      const { apiOrg } = await import('@/lib/org');
+      const gate = await apiOrg();
+      if (!gate.ok) return gate.res;
+      dbUser = { id: gate.ctx.user.id, isAdmin: gate.ctx.user.isAdmin };
+      orgId = gate.ctx.orgId;
       const { userId } = await auth();
       clerkUserId = userId;
     } catch {
       return NextResponse.json({ error: 'auth failed' }, { status: 401 });
     }
+  }
+  if (!orgId) {
+    return NextResponse.json({ error: 'sin organización activa' }, { status: 403 });
   }
 
   const body = await req.json().catch(() => ({}));
@@ -116,6 +123,7 @@ export async function POST(req: NextRequest) {
     const [row] = await db
       .insert(posts)
       .values({
+        orgId,
         platform,
         text,
         topic: topic ?? null,

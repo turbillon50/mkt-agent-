@@ -4,6 +4,7 @@ import { getPoster } from '../../posters/index';
 import { db } from '../../db/client';
 import { posts } from '../../db/schema';
 import { remember } from '../../memory/index';
+import { systemOrgId } from '../../orgs/system';
 
 export const publishPostTool = createTool({
   id: 'publish-post',
@@ -28,6 +29,7 @@ export const publishPostTool = createTool({
     const [row] = await db
       .insert(posts)
       .values({
+        orgId: await systemOrgId(),
         platform: input.platform,
         text: input.text,
         topic: input.topic ?? null,

@@ -6,7 +6,7 @@
  */
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db/client';
-import { campaigns, users, type Project } from '../db/schema';
+import { campaigns, orgMemberships, type Project } from '../db/schema';
 import {
   PROJECT_KINDS,
   resolveRules,
@@ -31,26 +31,34 @@ function slugify(input: string): string {
   );
 }
 
-/** Slug único dentro del tenant. Lo usa también lib/campaigns.ts. */
-export async function uniqueSlug(userId: string, base: string): Promise<string> {
+/**
+ * Slug único dentro de la ORG (antes era dentro del usuario). Lo respalda el
+ * índice `campaigns_org_slug_uniq` de la migración 0013.
+ */
+export async function uniqueSlug(orgId: string, base: string): Promise<string> {
   let slug = slugify(base);
   let i = 2;
   for (;;) {
     const existing = await db
       .select({ id: campaigns.id })
       .from(campaigns)
-      .where(and(eq(campaigns.userId, userId), eq(campaigns.slug, slug)))
+      .where(and(eq(campaigns.orgId, orgId), eq(campaigns.slug, slug)))
       .limit(1);
     if (existing.length === 0) return slug;
     slug = `${slugify(base)}-${i++}`;
   }
 }
 
-export async function setActiveProject(userId: string, projectId: string | null): Promise<void> {
+/** El proyecto activo se guarda por (user, org), no por usuario. */
+export async function setActiveProject(
+  orgId: string,
+  clerkUserId: string,
+  projectId: string | null,
+): Promise<void> {
   await db
-    .update(users)
-    .set({ activeCampaignId: projectId, updatedAt: new Date() })
-    .where(eq(users.id, userId));
+    .update(orgMemberships)
+    .set({ activeProjectId: projectId, updatedAt: new Date() })
+    .where(and(eq(orgMemberships.orgId, orgId), eq(orgMemberships.clerkUserId, clerkUserId)));
 }
 
 export interface ProjectInput {
@@ -139,19 +147,23 @@ export function sanitizeMcpSources(raw: unknown): McpSource[] {
     .slice(0, 10);
 }
 
-export async function listProjects(userId: string): Promise<Project[]> {
+export async function listProjects(orgId: string): Promise<Project[]> {
   return db
     .select()
     .from(campaigns)
-    .where(eq(campaigns.userId, userId))
+    .where(eq(campaigns.orgId, orgId))
     .orderBy(campaigns.createdAt);
 }
 
-export async function getProject(userId: string, id: string): Promise<Project | null> {
+/**
+ * El proyecto SIEMPRE se pide con su org. Sin este `and` un id adivinado de
+ * otra organización devolvería datos ajenos: es el candado del aislamiento.
+ */
+export async function getProject(orgId: string, id: string): Promise<Project | null> {
   const rows = await db
     .select()
     .from(campaigns)
-    .where(and(eq(campaigns.userId, userId), eq(campaigns.id, id)))
+    .where(and(eq(campaigns.orgId, orgId), eq(campaigns.id, id)))
     .limit(1);
   return rows[0] ?? null;
 }
@@ -162,12 +174,17 @@ export async function getProjectById(id: string): Promise<Project | null> {
   return rows[0] ?? null;
 }
 
-export async function createProject(userId: string, input: ProjectInput): Promise<Project> {
+export async function createProject(
+  orgId: string,
+  userId: string,
+  input: ProjectInput,
+): Promise<Project> {
   const name = input.name.trim();
-  const slug = await uniqueSlug(userId, name);
+  const slug = await uniqueSlug(orgId, name);
   const [row] = await db
     .insert(campaigns)
     .values({
+      orgId,
       userId,
       name,
       slug,
@@ -183,14 +200,11 @@ export async function createProject(userId: string, input: ProjectInput): Promis
     })
     .returning();
   if (!row) throw new Error('No se pudo crear el proyecto.');
-
-  const all = await listProjects(userId);
-  if (all.length === 1) await setActiveProject(userId, row.id);
   return row;
 }
 
 export async function updateProject(
-  userId: string,
+  orgId: string,
   id: string,
   input: Partial<ProjectInput> & { status?: string },
 ): Promise<Project | null> {
@@ -209,7 +223,7 @@ export async function updateProject(
   const [row] = await db
     .update(campaigns)
     .set(patch)
-    .where(and(eq(campaigns.userId, userId), eq(campaigns.id, id)))
+    .where(and(eq(campaigns.orgId, orgId), eq(campaigns.id, id)))
     .returning();
   return row ?? null;
 }

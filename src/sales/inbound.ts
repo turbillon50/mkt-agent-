@@ -49,6 +49,7 @@ export async function handleCloudInbound(
   if (!lead) {
     const scored = scoreLead({ fullName: msg.profileName ?? null, phone, createdAt: msg.timestamp });
     const created = await upsertLead({
+      orgId: project.orgId,
       userId: project.userId,
       campaignId: project.id,
       phone,
@@ -66,12 +67,14 @@ export async function handleCloudInbound(
 
   // --- conversación y mensaje ----------------------------------------------
   const conv = await getOrCreateConversation({
+    orgId: project.orgId,
     campaignId: project.id,
     leadId: lead.id,
     channel: 'whatsapp',
     externalThreadId: msg.from,
   });
   const stored = await insertMessage({
+    orgId: project.orgId,
     conversationId: conv.id,
     direction: 'inbound',
     body: msg.body,
@@ -84,7 +87,7 @@ export async function handleCloudInbound(
   }
 
   await touchInbound(conv.id, msg.timestamp);
-  await recordEvent({ leadId: lead.id, type: 'message_in', actor: 'lead', payload: { body: msg.body.slice(0, 500) } });
+  await recordEvent({ orgId: project.orgId, leadId: lead.id, type: 'message_in', actor: 'lead', payload: { body: msg.body.slice(0, 500) } });
   await moveStage(lead.id, 'contactado', 'goossip');
 
   // --- vendedor -------------------------------------------------------------
@@ -98,6 +101,7 @@ export async function handleCloudInbound(
   if (draft.escalate) {
     await setConversationStatus(conv.id, 'escalated');
     await enqueue({
+      orgId: project.orgId,
       campaignId: project.id,
       leadId: lead.id,
       kind: 'notify_owner',
@@ -110,6 +114,7 @@ export async function handleCloudInbound(
       createdBy: 'seller:escalacion',
     });
     await recordEvent({
+      orgId: project.orgId,
       leadId: lead.id,
       type: 'note',
       actor: 'goossip',
@@ -124,6 +129,7 @@ export async function handleCloudInbound(
   // --- ¿sale sola o se propone? --------------------------------------------
   if (!rules.auto_reply) {
     await enqueue({
+      orgId: project.orgId,
       campaignId: project.id,
       leadId: lead.id,
       kind: 'propose_reply',
@@ -146,6 +152,7 @@ export async function handleCloudInbound(
   if (!sent.ok) {
     // No se pudo mandar: se propone para que no se pierda el trabajo del vendedor.
     await enqueue({
+      orgId: project.orgId,
       campaignId: project.id,
       leadId: lead.id,
       kind: 'propose_reply',
@@ -159,6 +166,7 @@ export async function handleCloudInbound(
   }
 
   await insertMessage({
+    orgId: project.orgId,
     conversationId: conv.id,
     direction: 'outbound',
     body: draft.reply,
@@ -168,6 +176,7 @@ export async function handleCloudInbound(
   });
   await touchOutbound(conv.id, new Date());
   await recordEvent({
+    orgId: project.orgId,
     leadId: lead.id,
     type: 'message_out',
     actor: 'goossip',
@@ -198,6 +207,7 @@ export async function handleStatusUpdate(project: Project, s: StatusUpdate): Pro
 
   if (lead) {
     await recordEvent({
+      orgId: project.orgId,
       leadId: lead.id,
       type: 'note',
       actor: 'goossip',
@@ -207,6 +217,7 @@ export async function handleStatusUpdate(project: Project, s: StatusUpdate): Pro
 
   // Con Twilio pagado se intenta SMS; en trial se le avisa al dueño que marque.
   await enqueue({
+    orgId: project.orgId,
     campaignId: project.id,
     leadId: lead?.id ?? null,
     kind: rules.twilio_mode === 'paid' ? 'send_sms' : 'notify_owner',

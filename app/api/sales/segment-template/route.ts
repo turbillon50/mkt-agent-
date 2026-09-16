@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrCreateUser } from '@/lib/users';
+import { apiOrg } from '@/lib/org';
 import { getProject } from '@/lib/projects';
 import { activeProject } from '@/lib/sales';
 import { listLeadsByProject } from '@/src/sales/repo';
@@ -17,11 +17,14 @@ const MAX_SEGMENT = 200;
  * el número de WhatsApp ni se va sin que el dueño la vea.
  */
 export async function POST(req: NextRequest) {
-  const user = await getOrCreateUser();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  const gate = await apiOrg();
+  if (!gate.ok) return gate.res;
+  const { orgId, activeProjectId, user } = gate.ctx;
 
   const body = await req.json().catch(() => ({}));
-  const project = body?.projectId ? await getProject(user.id, body.projectId) : await activeProject(user);
+  const project = body?.projectId
+    ? await getProject(orgId, body.projectId)
+    : await activeProject(orgId, activeProjectId);
   if (!project) return NextResponse.json({ error: 'Primero crea un proyecto.' }, { status: 400 });
 
   const template = String(body?.template ?? resolveRules(project.rules).first_contact_template ?? '').trim();
@@ -49,6 +52,7 @@ export async function POST(req: NextRequest) {
   let enqueued = 0;
   for (const lead of targets) {
     const action = await enqueue({
+      orgId,
       campaignId: project.id,
       leadId: lead.id,
       kind: 'send_template',

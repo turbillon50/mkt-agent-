@@ -11,7 +11,7 @@
  *  3. Si `rules.auto_reply` es false, NO manda: propone y espera el tap del
  *     dueño en /automations.
  */
-import { desc, eq, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, isNull, or } from 'drizzle-orm';
 import { db } from '../db/client';
 import { knowledge, type Project, type SalesLead } from '../db/schema';
 import { chat } from '../openrouter';
@@ -56,7 +56,14 @@ async function projectKnowledge(project: Project, limit = 6): Promise<string[]> 
   const rows = await db
     .select({ title: knowledge.title, content: knowledge.content })
     .from(knowledge)
-    .where(or(eq(knowledge.campaignId, project.id), isNull(knowledge.campaignId)))
+    // La memoria nunca sale de la org: primero el proyecto, y como respaldo la
+    // knowledge sin proyecto DE ESA MISMA ORG.
+    .where(
+      and(
+        eq(knowledge.orgId, project.orgId),
+        or(eq(knowledge.campaignId, project.id), isNull(knowledge.campaignId)),
+      ),
+    )
     .orderBy(desc(knowledge.createdAt))
     .limit(limit)
     .catch(() => []);

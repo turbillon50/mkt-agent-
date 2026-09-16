@@ -71,6 +71,7 @@ export async function evaluateProject(project: Project, now = new Date()): Promi
     ) {
       const reason = `lead grado ${lead.grade} (${lead.score}) sin avisar al dueño`;
       const a = await enqueue({
+        orgId: project.orgId,
         campaignId: project.id,
         leadId: lead.id,
         kind: 'notify_owner',
@@ -95,6 +96,7 @@ export async function evaluateProject(project: Project, now = new Date()): Promi
     ) {
       const reason = `sin contacto ${Math.floor(ageH)} h (umbral ${rules.no_contact_hours} h)`;
       const a = await enqueue({
+        orgId: project.orgId,
         campaignId: project.id,
         leadId: lead.id,
         kind: 'send_template',
@@ -121,6 +123,7 @@ export async function evaluateProject(project: Project, now = new Date()): Promi
         ? `twilio_trial · sin respuesta ${Math.floor(silenceH)} h — esperando a que se abra la llave`
         : `sin respuesta ${Math.floor(silenceH)} h (umbral ${rules.no_reply_sms_hours} h)`;
       const a = await enqueue({
+        orgId: project.orgId,
         campaignId: project.id,
         leadId: lead.id,
         kind: 'send_sms',
@@ -141,6 +144,7 @@ export async function evaluateProject(project: Project, now = new Date()): Promi
     ) {
       const reason = `sin respuesta ${Math.floor(silenceH / 24)} d — propuesta de retargeting (falta Ads API)`;
       const a = await enqueue({
+        orgId: project.orgId,
         campaignId: project.id,
         leadId: lead.id,
         kind: 'retarget',

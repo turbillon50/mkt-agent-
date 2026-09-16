@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { listKnowledge } from '@/lib/data';
+import { orgContextOrNull } from '@/lib/org';
 import { formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,10 @@ export const revalidate = 0;
 
 async function ingestKnowledge(formData: FormData) {
   'use server';
+  // La memoria es de la ORG: sin org activa no se guarda nada (además
+  // `knowledge.org_id` es NOT NULL desde la migración 0013).
+  const ctx = await orgContextOrNull();
+  if (!ctx) return;
   const content = String(formData.get('content') ?? '').trim();
   const title = String(formData.get('title') ?? '').trim() || null;
   const source = String(formData.get('source') ?? '').trim() || null;
@@ -20,7 +25,7 @@ async function ingestKnowledge(formData: FormData) {
   const { remember } = await import('@/src/memory/index');
   const [row] = await db
     .insert(knowledge)
-    .values({ content, title, source })
+    .values({ orgId: ctx.orgId, content, title, source })
     .returning({ id: knowledge.id });
   if (row) {
     await remember({ refType: 'knowledge', refId: row.id, content, metadata: { title, source } });
@@ -32,7 +37,8 @@ export default async function KnowledgePage() {
   let rows: Awaited<ReturnType<typeof listKnowledge>> = [];
   let error: string | null = null;
   try {
-    rows = await listKnowledge();
+    const ctx = await orgContextOrNull();
+    rows = ctx ? await listKnowledge(ctx.orgId) : [];
   } catch (e) {
     error = e instanceof Error ? e.message : 'failed to load knowledge';
   }

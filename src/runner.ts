@@ -5,6 +5,7 @@ import { enabledPosters } from './posters/index';
 import { buildPlan, nextUnusedItem, markUsed } from './planner';
 import { remember } from './memory/index';
 import { config, type Platform } from './config';
+import { systemOrgId } from './orgs/system';
 
 function pickFallbackTopic(): string {
   const t = config.brand.topics;
@@ -53,6 +54,7 @@ export async function runOnce(opts: { dryRun?: boolean } = {}): Promise<RunResul
     externalUrl = out.url;
 
     const [row] = await db.insert(posts).values({
+      orgId: await systemOrgId(),
       platform: poster.platform,
       text,
       topic: item.topic,

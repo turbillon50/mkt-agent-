@@ -12,6 +12,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '../src/db/client';
 import { campaigns, users } from '../src/db/schema';
 import { createProject, setActiveProject, updateProject } from '../src/sales/projects';
+import { systemOrgId } from '../src/orgs/system';
 
 const CHANNELS = {
   meta_page_id: '1173019489236259',
@@ -38,10 +39,14 @@ async function main() {
   const [owner] = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (!owner) throw new Error(`No existe el usuario ${email} en la base. Que entre una vez por Clerk primero.`);
 
+  // El proyecto cuelga de la ORG, no del usuario. Se toma la org de sistema
+  // (GOOSSIP_SYSTEM_ORG_ID o la única que haya) para no adivinar tenant.
+  const orgId = await systemOrgId();
+
   const existing = await db
     .select()
     .from(campaigns)
-    .where(eq(campaigns.userId, owner.id))
+    .where(eq(campaigns.orgId, orgId))
     .then((rows) => rows.find((r) => r.slug === 'vliving' || r.name.toLowerCase().includes('living')));
 
   const rules = {
@@ -56,7 +61,7 @@ async function main() {
   };
 
   if (existing) {
-    const updated = await updateProject(owner.id, existing.id, {
+    const updated = await updateProject(orgId, existing.id, {
       kind: 'real_estate',
       sellerPersona: existing.sellerPersona ?? PERSONA,
       channels: { ...(existing.channels ?? {}), ...CHANNELS },
@@ -66,7 +71,7 @@ async function main() {
     return;
   }
 
-  const project = await createProject(owner.id, {
+  const project = await createProject(orgId, owner.id, {
     name: 'V&LIVING',
     kind: 'real_estate',
     description: 'Departamentos en el Caribe mexicano. Campaña Caribe.',
@@ -76,7 +81,7 @@ async function main() {
     rules,
     mcpSources: [],
   });
-  await setActiveProject(owner.id, project.id);
+  await setActiveProject(orgId, owner.clerkId, project.id);
   console.log(`creado: ${project.name} (${project.slug}) id=${project.id} — proyecto activo de ${email}`);
 }
 

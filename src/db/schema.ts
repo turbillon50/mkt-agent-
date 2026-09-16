@@ -23,9 +23,67 @@ import type {
   ProjectKind,
   ProjectRules,
 } from '../sales/types';
+import type { OrgPlan, OrgRole, OrgStatus, WebhookSource } from '../orgs/types';
+
+// ---------------------------------------------------------------------------
+// Organizaciones (Clerk). La org ES el tenant: todo dato de app lleva org_id.
+// Esta tabla es un ESPEJO — la verdad vive en Clerk y la sincroniza el webhook
+// `/api/webhooks/clerk`. Aquí solo guardamos lo que la app necesita consultar
+// sin salir a la red: plan, estado y quién es el dueño.
+// ---------------------------------------------------------------------------
+
+export const organizations = pgTable('organizations', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug'),
+  plan: text('plan').$type<OrgPlan>().notNull().default('free'),
+  status: text('status').$type<OrgStatus>().notNull().default('active'),
+  /** clerk_id del creador. En Clerk gratis no hay rol `org:owner`. */
+  ownerUserId: text('owner_user_id'),
+  settings: jsonb('settings').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  statusIdx: index('organizations_status_idx').on(t.status),
+}));
+
+export const orgMemberships = pgTable('org_memberships', {
+  id: text('id').primaryKey(),
+  orgId: text('org_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  clerkUserId: text('clerk_user_id').notNull(),
+  email: text('email'),
+  role: text('role').$type<OrgRole>().notNull().default('org:member'),
+  /** Proyecto activo por (user, org). Ver nota en la migración 0013. */
+  activeProjectId: uuid('active_project_id'),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  userIdx: index('org_memberships_user_idx').on(t.clerkUserId),
+}));
+
+/** Bitácora de webhooks recibidos. Es el pulso de la app en `/admin`. */
+export const webhookLog = pgTable('webhook_log', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  source: text('source').$type<WebhookSource>().notNull(),
+  event: text('event'),
+  status: text('status').$type<'ok' | 'error' | 'rejected'>().notNull().default('ok'),
+  detail: text('detail'),
+  orgId: text('org_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  timeIdx: index('webhook_log_time_idx').on(t.createdAt),
+  sourceTimeIdx: index('webhook_log_source_time_idx').on(t.source, t.createdAt),
+}));
+
+export type Organization = typeof organizations.$inferSelect;
+export type NewOrganization = typeof organizations.$inferInsert;
+export type OrgMembership = typeof orgMemberships.$inferSelect;
+export type WebhookLogRow = typeof webhookLog.$inferSelect;
 
 export const posts = pgTable('posts', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   platform: text('platform').notNull(),
   text: text('text').notNull(),
   topic: text('topic'),
@@ -42,6 +100,7 @@ export const posts = pgTable('posts', {
 
 export const knowledge = pgTable('knowledge', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   title: text('title'),
   content: text('content').notNull(),
   source: text('source'),
@@ -85,6 +144,7 @@ export const metrics = pgTable('metrics', {
 
 export const planItems = pgTable('plan_items', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   planId: uuid('plan_id').notNull(),
   dayOffset: integer('day_offset').notNull(),
   platform: text('platform').notNull(),
@@ -118,11 +178,19 @@ export const users = pgTable('users', {
   lastName: text('last_name'),
   username: text('username'),
   imageUrl: text('image_url'),
+  /** Dueño de la APLICACIÓN Goossip (entra a /admin). No es rol de org. */
   isAdmin: boolean('is_admin').default(false).notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
   brandName: text('brand_name'),
   brandVoice: text('brand_voice'),
   brandTopics: text('brand_topics'),
   brandLanguage: text('brand_language'),
+  /**
+   * MUERTA desde la migración 0013. El proyecto activo ahora es por (user, org)
+   * y vive en `org_memberships.active_project_id`. La columna se queda con su
+   * dato: tirar una columna en la base de producción no lo pidió nadie y no se
+   * puede deshacer. Nadie la lee — si alguien la vuelve a leer, está mal.
+   */
   activeCampaignId: uuid('active_campaign_id'),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -134,6 +202,7 @@ export const users = pgTable('users', {
 
 export const campaigns = pgTable('campaigns', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   slug: text('slug').notNull(),
@@ -161,6 +230,7 @@ export const campaigns = pgTable('campaigns', {
 
 export const socialAccounts = pgTable('social_accounts', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   platform: text('platform').notNull(),
   status: text('status').notNull().default('disconnected'),
@@ -250,6 +320,7 @@ export type NewAgentIdentity = typeof agentIdentity.$inferInsert;
 
 export const leads = pgTable('leads', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'set null' }),
   sourceUrl: text('source_url').notNull(),
@@ -279,6 +350,7 @@ export type NewLead = typeof leads.$inferInsert;
 
 export const competitorLinks = pgTable('competitor_links', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'set null' }),
   label: text('label').notNull(),
@@ -299,6 +371,7 @@ export type NewCompetitorLink = typeof competitorLinks.$inferInsert;
 
 export const salesLeads = pgTable('sales_leads', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   campaignId: uuid('campaign_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
   phone: text('phone'),
@@ -337,6 +410,7 @@ export const salesLeads = pgTable('sales_leads', {
 
 export const salesLeadEvents = pgTable('sales_lead_events', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   leadId: uuid('lead_id').notNull().references(() => salesLeads.id, { onDelete: 'cascade' }),
   type: text('type').$type<EventType>().notNull(),
   fromStage: text('from_stage').$type<LeadStage>(),
@@ -350,6 +424,7 @@ export const salesLeadEvents = pgTable('sales_lead_events', {
 
 export const conversations = pgTable('conversations', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'cascade' }),
   leadId: uuid('lead_id').references(() => salesLeads.id, { onDelete: 'set null' }),
   channel: text('channel').$type<'whatsapp' | 'sms' | 'email'>().notNull().default('whatsapp'),
@@ -367,6 +442,7 @@ export const conversations = pgTable('conversations', {
 
 export const messages = pgTable('messages', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   conversationId: uuid('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
   direction: text('direction').$type<'inbound' | 'outbound'>().notNull(),
   body: text('body').notNull().default(''),
@@ -382,6 +458,7 @@ export const messages = pgTable('messages', {
 
 export const actionQueue = pgTable('action_queue', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
   campaignId: uuid('campaign_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
   leadId: uuid('lead_id').references(() => salesLeads.id, { onDelete: 'cascade' }),
   kind: text('kind').$type<ActionKind>().notNull(),

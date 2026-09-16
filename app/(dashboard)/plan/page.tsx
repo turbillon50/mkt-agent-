@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { listPlanItems } from '@/lib/data';
+import { orgContextOrNull } from '@/lib/org';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -18,7 +19,8 @@ export default async function PlanPage() {
   let items: Awaited<ReturnType<typeof listPlanItems>> = [];
   let error: string | null = null;
   try {
-    items = await listPlanItems();
+    const ctx = await orgContextOrNull();
+    items = ctx ? await listPlanItems(ctx.orgId) : [];
   } catch (e) {
     error = e instanceof Error ? e.message : 'failed to load plan';
   }

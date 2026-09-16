@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrCreateUser } from '@/lib/users';
+import { apiOrg } from '@/lib/org';
 import { ownedAction } from '@/lib/sales';
 import { setStatus } from '@/src/sales/queue';
 import { recordEvent } from '@/src/sales/repo';
@@ -9,11 +9,12 @@ export const dynamic = 'force-dynamic';
 
 /** Aprobar o rechazar una acción de la cola. Un tap, y queda con actor y hora. */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getOrCreateUser();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  const gate = await apiOrg();
+  if (!gate.ok) return gate.res;
+  const { orgId, user } = gate.ctx;
   const { id } = await params;
 
-  const owned = await ownedAction(user.id, id);
+  const owned = await ownedAction(orgId, id);
   if (!owned) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (owned.action.leadId) {
     await recordEvent({
+      orgId,
       leadId: owned.action.leadId,
       type: 'note',
       actor: user.id,
