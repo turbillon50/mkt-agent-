@@ -185,9 +185,11 @@ function composioCard(c: Connector, account: SocialAccount | null, opts: CardOpt
   const meta = (account?.metadata ?? {}) as {
     motivo?: string;
     connected_account_id?: string;
+    expected_handle?: string;
     public_identity?: Record<string, unknown>;
     publish_capability?: { ready?: boolean; reason?: string | null; text?: boolean; image?: boolean; video?: boolean; checkedAt?: string };
   };
+  const expectedHandle = meta.expected_handle ?? null;
   const status = (account?.status ?? 'disconnected') as AccountStatus;
 
   if (status === 'connected') {
@@ -201,6 +203,7 @@ function composioCard(c: Connector, account: SocialAccount | null, opts: CardOpt
           data: {
             identity: meta.public_identity ?? null,
             capability: meta.publish_capability,
+            expectedHandle,
           },
         };
       }
@@ -211,6 +214,7 @@ function composioCard(c: Connector, account: SocialAccount | null, opts: CardOpt
         data: {
           identity: meta.public_identity ?? null,
           capability: meta.publish_capability ?? null,
+          expectedHandle,
         },
       };
     }
@@ -221,6 +225,7 @@ function composioCard(c: Connector, account: SocialAccount | null, opts: CardOpt
       state: 'reconectar',
       detail: account?.label ?? account?.externalHandle ?? null,
       pending: 'Hace más de un día que no confirmamos esta cuenta. Vuelve a conectarla.',
+      data: { expectedHandle },
     };
   }
 
@@ -230,6 +235,7 @@ function composioCard(c: Connector, account: SocialAccount | null, opts: CardOpt
       state: 'reconectar',
       detail: account?.label ?? account?.externalHandle ?? null,
       pending: meta.motivo ?? 'La cuenta dejó de responder. Vuelve a conectarla.',
+      data: { expectedHandle },
     };
   }
 
@@ -237,10 +243,11 @@ function composioCard(c: Connector, account: SocialAccount | null, opts: CardOpt
     return {
       ...base,
       pending: 'Te quedaste a medias en la pantalla de permisos. Inténtalo otra vez.',
+      data: { expectedHandle },
     };
   }
 
-  return base;
+  return { ...base, data: { expectedHandle } };
 }
 
 /** Lo que guarda la fila de `metaads` en `metadata`. Nada de esto es un secreto. */
@@ -922,7 +929,15 @@ export async function revokeConnection(
 ): Promise<SocialAccount | null> {
   const [row] = await db
     .update(socialAccounts)
-    .set({ status: 'disconnected', externalId: null, verifiedAt: null, updatedAt: new Date() })
+    .set({
+      status: 'disconnected',
+      label: null,
+      externalHandle: null,
+      externalId: null,
+      verifiedAt: null,
+      metadata: {},
+      updatedAt: new Date(),
+    })
     .where(
       and(
         eq(socialAccounts.orgId, orgId),

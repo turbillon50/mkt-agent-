@@ -31,7 +31,8 @@
     "capturas:c11": "tsx scripts/capturas-c11.ts",
     "test:corrida13": "tsx test/corrida13.test.ts",
     "test:social-os": "tsx test/social-os.test.ts",
-    "test:channel-identities": "tsx test/channel-identities.test.ts"
+    "test:channel-identities": "tsx test/channel-identities.test.ts",
+    "test:account-selection": "tsx test/account-selection.test.ts"
   },
   "engines": {
     "node": ">=20"

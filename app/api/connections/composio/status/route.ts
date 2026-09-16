@@ -38,7 +38,12 @@ export async function GET(req: NextRequest) {
       connectedBy: gate.ctx.clerkUserId,
       userId: gate.ctx.user.id,
     });
-    return NextResponse.json({ connected: r.ok, estado: r.status });
+    const terminal = r.status === 'CUENTA_EQUIVOCADA' || r.status === 'IDENTIDAD_NO_CONFIRMADA';
+    return NextResponse.json({
+      connected: r.ok,
+      estado: r.status,
+      ...(terminal ? { terminal: true, error: r.motivo } : {}),
+    });
   } catch {
     return NextResponse.json({ connected: false });
   }
