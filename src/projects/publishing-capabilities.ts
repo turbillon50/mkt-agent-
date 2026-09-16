@@ -3,6 +3,7 @@ import { db } from '../db/client';
 import { socialAccounts, type Project, type SocialAccount } from '../db/schema';
 import { cuerpo, run } from '../channels/base';
 import { paginasDeFacebook } from '../channels/facebook';
+import { TWITTER_TOOL_VERSION, twitterIdentityArguments } from '../channels/twitter-contract';
 
 export interface PublicIdentity {
   id: string | null;
@@ -89,9 +90,13 @@ async function identityFor(project: Project, account: SocialAccount): Promise<{
 
   if (account.platform === 'twitter') {
     const raw: any = cuerpo(
-      await run(project, 'twitter', 'TWITTER_USER_LOOKUP_ME', {
-        user_fields: 'id,name,username,profile_image_url',
-      }),
+      await run(
+        project,
+        'twitter',
+        'TWITTER_USER_LOOKUP_ME',
+        twitterIdentityArguments(),
+        TWITTER_TOOL_VERSION,
+      ),
     );
     const data = raw?.data ?? raw?.user ?? raw;
     const id = value(data?.id);

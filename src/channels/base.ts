@@ -59,12 +59,14 @@ export async function run<T = any>(
   toolkit: string,
   slug: string,
   args: Record<string, unknown> = {},
+  version?: string,
 ): Promise<T> {
   const cuenta = await cuentaDe(project, toolkit);
   const res: ToolResult<T> = await executeTool<T>(slug, {
     userId: cuenta.userId,
     connectedAccountId: cuenta.connectedAccountId,
     arguments: args,
+    version,
   });
   return (res.data ?? res) as T;
 }

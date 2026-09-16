@@ -8,6 +8,11 @@ import {
 } from '../src/creative/social-playbooks';
 import { sanitizePublicationError } from '../src/publishing/errors';
 import { assertPublicMediaUrl } from '../src/channels/media-url';
+import {
+  TWITTER_TOOL_VERSION,
+  twitterIdentityArguments,
+  twitterPostArguments,
+} from '../src/channels/twitter-contract';
 
 const REDES: RedPublicable[] = [
   'facebook',
@@ -60,5 +65,17 @@ for (const url of [
 ]) {
   assert.throws(() => assertPublicMediaUrl(url), `debe rechazar ${url}`);
 }
+
+assert.equal(TWITTER_TOOL_VERSION, '20260812_00');
+assert.deepEqual(twitterIdentityArguments().user_fields, [
+  'id',
+  'name',
+  'username',
+  'profile_image_url',
+]);
+assert.deepEqual(twitterPostArguments('hola', ['123']), {
+  text: 'hola',
+  media_media_ids: ['123'],
+});
 
 console.log(`ok — ${REDES.length} playbooks nativos, saneamiento y subida pública`);

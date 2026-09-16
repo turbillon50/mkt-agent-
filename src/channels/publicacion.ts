@@ -8,6 +8,7 @@
  */
 import type { Project } from '../db/schema';
 import { assertPublicMediaUrl } from './media-url';
+import { TWITTER_TOOL_VERSION, twitterPostArguments } from './twitter-contract';
 import {
   cuerpo,
   proxy,
@@ -274,7 +275,7 @@ export const twitter: ChannelAdapter = {
           'twitter',
           'TWITTER_UPLOAD_MEDIA',
           { media: input.media, media_category: 'tweet_image' },
-          '20260812_00',
+          TWITTER_TOOL_VERSION,
         ),
       );
       const mediaId =
@@ -288,10 +289,13 @@ export const twitter: ChannelAdapter = {
     }
 
     const data: any = cuerpo(
-      await run(project, 'twitter', 'TWITTER_CREATION_OF_A_POST', {
-        text: input.texto,
-        ...(mediaIds.length ? { media_media_ids: mediaIds } : {}),
-      }),
+      await run(
+        project,
+        'twitter',
+        'TWITTER_CREATION_OF_A_POST',
+        twitterPostArguments(input.texto, mediaIds),
+        TWITTER_TOOL_VERSION,
+      ),
     );
     const id = data?.id ?? data?.data?.id ?? null;
     return { toolkit: 'twitter', id, url: id ? `https://x.com/i/status/${id}` : null };
