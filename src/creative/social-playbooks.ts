@@ -38,9 +38,9 @@ export const SOCIAL_PLAYBOOKS: Record<RedPublicable, SocialPlaybook> = {
     fuente: 'https://www.facebook.com/business/ads-guide/update/image/facebook-feed/link-clicks',
     version: '2026-09-16',
     angulos: [
-      { angulo: 'Escena cotidiana', direccion: 'fotografía documental cálida de una situación cotidiana y creíble, con personas reales y espacio para el mensaje' },
-      { angulo: 'Beneficio visible', direccion: 'escena antes-después conceptual sin división literal, donde el beneficio se entienda por acción y contexto' },
-      { angulo: 'Comunidad local', direccion: 'fotografía editorial de comunidad y lugar, detalles reconocibles y composición cercana, nunca fotografía de stock genérica' },
+      { angulo: 'Historia visible', direccion: 'convertir el beneficio central del encargo en una escena editorial concreta y reconocible; usar personas sólo si la verdad del proyecto las justifica' },
+      { angulo: 'Demostración', direccion: 'mostrar el servicio, producto o proceso real en acción mediante detalles verificables, sin inventar pantallas, inmuebles ni resultados' },
+      { angulo: 'Comunidad', direccion: 'representar la relación entre las personas o actores reales del negocio con lenguaje documental, nunca poses o fotografía de stock genérica' },
     ],
   },
   instagram: {
@@ -55,9 +55,9 @@ export const SOCIAL_PLAYBOOKS: Record<RedPublicable, SocialPlaybook> = {
     fuente: 'https://developers.facebook.com/docs/instagram-platform/content-publishing',
     version: '2026-09-16',
     angulos: [
-      { angulo: 'Portada editorial', direccion: 'fotografía editorial vertical de alto impacto, sujeto grande, contraste limpio y zona tranquila para un titular corto' },
-      { angulo: 'Detalle aspiracional', direccion: 'primer plano sensorial con textura, luz cuidada y profundidad; composición premium que funciona aun sin leer el copy' },
-      { angulo: 'Momento humano', direccion: 'instante espontáneo con una persona real en acción, encuadre móvil y auténtico, estética social contemporánea no corporativa' },
+      { angulo: 'Hero editorial', direccion: 'traducir la idea central del encargo a un símbolo o sujeto propio de la marca, grande y vertical, con contraste limpio y espacio para un titular corto' },
+      { angulo: 'Detalle propio', direccion: 'primer plano de un elemento real y distintivo del producto, servicio o sistema; textura y luz premium, sin utilería genérica' },
+      { angulo: 'Sistema de marca', direccion: 'composición editorial de formas y objetos derivados del negocio y de su identidad visual, con profundidad y materialidad; nunca códigos, letras ni dashboards falsos' },
     ],
   },
   linkedin: {
@@ -73,8 +73,8 @@ export const SOCIAL_PLAYBOOKS: Record<RedPublicable, SocialPlaybook> = {
     version: '2026-09-16',
     angulos: [
       { angulo: 'Idea ejecutiva', direccion: 'composición editorial sobria con una metáfora visual precisa, mucho aire y jerarquía de revista de negocios' },
-      { angulo: 'Trabajo real', direccion: 'fotografía documental de una decisión o proceso real de trabajo, sin poses de apretón de manos ni oficina de stock' },
-      { angulo: 'Sistema explicado', direccion: 'diagrama visual minimalista hecho con formas y relaciones claras, preparado para recibir un dato o titular breve encima' },
+      { angulo: 'Evidencia', direccion: 'un resultado, artefacto o proceso que exista en el contexto del proyecto, fotografiado o representado con sobriedad; sin oficina de stock' },
+      { angulo: 'Sistema explicado', direccion: 'relaciones visuales minimalistas entre elementos reales del negocio, sin texto, cifras, diagramas técnicos falsos ni interfaces inventadas' },
     ],
   },
   twitter: {
@@ -90,8 +90,8 @@ export const SOCIAL_PLAYBOOKS: Record<RedPublicable, SocialPlaybook> = {
     version: '2026-09-16',
     angulos: [
       { angulo: 'Idea instantánea', direccion: 'una metáfora visual simple entendible en menos de un segundo, un solo sujeto y contraste muy alto' },
-      { angulo: 'Prueba visual', direccion: 'recorte documental o de producto que funcione como evidencia de la afirmación, sin decoración innecesaria' },
-      { angulo: 'Tarjeta de conversación', direccion: 'composición horizontal audaz con formas grandes y espacio para una sola frase corta, estética de conversación en tiempo real' },
+      { angulo: 'Prueba visual', direccion: 'recorte de un elemento real del producto, servicio o proceso que sostenga la afirmación, sin decoración ni pantallas inventadas' },
+      { angulo: 'Señal de marca', direccion: 'composición horizontal audaz con un símbolo propio del negocio y formas grandes; espacio para una frase corta que se añadirá después' },
     ],
   },
   tiktok: {

@@ -42,6 +42,7 @@ export async function generateSocialVariant(input: {
   brief: string;
   angle?: string | null;
   requestedCta?: string | null;
+  contexto?: string;
 }): Promise<SocialVariant> {
   const p = playbookDe(input.red);
   const language = input.project.brandLanguage || 'es-MX';
@@ -51,6 +52,7 @@ export async function generateSocialVariant(input: {
   const prompt = [
     `Crea una variante NATIVA para ${input.red}; no recicles el copy de otra red.`,
     `Marca: ${input.project.name}. Idioma: ${language}. Voz: ${voice}.`,
+    input.contexto || '',
     `Brief: ${input.brief}`,
     input.angle ? `Ángulo pedido: ${input.angle}` : '',
     `Objetivo de la red: ${p.objetivo}`,
@@ -61,7 +63,8 @@ export async function generateSocialVariant(input: {
     `Headline máximo: ${maxHeadline} caracteres. Debe funcionar sobre el arte.`,
     `CTA: ${input.requestedCta || p.cta}`,
     'No inventes cifras, premios, disponibilidad, precios, testimonios ni características no incluidas en el brief.',
-    'El visualBrief debe describir una escena concreta de alta calidad, sin texto generado dentro de la imagen.',
+    'No cambies el giro del negocio por una asociación superficial del brief. La verdad del proyecto manda.',
+    'El visualBrief debe describir una escena concreta, distintiva y ejecutable de alta calidad; debe decir sujeto, entorno, encuadre, luz y espacio negativo, sin texto generado dentro de la imagen.',
     'Devuelve JSON estricto: {"copy":"...","headline":"...","cta":"...","altText":"...","visualBrief":"..."}.',
   ].filter(Boolean).join('\n');
 
@@ -80,11 +83,12 @@ export async function generateSocialVariant(input: {
   const fallbackCopy = out?.copy?.trim()
     ? null
     : await generatePost({
-        platform: platformFor(input.red),
-        topic: input.brief,
-        angle: input.angle ?? undefined,
-        brand: projectBrand(input.project),
-      });
+      platform: platformFor(input.red),
+      topic: input.brief,
+      angle: input.angle ?? undefined,
+      brand: projectBrand(input.project),
+      projectId: input.project.id,
+    });
 
   const copy = (out?.copy?.trim() || fallbackCopy || input.brief).slice(0, p.caracteresMax).trim();
   const headline = (out?.headline?.trim() || input.brief).slice(0, maxHeadline).trim();

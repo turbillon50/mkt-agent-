@@ -91,6 +91,28 @@ export async function bajarImagen(url: string): Promise<Buffer | null> {
   }
 }
 
+/**
+ * Borra únicamente archivos que este mismo almacén generó.
+ *
+ * La validación estricta del UUID ocurre antes de construir el comando: una
+ * URL guardada en la base nunca puede convertirse en una orden arbitraria.
+ */
+export async function borrarImagen(url: string | null): Promise<boolean> {
+  if (!url || !almacenListo()) return false;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  const base = new URL(PUBLIC_BASE);
+  if (parsed.origin !== base.origin || !parsed.pathname.startsWith(`${base.pathname}/`)) return false;
+  const nombre = parsed.pathname.split('/').pop() ?? '';
+  if (!/^[0-9a-f-]{36}\.(png|jpe?g|webp)$/i.test(nombre)) return false;
+  const out = await relayExec(`test ! -f ${DIR}/${nombre} || { unlink -- ${DIR}/${nombre} && echo BORRADA; }`);
+  return out.includes('BORRADA');
+}
+
 /** `data:image/png;base64,…` → bytes. */
 export function deDataUrl(dataUrl: string): { buf: Buffer; ext: string } | null {
   const m = dataUrl.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,(.+)$/);

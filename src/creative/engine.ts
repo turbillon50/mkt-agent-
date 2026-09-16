@@ -30,6 +30,8 @@ import { angulosParaRed } from './social-playbooks';
 import { almacenListo, bajarImagen, deDataUrl, subirImagen } from './media';
 import { elegirFormato, esRed, type FormatoSpec, type RedSlug } from './specs';
 import { pedirAHiggsfield, type EncargoHiggsfield } from './higgsfield';
+import { contextoCreativoDelProyecto } from './context';
+import { evaluarImagenBase, type EvaluacionVisual } from './image-quality';
 
 export interface Encargo {
   project: Project;
@@ -43,6 +45,8 @@ export interface Encargo {
   cta?: string | null;
   /** Cuántas opciones. El mínimo es 2: "nunca una sola" es del issue. */
   opciones?: number;
+  /** Se calcula una vez por paquete; una pieza individual lo calcula aquí. */
+  contexto?: string;
 }
 
 export interface PiezaGenerada {
@@ -54,6 +58,7 @@ export interface PiezaGenerada {
   modelo: string;
   prompt: string;
   nota: string | null;
+  calidad?: EvaluacionVisual | null;
 }
 
 export interface ResultadoMotor {
@@ -99,6 +104,11 @@ export async function generarPiezas(encargo: Encargo): Promise<ResultadoMotor> {
   const formato = elegirFormato(encargo.red, encargo.formatoPista ?? null);
   const cuantas = Math.min(3, Math.max(2, encargo.opciones ?? 3));
   const loteId = randomUUID();
+  const contexto = encargo.contexto ?? (await contextoCreativoDelProyecto({
+    project: encargo.project,
+    kit: encargo.kit,
+    brief: encargo.brief,
+  })).texto;
 
   const guia = await guiaDeDiseno(formato).catch(() => '');
 
@@ -112,7 +122,7 @@ export async function generarPiezas(encargo: Encargo): Promise<ResultadoMotor> {
   const angulos = angulosParaRed(encargo.red).slice(0, cuantas);
   const intentos = await Promise.allSettled(
     angulos.map((opcion) =>
-      unaPieza({ encargo, formato, opcion, guia, conCanva }),
+      unaPieza({ encargo: { ...encargo, contexto }, formato, opcion, guia, conCanva }),
     ),
   );
 
@@ -162,8 +172,42 @@ async function unaPieza(input: {
     brief: encargo.brief,
     opcion,
     guiaDeDiseno: guia,
+    contexto: encargo.contexto,
   });
-  const base = await generarBase(p);
+  let base = await generarBase(p);
+  let calidad = await evaluarImagenBase({
+    imagen: base,
+    brief: encargo.brief,
+    contexto: encargo.contexto ?? '',
+    formato,
+    direccion: opcion.direccion,
+  });
+  if (!calidad) {
+    throw new Error('El control visual no estuvo disponible; la imagen no se guardó sin revisión.');
+  }
+
+  // Una segunda oportunidad, pero con el defecto nombrado. Si tampoco pasa,
+  // no se guarda: dos imágenes malas no se convierten en una opción buena.
+  if (calidad && !calidad.aprobada) {
+    const reintento = {
+      ...p,
+      prompt: `${p.prompt}\n\nCORRECCIÓN OBLIGATORIA DEL CONTROL DE CALIDAD: ${calidad.correccion || calidad.razones.join('; ')}`,
+    };
+    base = await generarBase(reintento);
+    calidad = await evaluarImagenBase({
+      imagen: base,
+      brief: encargo.brief,
+      contexto: encargo.contexto ?? '',
+      formato,
+      direccion: opcion.direccion,
+    });
+    if (!calidad) {
+      throw new Error('El control visual no pudo revisar el segundo intento; no se guardó.');
+    }
+    if (!calidad.aprobada) {
+      throw new Error(`Control de calidad rechazó la imagen (${calidad.score}/100): ${calidad.razones[0] ?? 'no corresponde al encargo'}`);
+    }
+  }
   const bytes = deDataUrl(base.dataUrl);
   if (!bytes) throw new Error('El modelo no devolvió una imagen usable.');
 
@@ -185,6 +229,7 @@ async function unaPieza(input: {
         modelo: MODELO_IMAGEN,
         prompt: p.prompt,
         nota: null,
+        calidad,
       };
     }
   }
@@ -211,6 +256,7 @@ async function unaPieza(input: {
     modelo: MODELO_IMAGEN,
     prompt: p.prompt,
     nota: faltas.length ? faltas.join(' y ') : null,
+    calidad,
   };
 }
 

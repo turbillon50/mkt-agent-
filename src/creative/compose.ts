@@ -160,8 +160,8 @@ export async function componer(input: {
 
   // 2. El bloque de texto: abajo, dentro de la zona segura.
   if (titular || cta) {
-    const tamTitular = Math.round(W * 0.075);
-    const tamCta = Math.round(W * 0.038);
+    const tamTitular = Math.round(W * 0.064);
+    const tamCta = Math.round(W * 0.027);
     const renglones = titular ? partirEnRenglones(titular, anchoUtil, tamTitular) : [];
     const altoTitular = renglones.length * Math.round(tamTitular * 1.22);
     const altoCta = cta ? Math.round(tamCta * 2.6) : 0;
@@ -201,8 +201,8 @@ export async function componer(input: {
 
     let botones = '';
     if (cta) {
-      const anchoBoton = Math.min(anchoUtil, Math.round(cta.length * tamCta * 0.62) + tamCta * 2);
-      const altoBoton = Math.round(tamCta * 2.4);
+      const anchoBoton = Math.min(anchoUtil, Math.round(cta.length * tamCta * 0.58) + tamCta * 1.7);
+      const altoBoton = Math.round(tamCta * 2);
       const yBoton = y + Math.round(tamCta * 0.4);
       botones =
         `<rect x="${margen}" y="${yBoton}" rx="${Math.round(altoBoton / 2)}" width="${anchoBoton}" height="${altoBoton}" fill="${primario}"/>` +
@@ -235,9 +235,9 @@ export async function componer(input: {
     const bytes = await bajarImagen(kit.logoUrl);
     if (bytes) {
       try {
-        const anchoLogo = Math.round(W * 0.2);
+        const anchoLogo = Math.round(W * 0.12);
         const logo = await sharp(bytes)
-          .resize({ width: anchoLogo, withoutEnlargement: true })
+          .resize({ width: anchoLogo, height: Math.round(H * 0.12), fit: 'inside', withoutEnlargement: true })
           .png()
           .toBuffer();
         const meta = await sharp(logo).metadata();
