@@ -1,17 +1,32 @@
 import 'server-only';
-import { desc, eq, sql, gte } from 'drizzle-orm';
+import { and, desc, eq, sql, gte } from 'drizzle-orm';
 import { db } from '@/src/db/client';
 import { posts, planItems, knowledge } from '@/src/db/schema';
 
-export async function getDashboardStats() {
-  const [totalRow] = await db.select({ c: sql<number>`count(*)::int` }).from(posts);
+export async function getDashboardStats(orgId: string) {
+  const [totalRow] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(posts)
+    .where(eq(posts.orgId, orgId));
   const byPlatform = await db
     .select({ platform: posts.platform, c: sql<number>`count(*)::int` })
     .from(posts)
+    .where(eq(posts.orgId, orgId))
     .groupBy(posts.platform);
-  const recent = await db.select().from(posts).orderBy(desc(posts.createdAt)).limit(5);
-  const [knowRow] = await db.select({ c: sql<number>`count(*)::int` }).from(knowledge);
-  const [planRow] = await db.select({ c: sql<number>`count(*)::int` }).from(planItems);
+  const recent = await db
+    .select()
+    .from(posts)
+    .where(eq(posts.orgId, orgId))
+    .orderBy(desc(posts.createdAt))
+    .limit(5);
+  const [knowRow] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(knowledge)
+    .where(eq(knowledge.orgId, orgId));
+  const [planRow] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(planItems)
+    .where(eq(planItems.orgId, orgId));
 
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const daily = await db
@@ -20,7 +35,7 @@ export async function getDashboardStats() {
       c: sql<number>`count(*)::int`.as('c'),
     })
     .from(posts)
-    .where(gte(posts.createdAt, since))
+    .where(and(eq(posts.orgId, orgId), gte(posts.createdAt, since)))
     .groupBy(sql`date_trunc('day', ${posts.createdAt})`)
     .orderBy(sql`date_trunc('day', ${posts.createdAt})`);
 
@@ -42,20 +57,27 @@ export async function getDashboardStats() {
   };
 }
 
-export async function listPosts(platform?: 'twitter' | 'linkedin') {
-  return platform
-    ? db.select().from(posts).where(eq(posts.platform, platform)).orderBy(desc(posts.createdAt)).limit(100)
-    : db.select().from(posts).orderBy(desc(posts.createdAt)).limit(100);
+export async function listPosts(orgId: string, platform?: 'twitter' | 'linkedin') {
+  const where = platform
+    ? and(eq(posts.orgId, orgId), eq(posts.platform, platform))
+    : eq(posts.orgId, orgId);
+  return db.select().from(posts).where(where).orderBy(desc(posts.createdAt)).limit(100);
 }
 
-export async function listPlanItems() {
+export async function listPlanItems(orgId: string) {
   return db
     .select()
     .from(planItems)
+    .where(eq(planItems.orgId, orgId))
     .orderBy(desc(planItems.createdAt), planItems.dayOffset)
     .limit(200);
 }
 
-export async function listKnowledge() {
-  return db.select().from(knowledge).orderBy(desc(knowledge.createdAt)).limit(100);
+export async function listKnowledge(orgId: string) {
+  return db
+    .select()
+    .from(knowledge)
+    .where(eq(knowledge.orgId, orgId))
+    .orderBy(desc(knowledge.createdAt))
+    .limit(100);
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrCreateUser } from '@/lib/users';
+import { apiOrg } from '@/lib/org';
 import { leadTimeline, ownedLead } from '@/lib/sales';
 import { moveStage, recordEvent } from '@/src/sales/repo';
 import { LEAD_STAGES, type LeadStage } from '@/src/sales/types';
@@ -8,20 +8,22 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getOrCreateUser();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  const gate = await apiOrg();
+  if (!gate.ok) return gate.res;
+  const { orgId } = gate.ctx;
   const { id } = await params;
-  const owned = await ownedLead(user, id);
+  const owned = await ownedLead(orgId, id);
   if (!owned) return NextResponse.json({ error: 'not found' }, { status: 404 });
-  const timeline = await leadTimeline(id);
+  const timeline = await leadTimeline(orgId, id);
   return NextResponse.json({ lead: owned.lead, ...timeline });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getOrCreateUser();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  const gate = await apiOrg();
+  if (!gate.ok) return gate.res;
+  const { orgId, user } = gate.ctx;
   const { id } = await params;
-  const owned = await ownedLead(user, id);
+  const owned = await ownedLead(orgId, id);
   if (!owned) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
   const body = await req.json().catch(() => ({}));
@@ -37,6 +39,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (typeof body?.note === 'string' && body.note.trim()) {
     await recordEvent({
+      orgId,
       leadId: id,
       type: 'note',
       actor: user.id,
@@ -45,7 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   if (body?.logCall === true) {
-    await recordEvent({ leadId: id, type: 'call', actor: user.id, payload: { por: user.email } });
+    await recordEvent({ orgId, leadId: id, type: 'call', actor: user.id, payload: { por: user.email } });
   }
 
   return NextResponse.json({ lead });

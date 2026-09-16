@@ -144,6 +144,7 @@ async function main() {
       // La nota que Luis escribió a mano no se pierde.
       if (r.nota?.trim()) {
         await recordEvent({
+          orgId: project.orgId,
           leadId: result.lead.id,
           type: 'note',
           actor: 'import',
@@ -152,6 +153,7 @@ async function main() {
       }
       if (r.contactado_en) {
         await recordEvent({
+          orgId: project.orgId,
           leadId: result.lead.id,
           type: 'stage_change',
           fromStage: 'nuevo',

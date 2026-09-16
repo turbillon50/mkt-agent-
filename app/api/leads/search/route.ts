@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrCreateUser } from '@/lib/users';
+import { apiOrg } from '@/lib/org';
 import {
   searchProspects,
   bulkCreateLeads,
@@ -16,8 +16,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getOrCreateUser();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  const gate = await apiOrg();
+  if (!gate.ok) return gate.res;
   try {
     const body = await req.json().catch(() => ({}));
     const query = String(body.query ?? '').trim();
@@ -39,8 +39,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const user = await getOrCreateUser();
-  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  const gate = await apiOrg();
+  if (!gate.ok) return gate.res;
+  const { orgId, user, activeProjectId } = gate.ctx;
   try {
     const body = await req.json().catch(() => ({}));
     const candidates: Array<{
@@ -62,6 +63,7 @@ export async function PUT(req: NextRequest) {
 
     if (mapsOnes.length > 0) {
       const result = await bulkCreateLeadsFromPlaces(
+        orgId,
         user.id,
         mapsOnes.map((c) => ({
           name: c.label ?? c.url,
@@ -71,14 +73,14 @@ export async function PUT(req: NextRequest) {
           rating: c.rating ?? null,
           mapsUrl: c.url,
         })),
-        user.activeCampaignId ?? null,
+        activeProjectId ?? null,
       );
       created += result.created;
       failed += result.failed;
     }
 
     if (webOnes.length > 0) {
-      const result = await bulkCreateLeads(user.id, webOnes.map((c) => c.url), user.activeCampaignId ?? null);
+      const result = await bulkCreateLeads(orgId, user.id, webOnes.map((c) => c.url), activeProjectId ?? null);
       created += result.created;
       failed += result.failed;
     }

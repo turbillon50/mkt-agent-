@@ -13,6 +13,7 @@
     "agent:start": "tsx src/index.ts start",
     "agent:test": "tsx test/connections.test.ts",
     "test:sales": "tsx test/sales.test.ts",
+    "test:orgs": "tsx test/orgs.test.ts",
     "seed:vliving": "tsx scripts/seed-vliving.ts",
     "import:vl-leads": "tsx scripts/import-vl-leads.ts",
     "lint": "next lint",

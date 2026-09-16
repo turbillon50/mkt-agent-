@@ -1,8 +1,9 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../db/client';
 import { posts } from '../../db/schema';
+import { systemOrgId } from '../../orgs/system';
 
 export const listRecentPostsTool = createTool({
   id: 'list-recent-posts',
@@ -26,10 +27,11 @@ export const listRecentPostsTool = createTool({
   }),
   execute: async (input) => {
     const limit = input.limit ?? 10;
-    const query = input.platform
-      ? db.select().from(posts).where(eq(posts.platform, input.platform)).orderBy(desc(posts.createdAt)).limit(limit)
-      : db.select().from(posts).orderBy(desc(posts.createdAt)).limit(limit);
-    const rows = await query;
+    const orgId = await systemOrgId();
+    const where = input.platform
+      ? and(eq(posts.orgId, orgId), eq(posts.platform, input.platform))
+      : eq(posts.orgId, orgId);
+    const rows = await db.select().from(posts).where(where).orderBy(desc(posts.createdAt)).limit(limit);
     return {
       posts: rows.map((r) => ({
         id: r.id,

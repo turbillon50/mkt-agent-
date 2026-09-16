@@ -59,13 +59,13 @@ export async function POST(req: NextRequest) {
 
   if (isClerkConfigured()) {
     try {
-      const { getOrCreateUser } = await import('@/lib/users');
-      const user = await getOrCreateUser();
-      if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-      userId = user.id;
-      if (user.activeCampaignId) {
-        const { getActiveCampaign } = await import('@/lib/campaigns');
-        campaign = await getActiveCampaign(user.id);
+      const { apiOrg } = await import('@/lib/org');
+      const gate = await apiOrg();
+      if (!gate.ok) return gate.res;
+      userId = gate.ctx.user.id;
+      if (gate.ctx.activeProjectId) {
+        const { getCampaign } = await import('@/lib/campaigns');
+        campaign = await getCampaign(gate.ctx.orgId, gate.ctx.activeProjectId);
       }
     } catch {
       return NextResponse.json({ error: 'auth failed' }, { status: 401 });

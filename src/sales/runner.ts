@@ -101,12 +101,14 @@ async function execSendTemplate(project: Project, action: QueuedAction): Promise
 
   if (lead) {
     const conv = await getOrCreateConversation({
+      orgId: project.orgId,
       campaignId: project.id,
       leadId: lead.id,
       channel: 'whatsapp',
       externalThreadId: to.replace(/^\+/, ''),
     });
     await insertMessage({
+      orgId: project.orgId,
       conversationId: conv.id,
       direction: 'outbound',
       body: `[plantilla ${template}]`,
@@ -117,6 +119,7 @@ async function execSendTemplate(project: Project, action: QueuedAction): Promise
     });
     await touchOutbound(conv.id, new Date());
     await recordEvent({
+      orgId: project.orgId,
       leadId: lead.id,
       type: 'message_out',
       actor: 'goossip',
@@ -144,12 +147,14 @@ async function execSendSms(project: Project, action: QueuedAction): Promise<Exec
   if (res.ok) {
     if (lead) {
       const conv = await getOrCreateConversation({
+        orgId: project.orgId,
         campaignId: project.id,
         leadId: lead.id,
         channel: 'sms',
         externalThreadId: to.replace(/^\+/, ''),
       });
       await insertMessage({
+        orgId: project.orgId,
         conversationId: conv.id,
         direction: 'outbound',
         body,
@@ -158,7 +163,7 @@ async function execSendSms(project: Project, action: QueuedAction): Promise<Exec
         respondedBy: 'goossip',
       });
       await touchOutbound(conv.id, new Date());
-      await recordEvent({ leadId: lead.id, type: 'message_out', actor: 'goossip', payload: { channel: 'sms' } });
+      await recordEvent({ orgId: project.orgId, leadId: lead.id, type: 'message_out', actor: 'goossip', payload: { channel: 'sms' } });
     }
     return { ok: true, detail: { sid: res.sid } };
   }
@@ -192,6 +197,7 @@ async function execProposeReply(project: Project, action: QueuedAction): Promise
     conv ??
     (lead
       ? await getOrCreateConversation({
+          orgId: project.orgId,
           campaignId: project.id,
           leadId: lead.id,
           channel: 'whatsapp',
@@ -201,6 +207,7 @@ async function execProposeReply(project: Project, action: QueuedAction): Promise
 
   if (conversation) {
     await insertMessage({
+      orgId: project.orgId,
       conversationId: conversation.id,
       direction: 'outbound',
       body: text,
@@ -212,6 +219,7 @@ async function execProposeReply(project: Project, action: QueuedAction): Promise
   }
   if (lead) {
     await recordEvent({
+      orgId: project.orgId,
       leadId: lead.id,
       type: 'message_out',
       actor: String(action.approvedBy ?? 'goossip'),
@@ -231,8 +239,9 @@ async function execProposeReply(project: Project, action: QueuedAction): Promise
 async function onNoWhatsapp(project: Project, leadId: string, to: string): Promise<void> {
   const rules = resolveRules(project.rules);
   const { enqueue } = await import('./queue');
-  await recordEvent({ leadId, type: 'note', actor: 'goossip', payload: { delivery: 'no_whatsapp', to } });
+  await recordEvent({ orgId: project.orgId, leadId, type: 'note', actor: 'goossip', payload: { delivery: 'no_whatsapp', to } });
   await enqueue({
+    orgId: project.orgId,
     campaignId: project.id,
     leadId,
     kind: rules.twilio_mode === 'paid' ? 'send_sms' : 'notify_owner',

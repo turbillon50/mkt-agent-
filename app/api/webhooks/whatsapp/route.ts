@@ -4,6 +4,7 @@ import { parseWebhook } from '@/lib/whatsapp-cloud';
 import { resolveProjectByWabaPhoneId } from '@/lib/projects';
 import { handleCloudInbound, handleStatusUpdate } from '@/src/sales/inbound';
 import type { Project } from '@/src/db/schema';
+import { logWebhook } from '@/src/orgs/repo';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
   const appSecret = process.env.META_APP_SECRET ?? '';
   const raw = await req.text();
   if (!verifySignature(raw, req.headers.get('x-hub-signature-256'), appSecret)) {
+    await logWebhook({ source: 'whatsapp', event: 'inbound', status: 'rejected', detail: 'firma inválida' });
     return NextResponse.json({ error: 'firma inválida' }, { status: 401 });
   }
 
@@ -43,12 +45,21 @@ export async function POST(req: NextRequest) {
     const project = await projectFor(m.phoneNumberId);
     if (!project) {
       inbound.push({ external_id: m.externalId, error: 'ningún proyecto tiene ese waba_phone_id' });
+      await logWebhook({
+        source: 'whatsapp',
+        event: 'inbound',
+        status: 'error',
+        detail: `sin proyecto para waba_phone_id=${m.phoneNumberId}`,
+      });
       continue;
     }
     try {
       inbound.push({ external_id: m.externalId, project: project.slug, ...(await handleCloudInbound(project, m)) });
+      await logWebhook({ source: 'whatsapp', event: 'inbound', status: 'ok', orgId: project.orgId });
     } catch (e) {
-      inbound.push({ external_id: m.externalId, project: project.slug, error: e instanceof Error ? e.message : 'error' });
+      const detail = e instanceof Error ? e.message : 'error';
+      inbound.push({ external_id: m.externalId, project: project.slug, error: detail });
+      await logWebhook({ source: 'whatsapp', event: 'inbound', status: 'error', detail, orgId: project.orgId });
     }
   }
 
@@ -58,8 +69,11 @@ export async function POST(req: NextRequest) {
     if (!project) continue;
     try {
       statuses.push({ external_id: s.externalId, status: s.status, ...(await handleStatusUpdate(project, s)) });
+      await logWebhook({ source: 'whatsapp', event: `status:${s.status}`, status: 'ok', orgId: project.orgId });
     } catch (e) {
-      statuses.push({ external_id: s.externalId, error: e instanceof Error ? e.message : 'error' });
+      const detail = e instanceof Error ? e.message : 'error';
+      statuses.push({ external_id: s.externalId, error: detail });
+      await logWebhook({ source: 'whatsapp', event: 'status', status: 'error', detail, orgId: project.orgId });
     }
   }
 

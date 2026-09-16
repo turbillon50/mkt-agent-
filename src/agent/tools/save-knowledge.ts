@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { db } from '../../db/client';
 import { knowledge } from '../../db/schema';
 import { remember } from '../../memory/index';
+import { systemOrgId } from '../../orgs/system';
 
 export const saveKnowledgeTool = createTool({
   id: 'save-knowledge',
@@ -18,6 +19,7 @@ export const saveKnowledgeTool = createTool({
     const [row] = await db
       .insert(knowledge)
       .values({
+        orgId: await systemOrgId(),
         content: input.content,
         title: input.title ?? null,
         source: input.source ?? null,

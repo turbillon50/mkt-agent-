@@ -7,6 +7,7 @@ import { db } from './db/client';
 import { knowledge } from './db/schema';
 import { readFile } from 'node:fs/promises';
 import { ask } from './agent/index';
+import { systemOrgId } from './orgs/system';
 
 const USAGE = `Usage:
   npm run dev -- run [--dry]            Generate and publish one round of posts
@@ -25,7 +26,10 @@ async function ingest(filePath: string): Promise<void> {
     .map((c) => c.trim())
     .filter((c) => c.length > 40);
   for (const chunk of chunks) {
-    const [row] = await db.insert(knowledge).values({ content: chunk, source: filePath }).returning({ id: knowledge.id });
+    const [row] = await db
+      .insert(knowledge)
+      .values({ orgId: await systemOrgId(), content: chunk, source: filePath })
+      .returning({ id: knowledge.id });
     if (row) await remember({ refType: 'knowledge', refId: row.id, content: chunk });
   }
   console.log(`Ingested ${chunks.length} chunk(s) from ${filePath}`);

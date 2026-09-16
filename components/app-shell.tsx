@@ -7,7 +7,17 @@ import { Sidebar } from './sidebar';
 import { BottomTabBar } from './bottom-tab-bar';
 import { cn } from '@/lib/utils';
 
-export function AppShell({ children, isAdmin = false }: { children: React.ReactNode; isAdmin?: boolean }) {
+export function AppShell({
+  children,
+  isAdmin = false,
+  orgName,
+  role,
+}: {
+  children: React.ReactNode;
+  isAdmin?: boolean;
+  orgName?: string;
+  role?: string;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -36,6 +46,11 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
           </div>
           <span className="text-lg font-semibold tracking-tight brand-gradient">goossip</span>
         </div>
+        {orgName && (
+          <span className="max-w-[45%] truncate px-4 py-3 text-xs text-[var(--color-muted-foreground)]">
+            {orgName}
+          </span>
+        )}
       </header>
 
       {/* Sidebar — se abre desde el boton "Mas" del tab bar en movil */}
@@ -57,7 +72,7 @@ export function AppShell({ children, isAdmin = false }: { children: React.ReactN
               <IconClose className="h-4 w-4" />
             </button>
           )}
-          <Sidebar onNavigate={() => setOpen(false)} isAdmin={isAdmin} />
+          <Sidebar onNavigate={() => setOpen(false)} isAdmin={isAdmin} role={role} />
         </div>
       </aside>
 

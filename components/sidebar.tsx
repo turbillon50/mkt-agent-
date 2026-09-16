@@ -21,6 +21,7 @@ import {
 } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { ActiveCampaignChip } from './active-campaign-chip';
+import { OrgSwitcher } from './orgs/org-switcher';
 
 const clerkPK = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
 const isClerkConfiguredClient =
@@ -37,6 +38,7 @@ const items: Item[] = [
   { href: '/dashboard', label: 'Inicio', Icon: IconHome },
   { href: '/chat', label: 'Chats', Icon: IconChat },
   { href: '/projects', label: 'Proyectos', Icon: IconFolder },
+  { href: '/organizacion', label: 'Mi organización', Icon: IconUsers },
   { href: '/leads', label: 'Pipeline', Icon: IconTarget },
   { href: '/automations', label: 'Automatizaciones', Icon: IconBolt },
   { href: '/whatsapp', label: 'WhatsApp', Icon: IconPhone, soon: true },
@@ -52,8 +54,11 @@ const items: Item[] = [
   { href: '/integrations', label: 'Integraciones', Icon: IconPlug },
 ];
 
-/** Solo para `users.is_admin`: el nivel por encima de los tenants. */
-const adminItems: Item[] = [{ href: '/agency', label: 'Agencia', Icon: IconShield }];
+/** Solo para `users.is_admin`: el dueño de la APLICACIÓN, no de una org. */
+const adminItems: Item[] = [{ href: '/admin', label: 'Administración', Icon: IconShield }];
+
+/** Rutas de configuración: fuera del menú para `org:member`. */
+const MANAGER_ONLY = new Set(['/projects', '/integrations', '/ads', '/campaigns']);
 
 const networks = [
   { name: 'WhatsApp', dot: '#2ba87a', enabled: false },
@@ -65,9 +70,19 @@ const networks = [
   { name: 'TikTok', dot: '#d6336c', enabled: false },
 ];
 
-export function Sidebar({ onNavigate, isAdmin = false }: { onNavigate?: () => void; isAdmin?: boolean }) {
+export function Sidebar({
+  onNavigate,
+  isAdmin = false,
+  role,
+}: {
+  onNavigate?: () => void;
+  isAdmin?: boolean;
+  role?: string;
+}) {
   const pathname = usePathname();
-  const navItems = isAdmin ? [...adminItems, ...items] : items;
+  // El `org:member` opera leads: no se le pinta lo que no puede tocar.
+  const base = role === 'org:member' ? items.filter((i) => !MANAGER_ONLY.has(i.href)) : items;
+  const navItems = isAdmin ? [...adminItems, ...base] : base;
   return (
     <div className="glass flex h-full w-full flex-col gap-4 p-4">
       <div className="flex items-center gap-2.5 px-2 pt-2">
@@ -99,6 +114,9 @@ export function Sidebar({ onNavigate, isAdmin = false }: { onNavigate?: () => vo
           <IconPlus className="h-3 w-3" />
         </span>
       </Link>
+
+      {/* Primero la ORG (el tenant), luego el proyecto activo dentro de ella. */}
+      <OrgSwitcher />
 
       <ActiveCampaignChip onNavigate={onNavigate} />
 

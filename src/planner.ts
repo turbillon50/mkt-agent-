@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { db } from './db/client';
 import { planItems, type PlanItem } from './db/schema';
 import { generateWeeklyPlan } from './generator';
+import { systemOrgId } from './orgs/system';
 import { enabledPosters } from './posters/index';
 import type { Platform } from './config';
 
@@ -13,8 +14,10 @@ export async function buildPlan(): Promise<{ planId: string; items: PlanItem[] }
   }
   const drafts = await generateWeeklyPlan({ platforms });
   const planId = randomUUID();
+  const orgId = await systemOrgId();
   const rows = await db.insert(planItems).values(
     drafts.map((d) => ({
+      orgId,
       planId,
       dayOffset: d.dayOffset,
       platform: d.platform,
@@ -26,8 +29,9 @@ export async function buildPlan(): Promise<{ planId: string; items: PlanItem[] }
 }
 
 export async function nextUnusedItem(platform: Platform): Promise<PlanItem | null> {
+  const orgId = await systemOrgId();
   const rows = await db.select().from(planItems)
-    .where(and(eq(planItems.platform, platform), eq(planItems.used, false)))
+    .where(and(eq(planItems.orgId, orgId), eq(planItems.platform, platform), eq(planItems.used, false)))
     .orderBy(asc(planItems.dayOffset))
     .limit(1);
   return rows[0] ?? null;
@@ -38,5 +42,10 @@ export async function markUsed(itemId: string): Promise<void> {
 }
 
 export async function latestPlan(): Promise<PlanItem[]> {
-  return db.select().from(planItems).orderBy(asc(planItems.createdAt), asc(planItems.dayOffset));
+  const orgId = await systemOrgId();
+  return db
+    .select()
+    .from(planItems)
+    .where(eq(planItems.orgId, orgId))
+    .orderBy(asc(planItems.createdAt), asc(planItems.dayOffset));
 }

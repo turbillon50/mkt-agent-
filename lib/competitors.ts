@@ -16,12 +16,14 @@ function extractMeta(html: string, prop: string): string | null {
 }
 
 export async function addLink(
+  orgId: string,
   userId: string,
   input: { label: string; url: string; kind: 'own' | 'competitor'; campaignId?: string | null }
 ): Promise<CompetitorLink> {
   const [row] = await db
     .insert(competitorLinks)
     .values({
+      orgId,
       userId,
       campaignId: input.campaignId ?? null,
       label: input.label,
@@ -33,16 +35,16 @@ export async function addLink(
   return row;
 }
 
-export async function listLinks(userId: string): Promise<CompetitorLink[]> {
+export async function listLinks(orgId: string): Promise<CompetitorLink[]> {
   return db
     .select()
     .from(competitorLinks)
-    .where(eq(competitorLinks.userId, userId))
+    .where(eq(competitorLinks.orgId, orgId))
     .orderBy(desc(competitorLinks.createdAt));
 }
 
-export async function deleteLink(userId: string, id: string): Promise<void> {
-  await db.delete(competitorLinks).where(and(eq(competitorLinks.userId, userId), eq(competitorLinks.id, id)));
+export async function deleteLink(orgId: string, id: string): Promise<void> {
+  await db.delete(competitorLinks).where(and(eq(competitorLinks.orgId, orgId), eq(competitorLinks.id, id)));
 }
 
 export type LinkSnapshot = {

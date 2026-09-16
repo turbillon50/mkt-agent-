@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { listPosts } from '@/lib/data';
+import { orgContextOrNull } from '@/lib/org';
 import { formatDate } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,8 @@ export default async function PostsPage() {
   let rows: Awaited<ReturnType<typeof listPosts>> = [];
   let error: string | null = null;
   try {
-    rows = await listPosts();
+    const ctx = await orgContextOrNull();
+    rows = ctx ? await listPosts(ctx.orgId) : [];
   } catch (e) {
     error = e instanceof Error ? e.message : 'failed to load posts';
   }

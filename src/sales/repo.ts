@@ -44,6 +44,7 @@ export async function upsertLead(input: NewSalesLead): Promise<UpsertLeadResult>
     const [row] = await db.insert(salesLeads).values(input).returning();
     if (!row) throw new Error('No se pudo insertar el lead.');
     await recordEvent({
+      orgId: row.orgId,
       leadId: row.id,
       type: 'created',
       toStage: row.stage,
@@ -151,6 +152,7 @@ export async function moveStage(
     .where(eq(salesLeads.id, leadId))
     .returning();
   await recordEvent({
+    orgId: lead.orgId,
     leadId,
     type: 'stage_change',
     fromStage: lead.stage,
@@ -166,6 +168,7 @@ export async function moveStage(
 // ---------------------------------------------------------------------------
 
 export async function recordEvent(input: {
+  orgId: string;
   leadId: string;
   type: EventType;
   fromStage?: LeadStage | null;
@@ -176,6 +179,7 @@ export async function recordEvent(input: {
   const [row] = await db
     .insert(salesLeadEvents)
     .values({
+      orgId: input.orgId,
       leadId: input.leadId,
       type: input.type,
       fromStage: input.fromStage ?? null,
@@ -201,6 +205,7 @@ export async function listEvents(leadId: string, limit = 50): Promise<SalesLeadE
 // ---------------------------------------------------------------------------
 
 export async function getOrCreateConversation(input: {
+  orgId: string;
   campaignId: string;
   leadId: string | null;
   channel: 'whatsapp' | 'sms' | 'email';
@@ -232,6 +237,7 @@ export async function getOrCreateConversation(input: {
   const [row] = await db
     .insert(conversations)
     .values({
+      orgId: input.orgId,
       campaignId: input.campaignId,
       leadId: input.leadId,
       channel: input.channel,
@@ -311,6 +317,7 @@ export function windowIsOpen(conversation: Conversation, now = new Date()): bool
 }
 
 export async function insertMessage(input: {
+  orgId: string;
   conversationId: string;
   direction: 'inbound' | 'outbound';
   body: string;
@@ -324,6 +331,7 @@ export async function insertMessage(input: {
   const [row] = await db
     .insert(messages)
     .values({
+      orgId: input.orgId,
       conversationId: input.conversationId,
       direction: input.direction,
       body: input.body,

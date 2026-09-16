@@ -6,15 +6,17 @@ import { CommandCenter } from '@/components/dashboard/command-center';
 import { ProjectsRow } from '@/components/dashboard/projects-row';
 import { GettingStarted } from '@/components/dashboard/getting-started';
 import { getDashboardStats } from '@/lib/data';
+import { orgContextOrNull } from '@/lib/org';
 import { formatDate } from '@/lib/utils';
 import { isClerkConfigured } from '@/lib/clerk-config';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-async function safeStats() {
+async function safeStats(orgId: string | null) {
+  if (!orgId) return null;
   try {
-    return await getDashboardStats();
+    return await getDashboardStats(orgId);
   } catch {
     return null;
   }
@@ -27,7 +29,7 @@ type Onboarding = {
   hasChatted: boolean;
 };
 
-async function safeOnboarding(): Promise<Onboarding> {
+async function safeOnboarding(orgId: string | null): Promise<Onboarding> {
   const fallback: Onboarding = {
     firstName: 'humano',
     hasManifesto: true,
@@ -39,12 +41,13 @@ async function safeOnboarding(): Promise<Onboarding> {
     const { currentUserOrNull } = await import('@/lib/users');
     const user = await currentUserOrNull();
     if (!user) return fallback;
+    const ctx = orgId ? await orgContextOrNull() : null;
 
     const firstName = user.firstName ?? user.username ?? user.email?.split('@')[0] ?? 'humano';
 
     const [campaign, twitterConnected, linkedinConnected, recentMessages] = await Promise.all([
-      user.activeCampaignId
-        ? import('@/lib/campaigns').then((m) => m.getActiveCampaign(user.id)).catch(() => null)
+      ctx?.activeProjectId && orgId
+        ? import('@/lib/campaigns').then((m) => m.getCampaign(orgId, ctx.activeProjectId!)).catch(() => null)
         : Promise.resolve(null),
       import('@/lib/composio').then((m) => m.isConnected(user.id, 'twitter')).catch(() => false),
       import('@/lib/composio').then((m) => m.isConnected(user.id, 'linkedin')).catch(() => false),
@@ -63,8 +66,10 @@ async function safeOnboarding(): Promise<Onboarding> {
 }
 
 export default async function DashboardPage() {
-  const { firstName, hasManifesto, hasConnectedNetwork, hasChatted } = await safeOnboarding();
-  const stats = await safeStats();
+  const ctx = await orgContextOrNull();
+  const orgId = ctx?.orgId ?? null;
+  const { firstName, hasManifesto, hasConnectedNetwork, hasChatted } = await safeOnboarding(orgId);
+  const stats = await safeStats(orgId);
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
@@ -126,7 +131,7 @@ export default async function DashboardPage() {
           <ActionChip href="/competencia" label="Analizar competencia" />
         </div>
 
-        <ProjectsRow />
+        <ProjectsRow orgId={orgId} />
 
         <section>
           <div className="mb-3 flex items-center justify-between">

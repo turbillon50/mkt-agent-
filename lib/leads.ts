@@ -77,6 +77,7 @@ export async function enrichFromPublicPage(url: string): Promise<{
 }
 
 export async function createLead(
+  orgId: string,
   userId: string,
   input: { sourceUrl: string; campaignId?: string | null }
 ): Promise<Lead> {
@@ -86,6 +87,7 @@ export async function createLead(
   const [row] = await db
     .insert(leads)
     .values({
+      orgId,
       userId,
       campaignId: input.campaignId ?? null,
       sourceUrl: input.sourceUrl,
@@ -116,6 +118,7 @@ export async function createLead(
  * tronar el batch completo.
  */
 export async function bulkCreateLeads(
+  orgId: string,
   userId: string,
   urls: string[],
   campaignId?: string | null,
@@ -124,7 +127,7 @@ export async function bulkCreateLeads(
   let failed = 0;
   for (const url of urls.slice(0, 25)) {
     try {
-      await createLead(userId, { sourceUrl: url, campaignId });
+      await createLead(orgId, userId, { sourceUrl: url, campaignId });
       created++;
     } catch {
       failed++;
@@ -138,6 +141,7 @@ export async function bulkCreateLeads(
  * telefono/sitio/rating reales — no hace falta re-enriquecer via fetch).
  */
 export async function bulkCreateLeadsFromPlaces(
+  orgId: string,
   userId: string,
   places: MapsPlace[],
   campaignId?: string | null,
@@ -154,6 +158,7 @@ export async function bulkCreateLeadsFromPlaces(
       await db
         .insert(leads)
         .values({
+          orgId,
           userId,
           campaignId: campaignId ?? null,
           sourceUrl,
@@ -178,26 +183,26 @@ export async function bulkCreateLeadsFromPlaces(
   return { created, failed };
 }
 
-export async function listLeads(userId: string, campaignId?: string | null): Promise<Lead[]> {
+export async function listLeads(orgId: string, campaignId?: string | null): Promise<Lead[]> {
   const where = campaignId
-    ? and(eq(leads.userId, userId), eq(leads.campaignId, campaignId))
-    : eq(leads.userId, userId);
+    ? and(eq(leads.orgId, orgId), eq(leads.campaignId, campaignId))
+    : eq(leads.orgId, orgId);
   return db.select().from(leads).where(where).orderBy(desc(leads.createdAt));
 }
 
 export async function updateLeadStatus(
-  userId: string,
+  orgId: string,
   id: string,
   status: string
 ): Promise<void> {
   await db
     .update(leads)
     .set({ status, updatedAt: new Date() })
-    .where(and(eq(leads.userId, userId), eq(leads.id, id)));
+    .where(and(eq(leads.orgId, orgId), eq(leads.id, id)));
 }
 
-export async function deleteLead(userId: string, id: string): Promise<void> {
-  await db.delete(leads).where(and(eq(leads.userId, userId), eq(leads.id, id)));
+export async function deleteLead(orgId: string, id: string): Promise<void> {
+  await db.delete(leads).where(and(eq(leads.orgId, orgId), eq(leads.id, id)));
 }
 
 export type ProspectCandidate = {
@@ -392,7 +397,7 @@ async function searchProspectsViaGrounding(query: string): Promise<ProspectCandi
 // ============================================================
 
 export async function generateOutreachMessages(
-  userId: string,
+  orgId: string,
   leadIds: string[],
   customPrompt: string | undefined,
   brand: { name: string; voice?: string | null } | null,
@@ -400,7 +405,7 @@ export async function generateOutreachMessages(
   const rows = await db
     .select()
     .from(leads)
-    .where(and(eq(leads.userId, userId), inArray(leads.id, leadIds)));
+    .where(and(eq(leads.orgId, orgId), inArray(leads.id, leadIds)));
 
   const updated: Lead[] = [];
   for (const lead of rows) {
@@ -442,7 +447,7 @@ export async function generateOutreachMessages(
       const [row] = await db
         .update(leads)
         .set({ draftMessage: message.trim(), updatedAt: new Date() })
-        .where(and(eq(leads.userId, userId), eq(leads.id, lead.id)))
+        .where(and(eq(leads.orgId, orgId), eq(leads.id, lead.id)))
         .returning();
       if (row) updated.push(row);
     } else {
@@ -476,6 +481,7 @@ export async function searchLinkedInProspects(query: string, limit = 10): Promis
  * subiria mucho el riesgo de deteccion).
  */
 export async function bulkCreateLeadsFromLinkedIn(
+  orgId: string,
   userId: string,
   people: LinkedInPerson[],
   campaignId?: string | null,
@@ -492,6 +498,7 @@ export async function bulkCreateLeadsFromLinkedIn(
       await db
         .insert(leads)
         .values({
+          orgId,
           userId,
           campaignId: campaignId ?? null,
           sourceUrl,

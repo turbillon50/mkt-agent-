@@ -61,6 +61,7 @@ export async function ingestLead(input: IngestInput): Promise<IngestResult> {
     : computed;
 
   const { lead, created } = await upsertLead({
+    orgId: project.orgId,
     userId: project.userId,
     campaignId: project.id,
     phone,
@@ -105,6 +106,7 @@ export async function ingestLead(input: IngestInput): Promise<IngestResult> {
 
   if (scored.grade === rules.notify_owner_grade) {
     const action = await enqueue({
+      orgId: project.orgId,
       campaignId: project.id,
       leadId: lead.id,
       kind: 'notify_owner',
@@ -121,6 +123,7 @@ export async function ingestLead(input: IngestInput): Promise<IngestResult> {
 
   if (rules.auto_first_contact && phone) {
     const action = await enqueue({
+      orgId: project.orgId,
       campaignId: project.id,
       leadId: lead.id,
       kind: 'send_template',
@@ -135,6 +138,7 @@ export async function ingestLead(input: IngestInput): Promise<IngestResult> {
 
   if (enqueued.length > 0) {
     await recordEvent({
+      orgId: project.orgId,
       leadId: lead.id,
       type: 'note',
       actor: 'goossip',

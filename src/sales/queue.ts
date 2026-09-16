@@ -8,6 +8,7 @@ import { actionQueue, type NewQueuedAction, type QueuedAction } from '../db/sche
 import type { ActionKind, ActionStatus } from './types';
 
 export interface EnqueueInput {
+  orgId: string;
   campaignId: string;
   leadId?: string | null;
   kind: ActionKind;
@@ -29,6 +30,7 @@ export interface EnqueueInput {
  */
 export async function enqueue(input: EnqueueInput): Promise<QueuedAction | null> {
   const values: NewQueuedAction = {
+    orgId: input.orgId,
     campaignId: input.campaignId,
     leadId: input.leadId ?? null,
     kind: input.kind,
