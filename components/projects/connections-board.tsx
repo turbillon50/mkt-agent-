@@ -228,7 +228,7 @@ export function ConnectionsBoard({
                           setAbierta(abierto ? null : card.id);
                         }}
                       >
-                        {trabajando === card.id ? 'Un momento…' : 'Conectar'}
+                        {trabajando === card.id ? 'Esperando a que termines en la otra ventana…' : 'Conectar'}
                       </Button>
                     )}
                   </div>
@@ -285,7 +285,40 @@ export function ConnectionsBoard({
       });
       const data = await res.json();
       if (!res.ok || !data.redirectUrl) throw new Error(data.error ?? 'No se pudo.');
-      window.location.href = data.redirectUrl;
+      // La ventana de permisos se abre APARTE. Esta pantalla se queda y
+      // pregunta a Goossip (que pregunta a Composio) hasta que la cuenta quede.
+      const ventana = window.open(
+        data.redirectUrl,
+        `goossip-conexion-${canal}`,
+        'width=640,height=780,noopener=no',
+      );
+      if (!ventana) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
+      const inicio = Date.now();
+      const cada = window.setInterval(async () => {
+        if (Date.now() - inicio > 5 * 60 * 1000) {
+          window.clearInterval(cada);
+          setTrabajando(null);
+          push({ title: 'No se completó la conexión. Intenta de nuevo.', variant: 'error' });
+          return;
+        }
+        try {
+          const r = await fetch(
+            `/api/connections/composio/status?project=${projectId}&canal=${canal}`,
+            { cache: 'no-store' },
+          );
+          const s = await r.json();
+          if (s.connected) {
+            window.clearInterval(cada);
+            try { ventana.close(); } catch {}
+            setTrabajando(null);
+            push({ title: 'Conectado. Ya puedes cerrar la otra ventana si sigue abierta.', variant: 'success' });
+            router.refresh();
+          }
+        } catch {}
+      }, 3000);
     } catch (e) {
       push({ title: e instanceof Error ? e.message : 'Error', variant: 'error' });
       setTrabajando(null);
