@@ -44,3 +44,7 @@ capturas-c8/*
 # misma pantalla. Mismo trato — se versiona la medición, no los 2.3 MB de PNG.
 capturas-integracion-c8/*
 !capturas-integracion-c8/resumen.json
+
+# Igual para las de la corrida 11. Lo que se versiona es la MEDICIÓN.
+capturas-c11/*
+!capturas-c11/resumen.json

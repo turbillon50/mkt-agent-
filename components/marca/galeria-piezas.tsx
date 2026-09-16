@@ -230,7 +230,7 @@ export function GaleriaPiezas({
   const abiertaEnVisor = piezas.find((p) => p.id === visor) ?? null;
 
   return (
-    <div className="space-y-4">
+    <div className="piezas-galeria space-y-4">
       {/* ---- barra: filtro por red + botón ---- */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -363,7 +363,7 @@ export function GaleriaPiezas({
 
       {/* ---- la galería ---- */}
       {cargando ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="piezas-grid grid gap-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="skeleton aspect-[4/5] w-full rounded-xl" />
           ))}
@@ -375,7 +375,7 @@ export function GaleriaPiezas({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="piezas-grid grid gap-3">
           {piezas.map((p) => (
             <Card key={p.id} className={cn(p.estado === 'descartada' && 'opacity-50')}>
               <CardContent className="space-y-2.5 p-3">

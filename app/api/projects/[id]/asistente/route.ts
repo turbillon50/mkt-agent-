@@ -98,6 +98,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       mandar('estado', { texto: 'Goossip está escribiendo…' });
 
       let completo = cabecera;
+      let textoFinal = cabecera;
       let piezas: unknown[] = [];
       let publicado: string | null = null;
 
@@ -110,6 +111,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
           } else if (evento.tipo === 'fin') {
             piezas = evento.respuesta.piezas;
             publicado = evento.respuesta.publicado;
+            textoFinal = cabecera + evento.respuesta.texto;
           } else {
             mandar('error', { mensaje: evento.mensaje });
           }
@@ -135,11 +137,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         ambito,
         conversationId: preparado!.hilo.id,
         role: 'assistant',
-        content: completo,
+        content: textoFinal || completo,
         metadata: { piezas: piezas as never, publicado },
       }).catch(() => undefined);
 
-      mandar('fin', { piezas, publicado, conversationId: preparado!.hilo.id });
+      mandar('fin', {
+        texto: textoFinal || completo,
+        piezas,
+        publicado,
+        conversationId: preparado!.hilo.id,
+      });
       control.close();
     },
   });

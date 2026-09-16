@@ -345,14 +345,15 @@ export async function* conversarEnVivo(
     salida = await (agente as any).stream(mensajes as never, opciones as never);
   } catch {
     const resultado = await agente.generate(mensajes as never, opciones as never);
-    const texto = extraerTexto(resultado);
+    const publicado = extraerPublicado(resultado);
+    const texto = garantizarVerdad(extraerTexto(resultado), publicado);
     yield { tipo: 'texto', delta: texto };
     yield {
       tipo: 'fin',
       respuesta: {
         texto,
         piezas: extraerPiezas(resultado),
-        publicado: extraerPublicado(resultado),
+        publicado,
       },
     };
     return;
@@ -414,12 +415,15 @@ export async function* conversarEnVivo(
     yield { tipo: 'error', mensaje: 'El modelo no devolvió nada. Vuelve a intentarlo.' };
   }
 
+  const publicado = extraerPublicado(comoResultado);
+  const textoFinal = garantizarVerdad(completo, publicado);
+
   yield {
     tipo: 'fin',
     respuesta: {
-      texto: completo,
+      texto: textoFinal,
       piezas: extraerPiezas(comoResultado),
-      publicado: extraerPublicado(comoResultado),
+      publicado,
     },
   };
 }

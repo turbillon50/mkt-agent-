@@ -234,7 +234,14 @@ export function useAsistente(projectId: string | null): Asistente {
             setTrabajando(null);
             setMensajes((m) => pegarEnElUltimo(m, dato.delta));
           } else if (evento === 'fin') {
-            setMensajes((m) => cerrarElUltimo(m, dato?.piezas ?? [], dato?.publicado ?? null));
+            setMensajes((m) =>
+              cerrarElUltimo(
+                m,
+                dato?.piezas ?? [],
+                dato?.publicado ?? null,
+                typeof dato?.texto === 'string' ? dato.texto : undefined,
+              ),
+            );
             if (dato?.conversationId) setConversationId(dato.conversationId);
           } else if (evento === 'estado' && typeof dato?.texto === 'string') {
             setTrabajando(dato.texto);
@@ -288,10 +295,14 @@ function cerrarElUltimo(
   mensajes: MensajeUI[],
   piezas: PiezaUI[],
   publicado: string | null,
+  textoFinal?: string,
 ): MensajeUI[] {
   const ultimo = mensajes[mensajes.length - 1];
   if (!ultimo || ultimo.role !== 'assistant') return mensajes;
-  return [...mensajes.slice(0, -1), { ...ultimo, piezas, publicado }];
+  return [
+    ...mensajes.slice(0, -1),
+    { ...ultimo, content: textoFinal ?? ultimo.content, piezas, publicado },
+  ];
 }
 
 /**

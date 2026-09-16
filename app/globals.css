@@ -503,3 +503,32 @@ html[data-asistente-drag='si'] .asistente-aside {
   max-width: 100%;
   overflow-x: auto;
 }
+
+/*
+  La galería vive entre dos columnas que cambian de ancho: el menú y Goossip.
+  Los breakpoints de viewport hacían que, a 1365 px, Tailwind intentara meter
+  TRES tarjetas dentro de un main de ~700 px. Esa es la causa de las piezas
+  cortadas en la captura: el navegador era ancho, el contenedor no.
+
+  Aquí decide el ancho REAL de la galería. Abierta con Goossip: dos piezas
+  cómodas. Panel plegado o monitor amplio: tres. Móvil: una.
+*/
+.piezas-galeria {
+  container-type: inline-size;
+}
+
+.piezas-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@container (min-width: 34rem) {
+  .piezas-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 64rem) {
+  .piezas-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
