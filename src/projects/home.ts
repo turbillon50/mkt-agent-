@@ -119,18 +119,24 @@ export async function projectHome(project: Project): Promise<ProjectHome> {
       ),
   ]);
 
+  // La verdad de Facebook/Instagram: por Composio (facebook, instagram) o por
+  // la app propia (meta). Cualquiera de las dos conectada cuenta.
   const meta = connections.cards.find((c) => c.id === 'meta');
-  const metaConectado = meta?.state === 'conectado';
+  const facebook = connections.cards.find((c) => c.id === 'facebook');
+  const instagram = connections.cards.find((c) => c.id === 'instagram');
+  const metaConectado =
+    meta?.state === 'conectado' || facebook?.state === 'conectado' || instagram?.state === 'conectado';
   const formularios = Array.isArray((meta?.data as { forms?: unknown[] })?.forms)
     ? ((meta!.data as { forms: unknown[] }).forms as unknown[]).length
     : 0;
+  const conectados = connections.cards.filter((c) => c.state === 'conectado').length;
   const base = `/projects/${project.id}`;
 
   const checklist: ChecklistStep[] = [
     {
       id: 'meta',
       label: 'Conecta Facebook e Instagram',
-      help: 'Es por donde entran los leads de tus anuncios.',
+      help: conectados > 0 ? `${conectados} conexiones activas en este proyecto.` : 'Es por donde entran los leads de tus anuncios.',
       done: metaConectado,
       href: `${base}/conexiones`,
       cta: 'Conectar',
@@ -139,7 +145,9 @@ export async function projectHome(project: Project): Promise<ProjectHome> {
       id: 'formulario',
       label: 'Elige el formulario de leads',
       help: 'De cuál de tus formularios quieres recibir a la gente.',
-      done: metaConectado && formularios > 0,
+      // Con la app propia se eligen formularios; por Composio los leads entran
+      // solos de todos los formularios de la página: cuenta como hecho.
+      done: (meta?.state === 'conectado' && formularios > 0) || facebook?.state === 'conectado',
       href: `${base}/conexiones`,
       cta: 'Elegir',
     },
