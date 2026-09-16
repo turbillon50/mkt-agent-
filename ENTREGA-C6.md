@@ -7,7 +7,7 @@ Kit de marca: OK · proyectos con kit: 1 (MOMENTUM, paleta propuesta por Gemini 
 Motor de piezas: Gemini OK (3 opciones en 12 s, 1080×1350 exactos) · Canva escrito y probado hasta donde se puede sin cuenta conectada → fallback sharp, que es el que corrió · Higgsfield OK (API viva, 948 créditos, job real completado)
 Asistente por proyecto: OK · publicó en LinkedIn de MOMENTUM: https://www.linkedin.com/feed/update/urn:li:share:7505932791906299904/
 Guía activa: reglas 6
-Deploy preview: READY — https://goossip-6feb0ix4w-luis-projects-48b011f9.vercel.app · PR: #40
+Deploy preview: READY — https://goossip-6feb0ix4w-luis-projects-48b011f9.vercel.app · PR: #41
 Bloqueos de Luis: [borrar a mano un post de prueba que salió durante el diagnóstico de LinkedIn — la conexión no tiene permiso para listarlos y borrarlo | conectar Canva en MOMENTUM y cargarle una plantilla de marca, o el motor seguirá componiendo por su cuenta | decidir si HIGGSFIELD_ACCESS_TOKEN entra al entorno de Vercel: hoy la app no lo tiene y foto de producto/video quedan apagados en producción | correr `npm run db:migrate` contra producción al mergear (0017 y 0018) y después `npm run ingest:diseno` | CLERK_SECRET_KEY y las NEXT_PUBLIC_CLERK_* siguen fuera del entorno Preview desde la corrida 5]
 ```
 
