@@ -10,6 +10,19 @@ import {
   vector,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import type {
+  ActionKind,
+  ActionStatus,
+  DeliveryStatus,
+  EventType,
+  LeadGrade,
+  LeadSource,
+  LeadStage,
+  McpSource,
+  ProjectChannels,
+  ProjectKind,
+  ProjectRules,
+} from '../sales/types';
 
 export const posts = pgTable('posts', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -32,6 +45,8 @@ export const knowledge = pgTable('knowledge', {
   title: text('title'),
   content: text('content').notNull(),
   source: text('source'),
+  // La columna existe en la base desde 0004_campaigns.sql; faltaba en el modelo.
+  campaignId: uuid('campaign_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -130,6 +145,12 @@ export const campaigns = pgTable('campaigns', {
   audience: text('audience'),
   manifesto: text('manifesto'),
   status: text('status').notNull().default('active'),
+  // --- proyecto (super vendedor). La tabla se queda; en UI es "proyecto". ---
+  kind: text('kind').$type<ProjectKind>().notNull().default('servicios'),
+  channels: jsonb('channels').$type<ProjectChannels>().notNull().default({}),
+  sellerPersona: text('seller_persona'),
+  rules: jsonb('rules').$type<ProjectRules>().notNull().default({}),
+  mcpSources: jsonb('mcp_sources').$type<McpSource[]>().notNull().default([]),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -270,3 +291,128 @@ export const competitorLinks = pgTable('competitor_links', {
 
 export type CompetitorLink = typeof competitorLinks.$inferSelect;
 export type NewCompetitorLink = typeof competitorLinks.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Super vendedor: leads de venta, bitácora, conversaciones, mensajes y cola.
+// `leads` (arriba) es prospección de LinkedIn/Maps y no se toca.
+// ---------------------------------------------------------------------------
+
+export const salesLeads = pgTable('sales_leads', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  campaignId: uuid('campaign_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  phone: text('phone'),
+  email: text('email'),
+  fullName: text('full_name'),
+  source: text('source').$type<LeadSource>().notNull().default('manual'),
+  sourceRef: text('source_ref'),
+  score: integer('score').notNull().default(0),
+  grade: text('grade').$type<LeadGrade>().notNull().default('C'),
+  scoreBreakdown: jsonb('score_breakdown').$type<{
+    base?: number;
+    signals?: string[];
+    zone?: string;
+    lada?: string;
+    country?: string;
+  }>().notNull().default({}),
+  stage: text('stage').$type<LeadStage>().notNull().default('nuevo'),
+  ownerId: uuid('owner_id').references(() => users.id, { onDelete: 'set null' }),
+  interest: jsonb('interest').$type<Record<string, unknown>>(),
+  phoneValidation: jsonb('phone_validation').$type<{
+    checked_at?: string;
+    valid?: boolean | null;
+    line_type?: string | null;
+    carrier?: string | null;
+    detail?: string;
+  }>(),
+  raw: jsonb('raw').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  campaignStageIdx: index('sales_leads_campaign_stage_idx').on(t.campaignId, t.stage),
+  campaignCreatedIdx: index('sales_leads_campaign_created_idx').on(t.campaignId, t.createdAt),
+  phoneIdx: index('sales_leads_phone_idx').on(t.phone),
+  userIdx: index('sales_leads_user_idx').on(t.userId),
+}));
+
+export const salesLeadEvents = pgTable('sales_lead_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  leadId: uuid('lead_id').notNull().references(() => salesLeads.id, { onDelete: 'cascade' }),
+  type: text('type').$type<EventType>().notNull(),
+  fromStage: text('from_stage').$type<LeadStage>(),
+  toStage: text('to_stage').$type<LeadStage>(),
+  actor: text('actor').notNull().default('goossip'),
+  payload: jsonb('payload').$type<Record<string, unknown>>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  leadIdx: index('sales_lead_events_lead_idx').on(t.leadId, t.createdAt),
+}));
+
+export const conversations = pgTable('conversations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  campaignId: uuid('campaign_id').references(() => campaigns.id, { onDelete: 'cascade' }),
+  leadId: uuid('lead_id').references(() => salesLeads.id, { onDelete: 'set null' }),
+  channel: text('channel').$type<'whatsapp' | 'sms' | 'email'>().notNull().default('whatsapp'),
+  externalThreadId: text('external_thread_id').notNull(),
+  status: text('status').$type<'open' | 'escalated' | 'closed'>().notNull().default('open'),
+  lastInboundAt: timestamp('last_inbound_at', { withTimezone: true }),
+  lastOutboundAt: timestamp('last_outbound_at', { withTimezone: true }),
+  windowExpiresAt: timestamp('window_expires_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  leadIdx: index('conversations_lead_idx').on(t.leadId),
+  campaignStatusIdx: index('conversations_campaign_status_idx').on(t.campaignId, t.status),
+}));
+
+export const messages = pgTable('messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  conversationId: uuid('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
+  direction: text('direction').$type<'inbound' | 'outbound'>().notNull(),
+  body: text('body').notNull().default(''),
+  media: jsonb('media').$type<{ type?: string; url?: string; caption?: string }>(),
+  templateName: text('template_name'),
+  externalId: text('external_id'),
+  deliveryStatus: text('delivery_status').$type<DeliveryStatus>(),
+  respondedBy: text('responded_by'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  conversationIdx: index('messages_conversation_idx').on(t.conversationId, t.createdAt),
+}));
+
+export const actionQueue = pgTable('action_queue', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  campaignId: uuid('campaign_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  leadId: uuid('lead_id').references(() => salesLeads.id, { onDelete: 'cascade' }),
+  kind: text('kind').$type<ActionKind>().notNull(),
+  payload: jsonb('payload').$type<Record<string, unknown>>().notNull().default({}),
+  priority: integer('priority').notNull().default(5),
+  status: text('status').$type<ActionStatus>().notNull().default('pending'),
+  reason: text('reason'),
+  scheduledFor: timestamp('scheduled_for', { withTimezone: true }).defaultNow().notNull(),
+  executedAt: timestamp('executed_at', { withTimezone: true }),
+  result: jsonb('result').$type<Record<string, unknown>>(),
+  createdBy: text('created_by').notNull().default('goossip'),
+  approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  campaignStatusIdx: index('action_queue_campaign_status_idx').on(t.campaignId, t.status),
+  runnerIdx: index('action_queue_runner_idx').on(t.status, t.scheduledFor, t.priority),
+  leadIdx: index('action_queue_lead_idx').on(t.leadId),
+}));
+
+export type SalesLead = typeof salesLeads.$inferSelect;
+export type NewSalesLead = typeof salesLeads.$inferInsert;
+export type SalesLeadEvent = typeof salesLeadEvents.$inferSelect;
+export type NewSalesLeadEvent = typeof salesLeadEvents.$inferInsert;
+export type Conversation = typeof conversations.$inferSelect;
+export type NewConversation = typeof conversations.$inferInsert;
+export type Message = typeof messages.$inferSelect;
+export type NewMessage = typeof messages.$inferInsert;
+export type QueuedAction = typeof actionQueue.$inferSelect;
+export type NewQueuedAction = typeof actionQueue.$inferInsert;
+
+/** Alias de dominio: en la base es `campaigns`, en la app es un proyecto. */
+export const projects = campaigns;
+export type Project = Campaign;
+export type { ProjectKind, ProjectChannels, ProjectRules, McpSource };

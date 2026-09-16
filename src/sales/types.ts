@@ -1,0 +1,138 @@
+/**
+ * Tipos del super vendedor multi-proyecto.
+ *
+ * En la base la tabla sigue llamándose `campaigns`; en UI y en tipos se llama
+ * PROYECTO. Un tenant (usuario Clerk) tiene N proyectos; cada proyecto trae sus
+ * canales, sus reglas, su vendedor y sus leads.
+ */
+
+export const PROJECT_KINDS = ['real_estate', 'mlm', 'marketplace', 'servicios'] as const;
+export type ProjectKind = (typeof PROJECT_KINDS)[number];
+
+export const LEAD_STAGES = [
+  'nuevo',
+  'contactado',
+  'interesado',
+  'cita_agendada',
+  'visita_hecha',
+  'apartado',
+  'cerrado',
+  'perdido',
+] as const;
+export type LeadStage = (typeof LEAD_STAGES)[number];
+
+export const LEAD_SOURCES = ['meta_leadgen', 'site', 'manual', 'import'] as const;
+export type LeadSource = (typeof LEAD_SOURCES)[number];
+
+export type LeadGrade = 'A' | 'B' | 'C';
+
+export const ACTION_KINDS = [
+  'send_template',
+  'send_sms',
+  'notify_owner',
+  'propose_reply',
+  'propose_campaign',
+  'retarget',
+] as const;
+export type ActionKind = (typeof ACTION_KINDS)[number];
+
+export const ACTION_STATUSES = ['pending', 'approved', 'auto', 'executed', 'rejected', 'failed'] as const;
+export type ActionStatus = (typeof ACTION_STATUSES)[number];
+
+export type EventType =
+  | 'created'
+  | 'stage_change'
+  | 'message_out'
+  | 'message_in'
+  | 'call'
+  | 'note'
+  | 'assigned';
+
+export type DeliveryStatus = 'sent' | 'delivered' | 'read' | 'failed' | 'no_whatsapp';
+
+/** Twilio arranca en `trial`: solo salen SMS a números verificados. */
+export type TwilioMode = 'trial' | 'paid';
+
+/**
+ * Canales del proyecto. Aquí van IDS PÚBLICOS, nunca tokens: los tokens viven
+ * en env de Vercel (ver `envKeyFor` en lib/project-secrets.ts).
+ */
+export interface ProjectChannels {
+  meta_page_id?: string;
+  meta_form_ids?: string[];
+  meta_ad_account?: string;
+  waba_phone_id?: string;
+  twilio_number?: string;
+  from_email?: string;
+}
+
+/** Reglas del proyecto. Los timers van en horas. */
+export interface ProjectRules {
+  auto_reply?: boolean;
+  auto_first_contact?: boolean;
+  /** Sin contacto a N horas → send_template. */
+  no_contact_hours?: number;
+  /** Sin respuesta a N horas → send_sms. */
+  no_reply_sms_hours?: number;
+  /** Sin respuesta a N horas → retarget (propuesto). */
+  no_reply_retarget_hours?: number;
+  /** Grado mínimo que dispara notify_owner inmediato. */
+  notify_owner_grade?: LeadGrade;
+  /** Puntaje a partir del cual el vendedor escala a humano. */
+  escalation_score?: number;
+  twilio_mode?: TwilioMode;
+  /** Plantilla de WhatsApp para el primer contacto. */
+  first_contact_template?: string;
+  /** Teléfono E.164 del dueño para notify_owner. */
+  owner_phone?: string;
+}
+
+export interface McpSource {
+  label: string;
+  url: string;
+}
+
+export const DEFAULT_RULES: Required<
+  Pick<
+    ProjectRules,
+    | 'auto_reply'
+    | 'auto_first_contact'
+    | 'no_contact_hours'
+    | 'no_reply_sms_hours'
+    | 'no_reply_retarget_hours'
+    | 'notify_owner_grade'
+    | 'escalation_score'
+    | 'twilio_mode'
+  >
+> = {
+  auto_reply: false,
+  auto_first_contact: false,
+  no_contact_hours: 2,
+  no_reply_sms_hours: 72,
+  no_reply_retarget_hours: 24 * 7,
+  notify_owner_grade: 'A',
+  escalation_score: 70,
+  twilio_mode: 'trial',
+};
+
+export function resolveRules(raw: ProjectRules | null | undefined): ProjectRules & typeof DEFAULT_RULES {
+  return { ...DEFAULT_RULES, ...(raw ?? {}) };
+}
+
+export const STAGE_ORDER: Record<LeadStage, number> = {
+  nuevo: 0,
+  contactado: 1,
+  interesado: 2,
+  cita_agendada: 3,
+  visita_hecha: 4,
+  apartado: 5,
+  cerrado: 6,
+  perdido: 99,
+};
+
+/** Solo avanza; nunca retrocede un stage que el humano ya movió. */
+export function isForwardStage(from: LeadStage, to: LeadStage): boolean {
+  if (to === 'perdido') return from !== 'cerrado';
+  if (from === 'perdido') return false;
+  return STAGE_ORDER[to] > STAGE_ORDER[from];
+}

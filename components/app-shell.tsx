@@ -7,7 +7,7 @@ import { Sidebar } from './sidebar';
 import { BottomTabBar } from './bottom-tab-bar';
 import { cn } from '@/lib/utils';
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, isAdmin = false }: { children: React.ReactNode; isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -57,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <IconClose className="h-4 w-4" />
             </button>
           )}
-          <Sidebar onNavigate={() => setOpen(false)} />
+          <Sidebar onNavigate={() => setOpen(false)} isAdmin={isAdmin} />
         </div>
       </aside>
 

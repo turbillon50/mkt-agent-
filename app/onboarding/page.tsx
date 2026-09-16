@@ -2,11 +2,16 @@ import { redirect } from 'next/navigation';
 import { IconLogoMark } from '@/components/icons';
 import { isClerkConfigured } from '@/lib/clerk-config';
 import { getOrCreateUser } from '@/lib/users';
-import { listCampaigns } from '@/lib/campaigns';
-import { CreateCampaignForm } from '@/components/campaigns/create-form';
+import { listProjects } from '@/lib/projects';
+import { OnboardingForm } from '@/components/projects/onboarding-form';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Alta del tenant + su primer proyecto en un solo paso. Solo pide lo mínimo
+ * (nombre, tipo, persona del vendedor): ley de Luis, primero se entra y se
+ * navega, los canales se conectan después.
+ */
 export default async function OnboardingPage() {
   if (!isClerkConfigured()) {
     redirect('/dashboard');
@@ -32,8 +37,8 @@ export default async function OnboardingPage() {
     );
   }
 
-  const campaigns = await listCampaigns(user.id).catch(() => []);
-  if (campaigns.length > 0) {
+  const projects = await listProjects(user.id).catch(() => []);
+  if (projects.length > 0) {
     redirect('/dashboard');
   }
 
@@ -49,14 +54,13 @@ export default async function OnboardingPage() {
             ¡Bienvenido, {user.firstName ?? 'a Goossip'}!
           </h1>
           <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-            Cada campaña es una marca distinta: su propia voz, audiencia e idioma. Crea la
-            primera — luego le subes el manifiesto completo, conectas redes y Goossip empieza
-            a planear sola cada lunes.
+            Un proyecto es un negocio con su propio vendedor: sus canales, sus campañas y sus
+            leads. Crea el primero — puedes entrar y navegar todo el panel antes de conectar nada.
           </p>
         </div>
 
         <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 text-left card-glow">
-          <CreateCampaignForm />
+          <OnboardingForm />
         </div>
 
         <p className="text-xs text-[var(--color-muted-foreground)]">

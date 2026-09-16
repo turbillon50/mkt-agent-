@@ -2,30 +2,9 @@ import 'server-only';
 import { and, eq, desc } from 'drizzle-orm';
 import { db } from '@/src/db/client';
 import { campaigns, users, type Campaign } from '@/src/db/schema';
-
-function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .slice(0, 60) || 'campana';
-}
-
-async function uniqueSlug(userId: string, base: string): Promise<string> {
-  let slug = slugify(base);
-  let i = 2;
-  while (true) {
-    const existing = await db
-      .select({ id: campaigns.id })
-      .from(campaigns)
-      .where(and(eq(campaigns.userId, userId), eq(campaigns.slug, slug)))
-      .limit(1);
-    if (existing.length === 0) return slug;
-    slug = `${slugify(base)}-${i++}`;
-  }
-}
+// Un solo generador de slug para campañas y proyectos: son la misma tabla.
+import { uniqueSlug } from '@/src/sales/projects';
+export { uniqueSlug };
 
 export async function listCampaigns(userId: string): Promise<Campaign[]> {
   return db
