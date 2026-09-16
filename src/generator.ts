@@ -1,16 +1,34 @@
 import { chat, chatJSON } from './openrouter';
 import { config, type Platform } from './config';
 import { recall } from './memory/index';
+import { playbookDe, type RedPublicable } from './creative/social-playbooks';
 
-const PLATFORM_LIMITS = {
-  meta: { maxChars: 800, hashtags: 8, style: 'visual-first, warm, community-oriented, always closes with 5-10 niche hashtags' },
-  instagram: { maxChars: 2200, hashtags: 10, style: 'short punchy caption, emoji-friendly, story-driven, closes with 8-10 hashtags, ALWAYS requires an image' },
-  twitter: { maxChars: 270, hashtags: 2, style: 'punchy, conversational, one idea per post' },
-  linkedin: { maxChars: 1500, hashtags: 4, style: 'professional, insightful, 1-3 short paragraphs' },
-} as const;
+const RED_DE_PLATAFORMA: Record<Platform, RedPublicable> = {
+  meta: 'facebook',
+  instagram: 'instagram',
+  twitter: 'twitter',
+  linkedin: 'linkedin',
+};
 
-function systemPrompt(): string {
-  const { name, voice, topics, language } = config.brand;
+export const PLATFORM_LIMITS = Object.fromEntries(
+  (Object.keys(RED_DE_PLATAFORMA) as Platform[]).map((platform) => {
+    const p = playbookDe(RED_DE_PLATAFORMA[platform]);
+    return [platform, { maxChars: p.caracteresMax, hashtags: p.hashtagsMax, style: p.tono }];
+  }),
+) as Record<Platform, { maxChars: number; hashtags: number; style: string }>;
+
+export interface ProjectBrandVoice {
+  name: string;
+  voice?: string | null;
+  topics?: string[] | null;
+  language?: string | null;
+}
+
+function systemPrompt(brand?: ProjectBrandVoice): string {
+  const name = brand?.name?.trim() || config.brand.name;
+  const voice = brand?.voice?.trim() || config.brand.voice;
+  const topics = brand?.topics?.filter(Boolean) ?? config.brand.topics;
+  const language = brand?.language?.trim() || config.brand.language;
   return [
     `You are the social media manager for "${name}".`,
     `Voice: ${voice}. Language: ${language}.`,
@@ -36,25 +54,33 @@ export interface GenerateInput {
   platform: Platform;
   topic: string;
   angle?: string;
+  /** Marca DEL PROYECTO. Si falta, solo los procesos globales usan config.brand. */
+  brand?: ProjectBrandVoice;
 }
 
 export async function generatePost(input: GenerateInput): Promise<string> {
+  const red = RED_DE_PLATAFORMA[input.platform] ?? 'twitter';
+  const playbook = playbookDe(red);
   const limits = PLATFORM_LIMITS[input.platform] ?? PLATFORM_LIMITS.twitter;
   const context = await buildContext(input.topic, input.platform);
 
   const user = [
-    `Write a ${input.platform} post.`,
+    `Write a native ${red} post. It must not read like a recycled caption from another network.`,
     `Topic: ${input.topic}.`,
     input.angle ? `Angle: ${input.angle}.` : '',
-    `Style: ${limits.style}.`,
+    `Platform objective: ${playbook.objetivo}`,
+    `Copy structure: ${playbook.estructuraCopy}`,
+    `Tone: ${playbook.tono}`,
+    `Call to action: ${playbook.cta}`,
     `Hard limit: ${limits.maxChars} characters including hashtags.`,
     `Use at most ${limits.hashtags} relevant hashtags at the end.`,
+    `Do not invent data, awards, availability, prices or customer claims.`,
     context,
     `Return ONLY the post body. No preface, no quotes.`,
   ].filter(Boolean).join('\n');
 
   const text = await chat([
-    { role: 'system', content: systemPrompt() },
+    { role: 'system', content: systemPrompt(input.brand) },
     { role: 'user', content: user },
   ], {
     temperature: 0.85,
@@ -98,5 +124,3 @@ export async function generateWeeklyPlan(opts: {
   if (!json || !Array.isArray(json.items)) throw new Error('Planner returned invalid JSON.');
   return json.items;
 }
-
-export { PLATFORM_LIMITS };

@@ -24,14 +24,13 @@ import { remember, recall } from '../memory/index';
 import { buscarDiseno } from '../design/knowledge';
 import {
   CANALES_DE_PUBLICACION,
-  publishTo,
 } from '../channels/index';
-import { activeAccountFor } from '../projects/composio-connections';
 import { generarPiezas, generarConHiggsfield } from '../creative/engine';
-import { guardarLote, guardarUna, marcarPublicada, piezaAprobadaDe } from '../creative/repo';
+import { guardarLote, guardarUna, piezaAprobadaDe } from '../creative/repo';
 import { elegirFormato, esRed, formatosDe, RED_LABEL, REDES, specEnPalabras } from '../creative/specs';
 import { palabrasProhibidasEn } from '../creative/brand-kit';
 import { generatePost } from '../generator';
+import { publishForProject } from '../publishing/service';
 import { readUrl, search } from '../jina';
 import { sendViaBridge } from '../whatsapp/bridge';
 import { insertMessage } from '../whatsapp/repo';
@@ -101,6 +100,15 @@ export function toolsParaProyecto(ctx: AgentContext) {
         platform: plataforma as never,
         topic: input.tema,
         angle: input.angulo,
+        brand: {
+          name: project.name,
+          voice: project.brandVoice,
+          topics: (project.brandTopics ?? '')
+            .split(',')
+            .map((v) => v.trim())
+            .filter(Boolean),
+          language: project.brandLanguage,
+        },
       });
 
       const prohibidas = palabrasProhibidasEn(ctx.kit, texto);
@@ -183,6 +191,66 @@ export function toolsParaProyecto(ctx: AgentContext) {
     },
   });
 
+  const hacerPaqueteSocial = createTool({
+    id: 'hacer-paquete-social',
+    description:
+      'Crea un paquete NATIVO para varias redes a partir de un brief: escribe copy, headline, CTA y alt text diferentes por red, elige sus medidas oficiales y genera 2 opciones de arte distintas por cada una. Úsala siempre que pidan una campaña o publicar el mismo tema en dos o más redes; no reutilices una sola pieza ni un solo copy.',
+    inputSchema: z.object({
+      redes: z.array(REDES_PUBLICABLES).min(1).max(6),
+      brief: z.string().min(4),
+      angulo: z.string().optional(),
+      cta: z.string().optional(),
+    }),
+    outputSchema: z.object({
+      packId: z.string(),
+      redes: z.array(
+        z.object({
+          red: z.string(),
+          copy: z.string(),
+          headline: z.string(),
+          cta: z.string(),
+          formato: z.string(),
+          medidas: z.string(),
+          opciones: z.array(z.object({ id: z.string(), url: z.string(), angulo: z.string() })),
+        }),
+      ),
+      fallos: z.array(z.object({ red: z.string(), motivo: z.string() })),
+    }),
+    execute: async (input) => {
+      soloOperadores(ctx, 'hacer piezas');
+      const prohibidas = palabrasProhibidasEn(
+        ctx.kit,
+        [input.brief, input.angulo, input.cta].filter(Boolean).join(' '),
+      );
+      if (prohibidas.length) {
+        throw new Error(`La marca prohíbe estas palabras: ${prohibidas.join(', ')}.`);
+      }
+      const { generateSocialPack } = await import('../creative/social-pack');
+      const pack = await generateSocialPack({
+        project,
+        kit: ctx.kit,
+        redes: input.redes,
+        brief: input.brief,
+        angle: input.angulo,
+        cta: input.cta,
+        optionsPerNetwork: 2,
+      });
+      return {
+        packId: pack.packId,
+        redes: pack.networks.map((network) => ({
+          red: network.red,
+          copy: network.variant.copy,
+          headline: network.variant.headline,
+          cta: network.variant.cta,
+          formato: network.formato.label,
+          medidas: `${network.formato.ancho} × ${network.formato.alto} px`,
+          opciones: network.piezas,
+        })),
+        fallos: pack.failures.map((failure) => ({ red: failure.red, motivo: failure.reason })),
+      };
+    },
+  });
+
   const fotoDeProducto = createTool({
     id: 'foto-de-producto',
     description:
@@ -255,18 +323,15 @@ export function toolsParaProyecto(ctx: AgentContext) {
       const toolkit = TOOLKIT_DE_RED[input.red];
       if (!toolkit) throw new Error(`Por ${input.red} todavía no se publica.`);
 
-      const cuenta = await activeAccountFor(project, toolkit).catch(() => null);
-      if (!cuenta) {
-        throw new Error(
-          `${project.name} no tiene ${RED_LABEL[input.red as never] ?? input.red} conectado. Dile al usuario que entre a Conexiones del proyecto y lo conecte — sin eso no se puede publicar con la cuenta de este cliente.`,
-        );
-      }
-
       // La pieza: la que eligió, o la última aprobada de esa red.
       const { getPieza } = await import('../creative/repo');
       const pieza = input.piezaId
         ? await getPieza(orgId, project.id, input.piezaId)
         : await piezaAprobadaDe(orgId, project.id, input.red as never);
+
+      if (pieza && pieza.red !== input.red) {
+        throw new Error(`Esa pieza es de ${pieza.red}; no se puede publicar como ${input.red}.`);
+      }
 
       if (input.red === 'instagram' && !pieza?.url) {
         throw new Error(
@@ -274,37 +339,27 @@ export function toolsParaProyecto(ctx: AgentContext) {
         );
       }
 
-      const out = await publishTo(project, toolkit, {
-        texto: input.texto,
+      const out = await publishForProject({
+        orgId,
+        project,
+        platform: toolkit,
+        text: input.texto,
+        topic: input.tema ?? null,
         media: pieza?.url ?? null,
+        pieceId: pieza?.id ?? null,
+        actor: ctx.quien,
+        metadata: { origin: 'project-agent' },
       });
-
-      const [fila] = await db
-        .insert(posts)
-        .values({
-          orgId,
-          projectId: project.id,
-          platform: input.red,
-          text: input.texto,
-          topic: input.tema ?? null,
-          externalId: out.id,
-          externalUrl: out.url,
-          publishedAt: new Date(),
-          metadata: { publicadoPor: ctx.quien, piezaId: pieza?.id ?? null },
-        })
-        .returning({ id: posts.id });
-
-      if (pieza) await marcarPublicada(pieza.id, fila?.id ?? null);
 
       await remember({
         refType: 'post',
-        refId: fila!.id,
+        refId: out.postId!,
         content: `${input.tema ?? project.name} | ${input.texto}`,
         metadata: { red: input.red, projectId: project.id, conImagen: Boolean(pieza?.url) },
       }).catch(() => undefined);
 
       return {
-        // Si llegamos aquí, `publishTo` no lanzó y la fila ya está en `posts`:
+        // Si llegamos aquí, el servicio no lanzó y la fila ya está en `posts`:
         // el post EXISTE. Cualquier otra lectura de este turno es una mentira.
         publicado: true,
         externalUrl: out.url,
@@ -786,6 +841,7 @@ export function toolsParaProyecto(ctx: AgentContext) {
   return {
     generarTextoDePost,
     hacerPieza,
+    hacerPaqueteSocial,
     fotoDeProducto,
     publicarPost,
     medidasDeRed,

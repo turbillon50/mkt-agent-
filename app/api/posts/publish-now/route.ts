@@ -78,19 +78,8 @@ export async function POST(req: NextRequest) {
   if (!gate.ok) return gate.res;
   const project = gate.ctx.project;
 
-  const { activeAccountFor } = await import('@/src/projects/composio-connections');
-  const cuenta = await activeAccountFor(project, red).catch(() => null);
-  if (!cuenta) {
-    return NextResponse.json(
-      {
-        error: `${project.name} no tiene esa red conectada. Conéctala en Conexiones del proyecto y vuelve.`,
-      },
-      { status: 400 },
-    );
-  }
-
   try {
-    const { getPieza, piezaAprobadaDe, marcarPublicada } = await import('@/src/creative/repo');
+    const { getPieza, piezaAprobadaDe } = await import('@/src/creative/repo');
     const { esRed } = await import('@/src/creative/specs');
 
     const pieza = piezaId
@@ -101,6 +90,13 @@ export async function POST(req: NextRequest) {
 
     const media = pieza?.url ?? (typeof body?.imageUrl === 'string' ? body.imageUrl : null);
 
+    if (pieza && pieza.red !== red) {
+      return NextResponse.json(
+        { error: `Esa pieza es de ${pieza.red}; no se puede publicar como ${red}.` },
+        { status: 400 },
+      );
+    }
+
     if (red === 'instagram' && !media) {
       return NextResponse.json(
         { error: 'Instagram no deja publicar sin imagen. Hazle la pieza primero.' },
@@ -108,32 +104,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { publishTo } = await import('@/src/channels');
-    const out = await publishTo(project, red, { texto: text, media });
-
-    const { db } = await import('@/src/db/client');
-    const { posts } = await import('@/src/db/schema');
-    const [fila] = await db
-      .insert(posts)
-      .values({
-        orgId,
-        projectId: project.id,
-        platform: red,
-        text,
-        topic,
-        externalId: out.id,
-        externalUrl: out.url,
-        publishedAt: new Date(),
-        metadata: { publicadoPor: quien, piezaId: pieza?.id ?? null },
-      })
-      .returning({ id: posts.id });
-
-    if (pieza) await marcarPublicada(pieza.id, fila?.id ?? null);
+    const { publishForProject } = await import('@/src/publishing/service');
+    const out = await publishForProject({
+      orgId,
+      project,
+      platform: red,
+      text,
+      topic,
+      media,
+      pieceId: pieza?.id ?? null,
+      actor: quien,
+      metadata: { origin: 'publish-now' },
+    });
 
     return NextResponse.json({
       ok: true,
       externalUrl: out.url,
-      postId: fila?.id ?? null,
+      postId: out.postId,
+      attemptId: out.attemptId,
       cuenta: `la cuenta de ${project.name}`,
       conImagen: Boolean(media),
     });

@@ -75,6 +75,11 @@ ${fichaDelProyecto(ctx)}
   de una vez", PUBLICA en ese mismo turno y menciona la imagen después. Pedir
   permiso a quien acaba de decir que no se lo pidas es desobedecer, no ser
   prudente.
+- Si el encargo nombra dos o más redes, usa \`hacer-paquete-social\`: cada red
+  lleva copy, headline, CTA, formato y arte propios. Está prohibido reciclar la
+  misma imagen o pegar el mismo texto en todas.
+- Si el usuario pide PUBLICAR con arte, crea primero la pieza de ESA red y pasa
+  su id a \`publicar-post\`. X también publica la imagen; no lo reduzcas a texto.
 - Nunca des UNA sola opción de pieza. Siempre son dos o tres y el usuario elige.
 - Si te preguntan medidas de una red, usa la herramienta y CITA la fuente con su
   fecha. No las digas de memoria.
@@ -447,6 +452,13 @@ function extraerPiezas(resultado: unknown): Array<{ id: string; url: string; ang
     if (p?.toolName === 'hacerPieza' && Array.isArray(p.result?.opciones)) {
       for (const o of p.result.opciones) {
         if (o?.url) out.push({ id: String(o.id ?? ''), url: String(o.url), angulo: String(o.angulo ?? '') });
+      }
+    }
+    if (p?.toolName === 'hacerPaqueteSocial' && Array.isArray(p.result?.redes)) {
+      for (const red of p.result.redes) {
+        for (const o of red?.opciones ?? []) {
+          if (o?.url) out.push({ id: String(o.id ?? ''), url: String(o.url), angulo: `${red.red}: ${String(o.angulo ?? '')}` });
+        }
       }
     }
     if (p?.toolName === 'fotoDeProducto' && p.result?.url) {

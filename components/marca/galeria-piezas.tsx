@@ -35,6 +35,12 @@ export interface PiezaUI {
   estado: string;
   angulo: string | null;
   nota: string | null;
+  copy?: string | null;
+  headline?: string | null;
+  cta?: string | null;
+  altText?: string | null;
+  socialPackId?: string | null;
+  source?: string | null;
   loteId: string | null;
   createdAt: string;
   /** Lo que pidieron al apretar "Pedir cambios" (corrida 7). */
@@ -100,6 +106,13 @@ export function GaleriaPiezas({
   const [cargando, setCargando] = useState(true);
 
   const [abierto, setAbierto] = useState(false);
+  const [modo, setModo] = useState<'paquete' | 'una'>('paquete');
+  const [redesElegidas, setRedesElegidas] = useState<string[]>([
+    'instagram',
+    'facebook',
+    'twitter',
+    'linkedin',
+  ]);
   const [red, setRed] = useState('instagram');
   const [formato, setFormato] = useState('');
   const [brief, setBrief] = useState('');
@@ -136,18 +149,43 @@ export function GaleriaPiezas({
     }
     setHaciendo(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}/piezas`, {
+      if (modo === 'paquete' && redesElegidas.length === 0) {
+        toast.push({ title: 'Elige al menos una red', variant: 'error' });
+        setHaciendo(false);
+        return;
+      }
+      const res = await fetch(
+        modo === 'paquete'
+          ? `/api/projects/${projectId}/piezas/paquete`
+          : `/api/projects/${projectId}/piezas`,
+        {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ red, formato: formato || null, brief, titular, cta }),
+        body: JSON.stringify(
+          modo === 'paquete'
+            ? { redes: redesElegidas, brief, cta, opciones: 2 }
+            : { red, formato: formato || null, brief, titular, cta },
+        ),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d?.error ?? 'No se pudo hacer la pieza.');
-      toast.push({
-        title: `${d.piezas.length} opciones listas`,
-        description: `${d.formato.label} · ${d.formato.ancho} × ${d.formato.alto} px. ${d.nota ?? ''}`,
-        variant: 'success',
-      });
+      if (modo === 'paquete') {
+        const total = (d.networks ?? []).reduce(
+          (sum: number, network: { piezas?: unknown[] }) => sum + (network.piezas?.length ?? 0),
+          0,
+        );
+        toast.push({
+          title: `${d.networks?.length ?? 0} redes y ${total} artes listos`,
+          description: 'Cada red lleva su propio copy, formato y dirección visual.',
+          variant: 'success',
+        });
+      } else {
+        toast.push({
+          title: `${d.piezas.length} opciones listas`,
+          description: `${d.formato.label} · ${d.formato.ancho} × ${d.formato.alto} px. ${d.nota ?? ''}`,
+          variant: 'success',
+        });
+      }
       setAbierto(false);
       setBrief('');
       setTitular('');
@@ -162,7 +200,7 @@ export function GaleriaPiezas({
     } finally {
       setHaciendo(false);
     }
-  }, [brief, cta, cargar, filtro, formato, projectId, red, titular, toast]);
+  }, [brief, cta, cargar, filtro, formato, modo, projectId, red, redesElegidas, titular, toast]);
 
   /**
    * Mover una pieza por el camino de aprobación.
@@ -246,7 +284,7 @@ export function GaleriaPiezas({
         {puedeEditar && (
           <Button className="btn-brand" onClick={() => setAbierto((v) => !v)}>
             <IconSparkles className="h-4 w-4" />
-            {abierto ? 'Cerrar' : 'Hazme una pieza'}
+            {abierto ? 'Cerrar' : 'Crear contenido'}
           </Button>
         )}
       </div>
@@ -262,6 +300,55 @@ export function GaleriaPiezas({
       {abierto && puedeEditar && (
         <Card>
           <CardContent className="space-y-3 pt-5">
+            <div className="flex w-fit rounded-lg border border-[var(--color-border)] p-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setModo('paquete')}
+                className={cn('rounded-md px-3 py-1.5', modo === 'paquete' && 'bg-[var(--color-primary)] text-white')}
+              >
+                Paquete por red
+              </button>
+              <button
+                type="button"
+                onClick={() => setModo('una')}
+                className={cn('rounded-md px-3 py-1.5', modo === 'una' && 'bg-[var(--color-primary)] text-white')}
+              >
+                Una sola pieza
+              </button>
+            </div>
+
+            {modo === 'paquete' ? (
+              <div className="space-y-2">
+                <p className="text-xs font-medium">¿En qué redes sale?</p>
+                <div className="flex flex-wrap gap-2">
+                  {REDES.slice(0, 6).map((item) => {
+                    const checked = redesElegidas.includes(item.slug);
+                    return (
+                      <label
+                        key={item.slug}
+                        className={cn(
+                          'flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs',
+                          checked && 'border-[var(--color-primary)] bg-[var(--color-primary)]/10',
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setRedesElegidas((current) =>
+                              checked
+                                ? current.filter((value) => value !== item.slug)
+                                : [...current, item.slug],
+                            )
+                          }
+                        />
+                        {item.label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <label htmlFor="red" className="text-xs font-medium">
@@ -292,6 +379,7 @@ export function GaleriaPiezas({
                 />
               </div>
             </div>
+            )}
             <div className="space-y-1.5">
               <label htmlFor="brief" className="text-xs font-medium">
                 ¿De qué va?
@@ -304,12 +392,18 @@ export function GaleriaPiezas({
               />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Input
-                value={titular}
-                onChange={(e) => setTitular(e.target.value)}
-                placeholder="Titular que va encima (opcional)"
-                aria-label="Titular"
-              />
+              {modo === 'una' ? (
+                <Input
+                  value={titular}
+                  onChange={(e) => setTitular(e.target.value)}
+                  placeholder="Titular que va encima (opcional)"
+                  aria-label="Titular"
+                />
+              ) : (
+                <p className="rounded-md bg-[var(--color-accent)]/60 px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
+                  Goossip escribirá un titular y un copy diferentes para cada red.
+                </p>
+              )}
               <Input
                 value={cta}
                 onChange={(e) => setCta(e.target.value)}
@@ -319,11 +413,16 @@ export function GaleriaPiezas({
             </div>
             <div className="flex items-center justify-between gap-3">
               <p className="text-[11px] text-[var(--color-muted-foreground)]">
-                Te voy a dar tres opciones distintas, en la medida exacta que pide esa red. Tarda
-                cerca de un minuto.
+                {modo === 'paquete'
+                  ? 'Dos artes distintos por red, con copy, CTA y medida nativos. Puede tardar unos minutos.'
+                  : 'Tres opciones distintas, en la medida exacta que pide esa red. Tarda cerca de un minuto.'}
               </p>
               <Button onClick={hacer} disabled={haciendo} className="btn-brand shrink-0">
-                {haciendo ? 'Haciéndolas…' : 'Hacer 3 opciones'}
+                {haciendo
+                  ? 'Creando…'
+                  : modo === 'paquete'
+                    ? 'Crear paquete'
+                    : 'Hacer 3 opciones'}
               </Button>
             </div>
           </CardContent>
@@ -353,7 +452,7 @@ export function GaleriaPiezas({
                 formato: abiertaEnVisor.formato,
                 brief: abiertaEnVisor.brief,
               }}
-              texto={abiertaEnVisor.brief}
+              texto={abiertaEnVisor.copy ?? abiertaEnVisor.brief}
               proyecto={nombreProyecto}
               logo={logo}
             />
@@ -371,7 +470,7 @@ export function GaleriaPiezas({
       ) : piezas.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-[var(--color-muted-foreground)]">
-            Todavía no hay piezas. Aprieta <strong>Hazme una pieza</strong> y te doy tres opciones.
+            Todavía no hay piezas. Aprieta <strong>Crear contenido</strong> para empezar.
           </CardContent>
         </Card>
       ) : (
@@ -384,8 +483,7 @@ export function GaleriaPiezas({
                   <img
                     src={p.url}
                     alt={p.angulo ?? p.brief}
-                    className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-accent)]/30 object-cover"
-                    style={{ aspectRatio: p.ancho && p.alto ? `${p.ancho}/${p.alto}` : '4/5' }}
+                    className="h-40 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-accent)]/30 object-cover sm:h-44"
                   />
                 )}
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -405,8 +503,9 @@ export function GaleriaPiezas({
                   )}
                 </div>
                 {p.angulo && <p className="text-xs font-medium">{p.angulo}</p>}
+                {p.headline && <p className="line-clamp-1 text-xs font-semibold">{p.headline}</p>}
                 <p className="line-clamp-2 text-[11px] text-[var(--color-muted-foreground)]">
-                  {p.brief}
+                  {p.copy ?? p.brief}
                 </p>
                 {p.nota && (
                   <p className="text-[10px] text-amber-600 dark:text-amber-400">{p.nota}</p>

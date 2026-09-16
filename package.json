@@ -29,7 +29,8 @@
     "test:asistente": "tsx test/asistente.test.ts",
     "test:metaads": "tsx test/metaads.test.ts",
     "capturas:c11": "tsx scripts/capturas-c11.ts",
-    "test:corrida13": "tsx test/corrida13.test.ts"
+    "test:corrida13": "tsx test/corrida13.test.ts",
+    "test:social-os": "tsx test/social-os.test.ts"
   },
   "engines": {
     "node": ">=20"

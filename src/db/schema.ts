@@ -705,6 +705,33 @@ export type DesignCategory = 'higgsfield' | 'diseno' | 'marca' | 'spec-red' | 'p
 export type DesignKnowledge = typeof designKnowledge.$inferSelect;
 export type NewDesignKnowledge = typeof designKnowledge.$inferInsert;
 
+/**
+ * Registro de las fuentes que gobiernan generación/publicación. La memoria
+ * vectorial ayuda a encontrar; este registro decide autoridad, versión y
+ * frescura para que un blog viejo no gane a la documentación oficial.
+ */
+export const knowledgeSources = pgTable('knowledge_sources', {
+  id: text('id').primaryKey(),
+  platform: text('platform').notNull(),
+  kind: text('kind').notNull(),
+  title: text('title').notNull(),
+  url: text('url').notNull(),
+  authority: integer('authority').notNull().default(100),
+  version: text('version'),
+  fetchedAt: timestamp('fetched_at', { withTimezone: true }),
+  validUntil: timestamp('valid_until', { withTimezone: true }),
+  sourceHash: text('source_hash'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  platformIdx: index('knowledge_sources_platform_idx').on(t.platform, t.kind),
+  freshnessIdx: index('knowledge_sources_freshness_idx').on(t.validUntil),
+}));
+
+export type KnowledgeSource = typeof knowledgeSources.$inferSelect;
+export type NewKnowledgeSource = typeof knowledgeSources.$inferInsert;
+
 export interface PaletteEntry {
   rol: 'primario' | 'secundario' | 'fondo' | 'texto' | 'acento';
   hex: string;
@@ -804,6 +831,39 @@ export const creativePieces = pgTable('creative_pieces', {
 
 export type CreativePiece = typeof creativePieces.$inferSelect;
 export type NewCreativePiece = typeof creativePieces.$inferInsert;
+
+export type PublicationAttemptStatus = 'started' | 'published' | 'failed';
+
+/**
+ * Recibo técnico de CADA intento. Solo ids públicos y errores saneados: jamás
+ * tokens, payloads de OAuth ni credenciales del proveedor.
+ */
+export const publicationAttempts = pgTable('publication_attempts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  platform: text('platform').notNull(),
+  pieceId: uuid('piece_id').references(() => creativePieces.id, { onDelete: 'set null' }),
+  postId: uuid('post_id').references(() => posts.id, { onDelete: 'set null' }),
+  status: text('status').$type<PublicationAttemptStatus>().notNull().default('started'),
+  stage: text('stage').notNull().default('preflight'),
+  accountHandle: text('account_handle'),
+  accountExternalId: text('account_external_id'),
+  externalId: text('external_id'),
+  externalUrl: text('external_url'),
+  providerCode: text('provider_code'),
+  requestId: text('request_id'),
+  errorMessage: text('error_message'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+}, (t) => ({
+  projectIdx: index('publication_attempts_project_idx').on(t.projectId, t.startedAt),
+  statusIdx: index('publication_attempts_status_idx').on(t.status, t.startedAt),
+}));
+
+export type PublicationAttempt = typeof publicationAttempts.$inferSelect;
+export type NewPublicationAttempt = typeof publicationAttempts.$inferInsert;
 
 // ---------------------------------------------------------------------------
 // Corrida 7: prospección por Maps, competencia por proyecto y lecciones (0019).

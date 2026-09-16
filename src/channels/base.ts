@@ -11,7 +11,7 @@
  * había antes y es lo que no se entiende.
  */
 import type { Project } from '../db/schema';
-import { executeTool, proxyExecute, proxyExecuteFull, type ToolResult } from '../composio/client';
+import { executeTool, executeToolWithFiles, proxyExecute, proxyExecuteFull, type ToolResult } from '../composio/client';
 import { activeAccountFor, verifyAccount } from '../projects/composio-connections';
 import { composioAccountsOf } from '../projects/composio-connections';
 import { connectorOrThrow } from '../projects/catalog';
@@ -65,6 +65,24 @@ export async function run<T = any>(
     userId: cuenta.userId,
     connectedAccountId: cuenta.connectedAccountId,
     arguments: args,
+  });
+  return (res.data ?? res) as T;
+}
+
+/** Ejecuta una tool que recibe una URL pública como archivo. */
+export async function runWithFiles<T = any>(
+  project: Project,
+  toolkit: string,
+  slug: string,
+  args: Record<string, unknown> = {},
+  version?: string,
+): Promise<T> {
+  const cuenta = await cuentaDe(project, toolkit);
+  const res: ToolResult<T> = await executeToolWithFiles<T>(slug, {
+    userId: cuenta.userId,
+    connectedAccountId: cuenta.connectedAccountId,
+    arguments: args,
+    version,
   });
   return (res.data ?? res) as T;
 }

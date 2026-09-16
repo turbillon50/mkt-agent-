@@ -285,6 +285,49 @@ export async function executeTool<T = any>(
 }
 
 /**
+ * Variante exclusiva para tools que reciben archivo. El SDK convierte una URL
+ * pública en el descriptor temporal que exige Composio; el cliente REST de
+ * arriba no puede hacerlo. Las rutas locales están deshabilitadas.
+ */
+export async function executeToolWithFiles<T = any>(
+  slug: string,
+  input: {
+    userId: string;
+    arguments?: Record<string, unknown>;
+    connectedAccountId?: string;
+    version?: string;
+  },
+): Promise<ToolResult<T>> {
+  const key = composioKey();
+  if (!key) throw new ComposioError('Falta la llave de Composio en este entorno.', 503);
+
+  const { Composio } = await import('@composio/core');
+  const sdk = new Composio({
+    apiKey: key,
+    allowTracking: false,
+    dangerouslyAllowAutoUploadDownloadFiles: true,
+    sensitiveFileUploadProtection: true,
+    // X recibe URLs públicas. No se permite leer ningún archivo del servidor.
+    fileUploadDirs: false,
+  });
+  const res = await sdk.tools.execute(slug, {
+    userId: input.userId,
+    connectedAccountId: input.connectedAccountId,
+    arguments: input.arguments ?? {},
+    ...(input.version ? { version: input.version } : { dangerouslySkipVersionCheck: true }),
+  });
+  if (!res.successful) {
+    throw new ComposioError(res.error || `${slug} no se pudo ejecutar.`, 502);
+  }
+  return {
+    successful: res.successful,
+    data: res.data as T,
+    error: res.error,
+    log_id: res.logId,
+  };
+}
+
+/**
  * Llamada cruda a la API del proveedor, con Composio poniendo las credenciales.
  *
  * Se usa donde el toolkit no trae una tool para lo que Goossip necesita — el

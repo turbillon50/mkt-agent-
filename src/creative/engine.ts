@@ -25,7 +25,8 @@ import type { Project, ProjectBrandKit } from '../db/schema';
 import { fotoDelKit } from './brand-kit';
 import { armarConCanva, canvaConectado, porQueNo } from './canva';
 import { alFormatoDeLaRed, componer } from './compose';
-import { ANGULOS, construirPrompt, generarBase, guiaDeDiseno, MODELO_IMAGEN } from './gemini';
+import { construirPrompt, generarBase, guiaDeDiseno, MODELO_IMAGEN, type OpcionCreativa } from './gemini';
+import { angulosParaRed } from './social-playbooks';
 import { almacenListo, bajarImagen, deDataUrl, subirImagen } from './media';
 import { elegirFormato, esRed, type FormatoSpec, type RedSlug } from './specs';
 import { pedirAHiggsfield, type EncargoHiggsfield } from './higgsfield';
@@ -108,8 +109,9 @@ export async function generarPiezas(encargo: Encargo): Promise<ResultadoMotor> {
     () => 'La pieza la armó Goossip.',
   );
 
+  const angulos = angulosParaRed(encargo.red).slice(0, cuantas);
   const intentos = await Promise.allSettled(
-    ANGULOS.slice(0, cuantas).map((opcion) =>
+    angulos.map((opcion) =>
       unaPieza({ encargo, formato, opcion, guia, conCanva }),
     ),
   );
@@ -118,7 +120,7 @@ export async function generarPiezas(encargo: Encargo): Promise<ResultadoMotor> {
   const fallos: Array<{ angulo: string; motivo: string }> = [];
 
   intentos.forEach((r, i) => {
-    const angulo = ANGULOS[i]!.angulo;
+    const angulo = angulos[i]!.angulo;
     if (r.status === 'fulfilled') piezas.push(r.value);
     else {
       fallos.push({
@@ -147,7 +149,7 @@ export async function generarPiezas(encargo: Encargo): Promise<ResultadoMotor> {
 async function unaPieza(input: {
   encargo: Encargo;
   formato: FormatoSpec;
-  opcion: (typeof ANGULOS)[number];
+  opcion: OpcionCreativa;
   guia: string;
   conCanva: boolean;
 }): Promise<PiezaGenerada> {
