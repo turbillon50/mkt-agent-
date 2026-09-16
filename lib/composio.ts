@@ -20,12 +20,21 @@ export function isToolkitConfigured(toolkit: SocialToolkit): boolean {
 export async function startConnection(
   userId: string,
   toolkit: SocialToolkit
-): Promise<{ redirectUrl: string; connectionId: string }> {
+): Promise<{ redirectUrl: string; connectionId: string; alreadyConnected?: boolean }> {
   const authConfigId = AUTH_CONFIG_IDS[toolkit];
   if (!authConfigId) {
     throw new Error(
       `${toolkit} no tiene una app de developer configurada todavia. Necesitas registrar credenciales propias antes de poder conectarlo.`
     );
+  }
+  // Limpieza antes de conectar: cada clic que no terminó deja una cuenta
+  // "iniciando" en Composio; con basura acumulada Composio se niega a crear otra.
+  // Si ya hay una ACTIVE no hay nada que conectar; las demás se borran.
+  const previas = await composio.connectedAccounts.list({ userIds: [userId], toolkitSlugs: [toolkit] });
+  const activa = previas.items.find((acc) => acc.status === 'ACTIVE');
+  if (activa) return { redirectUrl: '', connectionId: activa.id, alreadyConnected: true };
+  for (const acc of previas.items) {
+    try { await composio.connectedAccounts.delete(acc.id); } catch {}
   }
   const connectionRequest = await composio.connectedAccounts.link(userId, authConfigId);
   return {
@@ -124,7 +133,7 @@ const GOOGLE_ADS_LOGIN_CUSTOMER_ID = '7745650752'; // MCC
 export async function startGoogleAdsConnection(
   userId: string,
   customerId: string
-): Promise<{ redirectUrl: string; connectionId: string }> {
+): Promise<{ redirectUrl: string; connectionId: string; alreadyConnected?: boolean }> {
   const normalized = customerId.replace(/[^0-9]/g, '');
   if (normalized.length !== 10) {
     throw new Error('El ID de cliente de Google Ads debe tener 10 dígitos (formato 123-456-7890).');
@@ -310,12 +319,21 @@ export function configuredEmailToolkits(): EmailToolkit[] {
 export async function startEmailConnection(
   userId: string,
   toolkit: EmailToolkit
-): Promise<{ redirectUrl: string; connectionId: string }> {
+): Promise<{ redirectUrl: string; connectionId: string; alreadyConnected?: boolean }> {
   const authConfigId = EMAIL_AUTH_CONFIG_IDS[toolkit];
   if (!authConfigId) {
     throw new Error(
       `${toolkit === 'gmail' ? 'Gmail' : 'Outlook'} todavía no está configurado. Falta registrar el auth config de Composio.`
     );
+  }
+  // Limpieza antes de conectar: cada clic que no terminó deja una cuenta
+  // "iniciando" en Composio; con basura acumulada Composio se niega a crear otra.
+  // Si ya hay una ACTIVE no hay nada que conectar; las demás se borran.
+  const previas = await composio.connectedAccounts.list({ userIds: [userId], toolkitSlugs: [toolkit] });
+  const activa = previas.items.find((acc) => acc.status === 'ACTIVE');
+  if (activa) return { redirectUrl: '', connectionId: activa.id, alreadyConnected: true };
+  for (const acc of previas.items) {
+    try { await composio.connectedAccounts.delete(acc.id); } catch {}
   }
   const connectionRequest = await composio.connectedAccounts.link(userId, authConfigId);
   return {

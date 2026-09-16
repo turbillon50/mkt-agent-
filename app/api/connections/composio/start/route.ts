@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const { startConnection } = await import('@/lib/composio');
-    const { redirectUrl } = await startConnection(composioUserId(projectId), 'linkedin');
+    const { redirectUrl, alreadyConnected } = await startConnection(composioUserId(projectId), 'linkedin');
+    if (alreadyConnected) return NextResponse.json({ alreadyConnected: true });
     if (!redirectUrl) throw new Error('No se pudo abrir la ventana de LinkedIn.');
 
     await logProjectEvent({
@@ -44,8 +45,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ redirectUrl });
   } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'No se pudo conectar.' },
+      { error: mensajeAmable(e) },
       { status: 400 },
     );
   }
+}
+
+/** Nunca le mostramos al usuario el error crudo de Composio en inglés. */
+function mensajeAmable(e: unknown): string {
+  const raw = e instanceof Error ? e.message : String(e);
+  if (/Multiple connected accounts/i.test(raw)) return 'Había intentos anteriores sin terminar. Vuelve a dar Conectar.';
+  if (/unauthorized|401|api key/i.test(raw)) return 'Goossip no pudo hablar con el proveedor de conexiones. Avísanos.';
+  console.error('[composio/start]', raw);
+  return 'No se pudo iniciar la conexión. Intenta de nuevo.';
 }

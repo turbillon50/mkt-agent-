@@ -284,6 +284,12 @@ export function ConnectionsBoard({
         body: JSON.stringify({ project: projectId, canal }),
       });
       const data = await res.json();
+      if (res.ok && data.alreadyConnected) {
+        setTrabajando(null);
+        push({ title: 'Ya estaba conectado.', variant: 'success' });
+        router.refresh();
+        return;
+      }
       if (!res.ok || !data.redirectUrl) throw new Error(data.error ?? 'No se pudo.');
       // La ventana de permisos se abre APARTE. Esta pantalla se queda y
       // pregunta a Goossip (que pregunta a Composio) hasta que la cuenta quede.
