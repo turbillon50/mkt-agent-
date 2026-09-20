@@ -32,6 +32,7 @@ import { hasProjectSecret, projectSecret } from '../../lib/project-secrets';
 import { open } from '../../lib/secret-box';
 import { metaAdsHabilitado } from '../banderas';
 import { composioReady } from '../composio/client';
+import { whatsappHabilitado } from '../banderas';
 import { resolveRules, type McpSource, type ProjectChannels } from '../sales/types';
 import {
   activeConnectors,
@@ -88,9 +89,16 @@ export function channelAvailable(id: string): boolean {
   switch (id) {
     case 'meta':
       return metaOwnAppEnabled() && Boolean(env('META_APP_ID') && env('META_APP_SECRET'));
+    case 'whatsapp':
+      // Decisión de Luis (16-sep-2026): WhatsApp va al final y el chip del
+      // Inicio NO ofrece "Conectar". La bandera ya era la decisión; lo que
+      // faltaba era que la franja la leyera. Se arregla AQUÍ y no pintando el
+      // chip distinto: apagar el botón y dejar el canal "disponible" es
+      // esconder el interruptor, que es justo lo que la bandera no hace.
+      return whatsappHabilitado();
     default:
-      // El formulario del sitio, el catálogo y el número de WhatsApp no
-      // dependen de terceros: siempre se pueden dar de alta.
+      // El formulario del sitio y el catálogo no dependen de terceros: siempre
+      // se pueden dar de alta.
       return true;
   }
 }
@@ -130,6 +138,14 @@ export interface ChannelCard extends Connector {
   verifiedAt: string | null;
   /** Falta un paso del usuario, dicho en español de a pie. Nunca jerga interna. */
   pending: string | null;
+  /**
+   * Lo que dice el chip cuando NO se puede conectar.
+   *
+   * "Próximamente" es el caso normal: falta que el proveedor lo permita sin app
+   * propia. WhatsApp dice **"Más adelante"** porque no está esperando a un
+   * tercero — está esperando a que Luis lo abra, y son dos promesas distintas.
+   */
+  espera: string;
   /** Datos públicos que la pantalla necesita (páginas elegidas, formularios…). */
   data: Record<string, unknown>;
 }
@@ -171,6 +187,7 @@ function baseCard(c: Connector, account: SocialAccount | null, opts: CardOptions
     connectedAt: account?.connectedAt?.toISOString() ?? null,
     verifiedAt: account?.verifiedAt?.toISOString() ?? null,
     pending: null,
+    espera: c.slug === 'whatsapp' ? 'Más adelante' : 'Próximamente',
     data: {},
   };
 }
@@ -353,7 +370,16 @@ export function buildChannelCards(
     const account = byPlatform.get(c.slug) ?? null;
     const base = baseCard(c, account, opts);
 
-    if (!channelAvailable(c.slug as ConnectionChannel)) return { ...base, state: 'proximamente' };
+    if (!channelAvailable(c.slug as ConnectionChannel)) {
+      return {
+        ...base,
+        state: 'proximamente',
+        pending:
+          c.slug === 'whatsapp'
+            ? 'WhatsApp va al final, cuando el número esté dado de alta en Business Manager.'
+            : null,
+      };
+    }
     if (c.via === 'composio') return composioCard(c, account, opts);
     if (c.via === 'meta_own_app') return metaAdsCard(c, account, opts);
 

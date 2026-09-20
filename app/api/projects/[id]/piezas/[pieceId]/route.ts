@@ -59,6 +59,63 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   const previa = await getPieza(gate.ctx.orgId, id, pieceId);
   if (!previa) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
+  /*
+    LA COMPUERTA, ANTES DE APROBAR O PUBLICAR.
+
+    Vive aquí y no en la pantalla porque por aquí pasan TODAS: la galería, la
+    Sala, el Asistente y el cron que publica lo programado. Una compuerta que
+    solo existe en el botón se brinca con una pestaña del navegador abierta en
+    la ruta — y entonces no era una compuerta.
+
+    Solo se corre para `aprobada` y `publicada`: mandar una pieza a revisión o
+    pedirle cambios no publica nada, y frenar eso sería cobrarle a quien está
+    haciendo justo lo correcto.
+  */
+  if (destino === 'aprobada' || destino === 'publicada') {
+    const { compuerta } = await import('@/src/creative/compliance');
+    const { esRed } = await import('@/src/creative/specs');
+
+    if (esRed(previa.red)) {
+      let medida = null;
+      if (previa.url) {
+        const { medirPieza } = await import('@/src/creative/calidad');
+        medida = await medirPieza(previa.url, previa.formato).catch(() => null);
+      }
+
+      const r = await compuerta({
+        orgId: gate.ctx.orgId,
+        project: gate.ctx.project,
+        red: previa.red,
+        formatoId: previa.formato,
+        texto: previa.brief,
+        piezaId: pieceId,
+        medida,
+        quien: 'persona',
+        accion: destino === 'publicada' ? 'publicar' : 'aprobar',
+        // Aprobar no gasta cuota: lo que gasta es publicar. Contar la
+        // frecuencia al aprobar frenaría el trabajo del lunes por lo que se
+        // publicó el domingo.
+        sinFrecuencia: destino === 'aprobada',
+      }).catch(() => null);
+
+      // Si la compuerta no pudo correr —la base caída, el modelo sin llave—,
+      // NO se bloquea: se deja pasar y se anota. Frenar la operación del
+      // cliente porque nuestro revisor se cayó es peor que el riesgo que
+      // evita. Frenar cuando SÍ corrió y dijo que no, eso es innegociable.
+      if (r && !r.puede) {
+        return NextResponse.json(
+          {
+            error: r.motivo,
+            semaforo: r.veredicto.semaforo,
+            hallazgos: r.veredicto.hallazgos,
+            reglasEvaluadas: r.veredicto.reglasEvaluadas,
+          },
+          { status: 422 },
+        );
+      }
+    }
+  }
+
   try {
     const r = await moverPieza({
       orgId: gate.ctx.orgId,

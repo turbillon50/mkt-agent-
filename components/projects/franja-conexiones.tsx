@@ -93,7 +93,9 @@ export function FranjaConexiones({
                 title={
                   c.state === 'conectado'
                     ? `${c.label}${c.detail ? ` · ${c.detail}` : ''}`
-                    : `${c.label} — ${CONNECTION_STATE_LABEL[c.state]}. ${c.blurb}`
+                    : c.state === 'proximamente'
+                      ? `${c.label} — ${c.espera}. ${c.pending ?? c.blurb}`
+                      : `${c.label} — ${CONNECTION_STATE_LABEL[c.state]}. ${c.blurb}`
                 }
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -102,9 +104,14 @@ export function FranjaConexiones({
                 {c.state === 'conectado' && <IconCheck className="h-3 w-3 shrink-0" />}
                 {c.state === 'sin_conectar' && <span className="shrink-0 font-medium">Conectar</span>}
                 {c.state === 'reconectar' && <span className="shrink-0 font-medium">Reconectar</span>}
-                {c.state === 'proximamente' && (
-                  <span className="shrink-0 text-[10px]">Próximamente</span>
-                )}
+                {/*
+                  El texto sale de la tarjeta, no de aquí. WhatsApp dice "Más
+                  adelante" (decisión de Luis, 16-sep) y el resto "Próximamente":
+                  uno espera a que Luis lo abra y los otros a que el proveedor
+                  deje conectarlos sin app propia. Escribirlo a mano en la
+                  pantalla es como se acaban desincronizando las dos verdades.
+                */}
+                {c.state === 'proximamente' && <span className="shrink-0 text-[10px]">{c.espera}</span>}
               </span>
             );
 

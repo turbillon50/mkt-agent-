@@ -101,6 +101,56 @@ export const FORMATOS: FormatoSpec[] = [
     leidoEl: LEIDO,
   },
   {
+    id: 'facebook-enlace',
+    label: 'Facebook — publicación con enlace',
+    red: 'facebook',
+    tipo: 'imagen',
+    ratio: '1.91:1',
+    ancho: 1200,
+    alto: 630,
+    pesoMaxMb: 8,
+    limites: { texto: 150, titulo: 27, descripcion: 30 },
+    archivos: ['jpg', 'png'],
+    nota:
+      'La medida de la vista previa de un enlace compartido: "Use images that are at least 1200 x 630 pixels for the best display on high resolution devices", mínimo 200 × 200 px y tope de 8 MB. "Try to keep your images as close to 1.91:1 aspect ratio as possible to display the full image in Feed without any cropping."',
+    fuente: 'https://developers.facebook.com/docs/sharing/webmasters/images/',
+    leidoEl: LEIDO,
+  },
+  {
+    id: 'facebook-cuadrada',
+    label: 'Facebook — publicación cuadrada',
+    red: 'facebook',
+    tipo: 'imagen',
+    ratio: '1:1',
+    ancho: 1080,
+    alto: 1080,
+    pesoMaxMb: 30,
+    limites: { texto: 150, titulo: 27 },
+    archivos: ['jpg', 'png'],
+    nota:
+      'Es el lienzo cuadrado del muro de Facebook: la guía de anuncios publica 1080 × 1080 px para el carrusel de feed, que usa la misma caja. Tolerancia de proporción del 3 %.',
+    fuente: 'https://www.facebook.com/business/ads-guide/update/carousel/facebook-feed',
+    leidoEl: LEIDO,
+  },
+  {
+    id: 'facebook-video',
+    label: 'Facebook — video de muro',
+    red: 'facebook',
+    tipo: 'video',
+    ratio: '4:5',
+    ancho: 1440,
+    alto: 1800,
+    pesoMaxMb: 4096,
+    duracionMinS: 1,
+    duracionMaxS: 14_460,
+    limites: { texto: 150, titulo: 27 },
+    archivos: ['mp4', 'mov', 'gif'],
+    nota:
+      'De 1 segundo a 241 minutos y hasta 4 GB. Compresión H.264, píxeles cuadrados, cuadros por segundo fijos, barrido progresivo y audio AAC estéreo a 128 kbps o más. Ancho y alto mínimos de 120 px.',
+    fuente: 'https://www.facebook.com/business/ads-guide/update/video/facebook-feed',
+    leidoEl: LEIDO,
+  },
+  {
     id: 'facebook-carrusel',
     label: 'Facebook — carrusel',
     red: 'facebook',
@@ -113,6 +163,31 @@ export const FORMATOS: FormatoSpec[] = [
     archivos: ['jpg', 'png'],
     nota: 'De 2 a 10 tarjetas, todas del mismo tamaño.',
     fuente: 'https://www.facebook.com/business/ads-guide/update/carousel/facebook-feed',
+    leidoEl: LEIDO,
+  },
+
+  {
+    /**
+     * La burbuja de Messenger y del DM.
+     *
+     * Va bajo `facebook` y no como red aparte porque es la MISMA conexión y las
+     * mismas políticas: la ventana de 24 horas y las etiquetas de mensaje viven
+     * en el ámbito de Facebook en `reglas.ts`. Partirlo en una red nueva sería
+     * duplicar ocho tablas para pintar un globito.
+     */
+    id: 'facebook-messenger',
+    label: 'Messenger — tarjeta en el chat',
+    red: 'facebook',
+    tipo: 'imagen',
+    ratio: '1.91:1',
+    ancho: 1200,
+    alto: 628,
+    pesoMaxMb: 8,
+    limites: { texto: 640, titulo: 80, descripcion: 80 },
+    archivos: ['jpg', 'png'],
+    nota:
+      'La plantilla genérica admite hasta 10 tarjetas y 3 botones por tarjeta; el título y el subtítulo se cortan a 80 caracteres cada uno. Messenger escala o recorta las fotos que no van en 1.91:1. Lo que se manda está sujeto a la ventana de 24 horas.',
+    fuente: 'https://developers.facebook.com/docs/messenger-platform/send-messages/template/generic',
     leidoEl: LEIDO,
   },
 

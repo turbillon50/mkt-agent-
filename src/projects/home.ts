@@ -270,8 +270,8 @@ export async function projectHome(project: Project): Promise<ProjectHome> {
     },
     {
       id: 'contenido',
-      label: 'Contenido',
-      blurb: 'Tus piezas, cómo se ven en cada red y qué se publicó.',
+      label: 'Sala de arte',
+      blurb: 'Cómo se ve tu pieza en cada red y si la red la va a aceptar.',
       estado: nPiezas === 0 ? 'sin piezas · hacer la primera' : `${nPiezas} ${nPiezas === 1 ? 'pieza' : 'piezas'}`,
       href: `${base}/contenido`,
       conContenido: nPiezas > 0,
