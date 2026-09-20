@@ -247,11 +247,20 @@ export async function reglasDuras(input: EntradaCompuerta): Promise<{
   const hashtags = [...new Set(texto.match(RE_HASHTAG) ?? [])];
   const topeHashtags = formato?.limites?.hashtags;
   if (topeHashtags && hashtags.length > topeHashtags) {
+    // El tope de hashtags sale de la ficha del formato (`specs.ts`), que ya trae
+    // su propia fuente oficial; NO de la regla de publicaciones/día, que es otra
+    // cosa. Si la red tiene una norma de comunidad o spam contra el exceso de
+    // hashtags, se cita esa —etiquetar de más es señal de spam—; si no, se deja
+    // sin cita antes que colgarle al usuario un enlace que no viene al caso.
+    const normaSpam =
+      reglasDe(red).find((r) => r.id.includes('spam')) ??
+      reglasDe(red).find((r) => r.id.includes('normas-comuni')) ??
+      null;
     hallazgos.push(
       comoHallazgo(
         `${hashtags.length} hashtags y ${RED_LABEL[red]} acepta ${topeHashtags}. De más, rechaza la publicación entera.`,
         'rojo',
-        reglaPorId('instagram-tope-publicaciones'),
+        normaSpam,
         'duro',
       ),
     );
@@ -519,6 +528,131 @@ function resumir(
   if (aviso && hallazgos.length === 0) return aviso;
   const n = hallazgos.filter((h) => h.nivel === 'ambar').length;
   return `Sale, pero con ${n} ${n === 1 ? 'advertencia' : 'advertencias'}. Léelas antes de aprobar.`;
+}
+
+// ---------------------------------------------------------------------------
+// Corregir con Goossip
+// ---------------------------------------------------------------------------
+
+export interface Correccion {
+  /** El texto ya reescrito. Igual al de entrada si no se pudo o no hacía falta. */
+  textoCorregido: string;
+  /** ¿De verdad cambió algo? */
+  cambio: boolean;
+  /** Qué se tocó, en español, para enseñárselo al dueño. */
+  queSeCambio: string[];
+  /** Por qué NO se pudo, si no se pudo. */
+  aviso: string | null;
+}
+
+interface RespuestaCorreccion {
+  texto: string;
+  cambios: string[];
+}
+
+/**
+ * "Corregir con Goossip": el botón del ámbar que de verdad corrige.
+ *
+ * Reescribe el TEXTO para que pase la compuerta —quita la promesa que no se
+ * puede probar, baja los hashtags o las menciones al tope de la red, abre el
+ * enlace acortado, redacta distinto lo que se parecía demasiado a algo ya
+ * publicado— sin cambiar el mensaje ni el tono, y sin pasarse del largo que la
+ * red corta.
+ *
+ * Lo que NO toca, y por eso lo dice:
+ *   · la calidad del archivo (resolución, peso, duración) → eso es "Adaptar";
+ *   · la frecuencia (te quedan N hoy) → eso es esperar, no reescribir.
+ *
+ * Devuelve el texto nuevo para que la pantalla lo ponga en el editor y vuelva a
+ * pasar la compuerta: la corrección se PRUEBA, no se promete.
+ */
+export async function corregir(input: EntradaCompuerta): Promise<Correccion> {
+  // La frecuencia no se arregla reescribiendo, así que ni se mide aquí.
+  const veredicto = await revisar({ ...input, sinFrecuencia: true });
+  const arreglables = veredicto.hallazgos.filter((h) => h.corregible);
+
+  if (arreglables.length === 0) {
+    return {
+      textoCorregido: input.texto,
+      cambio: false,
+      queSeCambio: [],
+      aviso:
+        'No hay nada que reescribir aquí: lo que queda o se arregla con "Adaptar" (es el archivo) o es cuestión de esperar (es la frecuencia).',
+    };
+  }
+
+  if (!config.openrouter.apiKey) {
+    return {
+      textoCorregido: input.texto,
+      cambio: false,
+      queSeCambio: [],
+      aviso: 'Falta la llave del proveedor, así que no se pudo reescribir con el modelo.',
+    };
+  }
+
+  const corte = corteDe(input.red);
+  const problemas = arreglables
+    .map((h, i) => `${i + 1}. ${h.texto}${h.regla ? ` (política: ${h.regla.titulo})` : ''}`)
+    .join('\n');
+
+  const sistema = [
+    'Eres Goossip reescribiendo un texto para que pase la compuerta anti-baneo de una red social sin perder lo que quiere decir.',
+    'Te dan el texto, la red, y la LISTA de problemas que hay que arreglar. Arréglalos TODOS y solo esos.',
+    'Reglas de la reescritura: mantén el mensaje, la intención y el tono; escribe en el MISMO idioma (español de México);',
+    'quita toda promesa de rendimiento, ganancia o plusvalía garantizada y cualquier afirmación que no se pueda comprobar;',
+    'si sobran hashtags o menciones, deja solo los que de verdad vengan al caso hasta caber en el límite;',
+    'si hay un enlace acortado, ponlo como texto neutro ("(enlace)") en vez de inventar una URL;',
+    'no inventes datos, precios ni cifras; no agregues hashtags nuevos.',
+    corte.tope !== null
+      ? `El texto final NO puede pasar de ${corte.tope} caracteres, que es donde ${RED_LABEL[input.red]} lo corta.`
+      : '',
+    'Devuelve SOLO un JSON: {"texto":"<el texto ya corregido>","cambios":["<qué cambiaste, en español, una frase por cambio>"]}',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const usuario = [
+    `Red: ${RED_LABEL[input.red]}`,
+    `Negocio: ${input.project.name}`,
+    '',
+    'PROBLEMAS QUE HAY QUE ARREGLAR:',
+    problemas,
+    '',
+    'TEXTO A REESCRIBIR:',
+    input.texto,
+  ].join('\n');
+
+  try {
+    const r = await chatJSON<RespuestaCorreccion>(
+      [
+        { role: 'system', content: sistema },
+        { role: 'user', content: usuario },
+      ],
+      { temperature: 0.3, maxTokens: 900 },
+    );
+    const nuevo = (r.texto ?? '').trim();
+    if (!nuevo || nuevo === input.texto.trim()) {
+      return {
+        textoCorregido: input.texto,
+        cambio: false,
+        queSeCambio: [],
+        aviso: 'El modelo no propuso un cambio distinto. Revísalo a mano.',
+      };
+    }
+    return {
+      textoCorregido: nuevo,
+      cambio: true,
+      queSeCambio: Array.isArray(r.cambios) ? r.cambios.filter((c) => typeof c === 'string') : [],
+      aviso: null,
+    };
+  } catch (e) {
+    return {
+      textoCorregido: input.texto,
+      cambio: false,
+      queSeCambio: [],
+      aviso: `No se pudo reescribir (${e instanceof Error ? e.message.slice(0, 120) : 'error'}).`,
+    };
+  }
 }
 
 /**

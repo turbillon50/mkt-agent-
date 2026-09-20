@@ -65,9 +65,11 @@ export function Compuerta({
   revisando,
   fresco,
   adaptando,
+  corrigiendo,
   puedeEditar,
   onRevisar,
   onAdaptar,
+  onCorregir,
   onAprobar,
   estadoDeLaPieza,
 }: {
@@ -76,9 +78,11 @@ export function Compuerta({
   /** ¿El semáforo corresponde al texto de ahora? */
   fresco: boolean;
   adaptando: boolean;
+  corrigiendo: boolean;
   puedeEditar: boolean;
   onRevisar: () => void;
   onAdaptar: () => void;
+  onCorregir: () => void;
   onAprobar: () => void;
   estadoDeLaPieza: string | null;
 }) {
@@ -198,10 +202,10 @@ export function Compuerta({
                 size="sm"
                 variant="outline"
                 className="h-8 w-full text-[11px]"
-                onClick={onRevisar}
-                disabled={revisando}
+                onClick={onCorregir}
+                disabled={corrigiendo || revisando}
               >
-                Corregir con Goossip
+                {corrigiendo ? 'Corrigiendo…' : 'Corregir con Goossip'}
               </Button>
             )}
 

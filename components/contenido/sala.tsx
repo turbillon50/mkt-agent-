@@ -63,6 +63,7 @@ export function Sala({
   const [veredicto, setVeredicto] = useState<VeredictoUI | null>(null);
   const [revisando, setRevisando] = useState(false);
   const [adaptando, setAdaptando] = useState(false);
+  const [corrigiendo, setCorrigiendo] = useState(false);
   const [fresco, setFresco] = useState(true);
 
   const pieza = useMemo(() => piezas.find((p) => p.id === elegida) ?? null, [piezas, elegida]);
@@ -118,13 +119,17 @@ export function Sala({
   }, [projectId, red]);
 
   // --- la compuerta ----------------------------------------------------------
-  const revisar = useCallback(async () => {
+  // `revisarCon` acepta un texto para el caso de "Corregir": el estado se acaba
+  // de actualizar y el valor viejo seguiría en la clausura, así que se pasa el
+  // nuevo a mano. Sin argumento, revisa el texto de ahora.
+  const revisarCon = useCallback(async (textoOverride?: string) => {
+    const elTexto = textoOverride ?? texto;
     setRevisando(true);
     try {
       const res = await fetch(`/api/projects/${projectId}/compuerta`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ red, formatoId, texto, piezaId: elegida }),
+        body: JSON.stringify({ red, formatoId, texto: elTexto, piezaId: elegida }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d?.error ?? 'No se pudo revisar.');
@@ -140,6 +145,8 @@ export function Sala({
       setRevisando(false);
     }
   }, [projectId, red, formatoId, texto, elegida, toast]);
+
+  const revisar = useCallback(() => revisarCon(), [revisarCon]);
 
   // Al cambiar de red o de pieza se revisa sola: es el momento en que la
   // respuesta cambia de verdad. Al escribir, NO — solo se marca el semáforo
@@ -192,6 +199,47 @@ export function Sala({
       setAdaptando(false);
     }
   }, [projectId, elegida, revisar, toast]);
+
+  // --- corregir con Goossip --------------------------------------------------
+  const corregir = useCallback(async () => {
+    setCorrigiendo(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/corregir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ red, formatoId, texto, piezaId: elegida }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error ?? 'No se pudo corregir.');
+      if (!d.cambio) {
+        toast.push({
+          title: 'No había nada que reescribir',
+          description: d.aviso ?? undefined,
+          variant: 'info',
+        });
+        return;
+      }
+      setTexto(d.textoCorregido);
+      setFresco(false);
+      toast.push({
+        title: 'Texto corregido',
+        description:
+          (d.queSeCambio ?? []).join(' ') ||
+          'Lo reescribí para que pase. Revísalo y vuelve a pasar la compuerta.',
+        variant: 'success',
+      });
+      // Se prueba la corrección: se vuelve a pasar la compuerta con el texto nuevo.
+      await revisarCon(d.textoCorregido);
+    } catch (e) {
+      toast.push({
+        title: 'No se pudo corregir',
+        description: e instanceof Error ? e.message : undefined,
+        variant: 'error',
+      });
+    } finally {
+      setCorrigiendo(false);
+    }
+  }, [projectId, red, formatoId, texto, elegida, revisarCon, toast]);
 
   // --- aprobar ---------------------------------------------------------------
   const aprobar = useCallback(async () => {
@@ -353,9 +401,11 @@ export function Sala({
             revisando={revisando}
             fresco={fresco}
             adaptando={adaptando}
+            corrigiendo={corrigiendo}
             puedeEditar={puedeEditar}
             onRevisar={() => void revisar()}
             onAdaptar={() => void adaptar()}
+            onCorregir={() => void corregir()}
             onAprobar={() => void aprobar()}
             estadoDeLaPieza={pieza?.estado ?? null}
           />

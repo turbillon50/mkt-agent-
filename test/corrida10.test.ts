@@ -67,6 +67,7 @@ import {
   MENCIONES_QUE_HUELEN_MAL,
   PARECIDO_QUE_ES_REPETIR,
   compuerta,
+  corregir,
   cuantasReglas,
   parecido,
   promesaDeRendimiento,
@@ -691,6 +692,39 @@ function pruebaWhatsapp(project: Project) {
 
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Corregir con Goossip — la parte determinista (sin el modelo)
+// ---------------------------------------------------------------------------
+
+async function pruebaCorregir(project: Project) {
+  // Un texto limpio no tiene qué reescribir: corregir lo dice, no inventa un
+  // cambio. Con `sinModelo` la DETECCIÓN es determinista y no toca la red.
+  const limpio = await corregir({
+    orgId: ORG,
+    project,
+    red: 'facebook',
+    formatoId: 'facebook-feed',
+    texto: 'Departamento modelo abierto este fin de semana en Polanco.',
+    sinModelo: true,
+  });
+  ok('corregir un texto limpio no cambia nada', limpio.cambio === false);
+  ok('y explica por qué no había qué reescribir', Boolean(limpio.aviso));
+  ok('y devuelve el texto tal cual', limpio.textoCorregido.includes('Polanco'));
+
+  // Un rojo de archivo/frecuencia NO es cosa de reescribir el texto: corregir
+  // no lo intenta. (Aquí no hay pieza ni medida, así que no hay hallazgo
+  // corregible de texto y responde que no hay nada que reescribir.)
+  const soloFrecuencia = await corregir({
+    orgId: ORG,
+    project,
+    red: 'facebook',
+    formatoId: 'facebook-feed',
+    texto: 'Un texto normal, sin promesas ni hashtags de más.',
+    sinModelo: true,
+  });
+  ok('sin hallazgos de texto, corregir no reescribe', soloFrecuencia.cambio === false);
+}
+
 async function main() {
   console.log('Pruebas de la corrida 10 — la Sala de arte y comunicación\n');
 
@@ -708,6 +742,7 @@ async function main() {
     await pruebaCompuerta(project);
     await pruebaElModeloNoAbre(project);
     await pruebaFrecuencia(project);
+    await pruebaCorregir(project);
   } catch (e) {
     fallidas.push(`explotó: ${e instanceof Error ? e.message : String(e)}`);
     console.error(e);
