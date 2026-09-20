@@ -59,7 +59,29 @@ export default async function LeadsPage({
       </nav>
 
       {enProspeccion ? (
-        <TableroProspeccion projectId={id} />
+        <div className="space-y-4">
+          {/*
+            El puente a la Sala en vivo (corrida 12). Va ARRIBA de la lista y no
+            escondido en un menú porque es lo que alguien quiere abrir cuando
+            tiene al prospecto enfrente, y buscarlo en ese momento es perderlo.
+          */}
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/5 p-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">Míralo recorrer la zona</p>
+              <p className="text-xs text-[var(--color-muted-foreground)]">
+                El mapa en grande, cuadrante por cuadrante, con los negocios cayendo en vivo. Trae
+                modo Presentación para enseñárselo a un cliente.
+              </p>
+            </div>
+            <Link
+              href={`/projects/${id}/prospeccion`}
+              className="btn-brand inline-flex h-9 shrink-0 items-center rounded-md px-3 text-sm"
+            >
+              Abrir la Sala en vivo
+            </Link>
+          </div>
+          <TableroProspeccion projectId={id} />
+        </div>
       ) : (
         /*
           `whatsapp` viene del SERVIDOR: el tablero es un componente de cliente y

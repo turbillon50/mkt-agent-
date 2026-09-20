@@ -44,6 +44,7 @@ import {
 import { activeAccountFor } from '../projects/composio-connections';
 import { executeTool } from '../composio/client';
 import { cuerpo } from '../channels/base';
+import { METROS_POR_GRADO_LAT } from './geo';
 
 // ---------------------------------------------------------------------------
 // Lo que devuelve Google, ya parejo
@@ -61,6 +62,13 @@ export interface Lugar {
   lat: number | null;
   lng: number | null;
   mapsUrl: string | null;
+  /**
+   * Solo viene si se pidieron horarios, que Google cobra en un tramo más caro.
+   * `null` significa "no se preguntó", no "no abre 24 h" — la diferencia importa
+   * porque el resumen no puede contar como cerrado lo que nunca revisó.
+   */
+  abierto24h?: boolean | null;
+  abiertoAhora?: boolean | null;
 }
 
 export type ViaMaps = 'composio' | 'places';
@@ -70,7 +78,7 @@ export type ViaMaps = 'composio' | 'places';
  * TRAMO de campos (Basic / Advanced / Preferred) y pedir el universo entero
  * multiplica la factura por algo que nadie va a mirar.
  */
-const CAMPOS = [
+const CAMPOS_BASE = [
   'places.id',
   'places.displayName',
   'places.formattedAddress',
@@ -83,7 +91,41 @@ const CAMPOS = [
   'places.primaryType',
   'places.location',
   'places.googleMapsUri',
-].join(',');
+];
+
+const CAMPOS = CAMPOS_BASE.join(',');
+
+/**
+ * El horario va APARTE porque va en otra factura.
+ *
+ * `places.regularOpeningHours` es del tramo Enterprise de Places API (New);
+ * todo lo de arriba es Pro. Meterlo en la lista fija subiría el precio de cada
+ * búsqueda que hace la app —incluidas las que a nadie le importa el horario—
+ * para que el resumen pueda decir "3 abiertos 24 h" de vez en cuando. Se pide
+ * solo cuando el usuario prende ese filtro, y la pantalla se lo advierte.
+ */
+const CAMPO_HORARIOS = 'places.regularOpeningHours';
+
+function mascara(horarios: boolean): string {
+  const campos = [...CAMPOS_BASE, 'nextPageToken'];
+  if (horarios) campos.push(CAMPO_HORARIOS);
+  return campos.join(',');
+}
+
+/**
+ * ¿Abre 24 horas?
+ *
+ * Google no tiene una bandera para eso: lo dice **por omisión**. Un negocio
+ * abierto siempre viene con un solo periodo que abre el domingo a las 00:00 y
+ * **no trae `close`**. Es el único caso en toda la respuesta donde falta el
+ * cierre, así que buscar esa falta es más confiable que sumar horas.
+ */
+export function abre24h(horario: any): boolean | null {
+  const periodos = horario?.periods;
+  if (!Array.isArray(periodos)) return null;
+  if (periodos.length === 0) return false;
+  return periodos.length === 1 && periodos[0]?.open != null && periodos[0]?.close == null;
+}
 
 export class MapsNoDisponible extends Error {
   constructor() {
@@ -124,6 +166,9 @@ function normaliza(p: any): Lugar | null {
     lat: typeof loc?.latitude === 'number' ? loc.latitude : null,
     lng: typeof loc?.longitude === 'number' ? loc.longitude : null,
     mapsUrl: p?.googleMapsUri ?? null,
+    abierto24h: abre24h(p?.regularOpeningHours ?? p?.currentOpeningHours),
+    abiertoAhora:
+      typeof p?.regularOpeningHours?.openNow === 'boolean' ? p.regularOpeningHours.openNow : null,
   };
 }
 
@@ -131,20 +176,63 @@ function normaliza(p: any): Lugar | null {
 // Las dos llamadas
 // ---------------------------------------------------------------------------
 
-async function porPlaces(input: {
+/**
+ * Una llamada a Google, por el camino que toque.
+ *
+ * Es el ladrillo del que cuelgan las dos formas de buscar: la frase suelta de
+ * la corrida 7 y el recorrido por cuadrantes de la 12. Por eso devuelve también
+ * el `pageToken`: sin él, "veinte por búsqueda" era un techo de la
+ * implementación disfrazado de límite de Google.
+ */
+export interface PeticionLugares {
+  project: Project;
+  via: ViaMaps;
+  /** El giro, con las palabras del usuario. */
   consulta: string;
-  limite: number;
+  /** Limitar a esta celda. Es lo que usa el recorrido por cuadrantes. */
+  caja?: { sur: number; oeste: number; norte: number; este: number } | null;
+  /** Sesgar (o restringir, en Composio) a este círculo. */
   centro?: { lat: number; lng: number; radioM: number } | null;
-}): Promise<Lugar[]> {
+  limite?: number;
+  /** La página siguiente de la MISMA búsqueda. Google la cobra aparte. */
+  pageToken?: string | null;
+  minRating?: number;
+  openNow?: boolean;
+  horarios?: boolean;
+  señal?: AbortSignal;
+}
+
+export interface RespuestaLugares {
+  lugares: Lugar[];
+  /** `null` = ya no hay más páginas. */
+  pageToken: string | null;
+}
+
+async function porPlaces(input: PeticionLugares): Promise<RespuestaLugares> {
   const key = llaveDeLaCasa();
   if (!key) throw new MapsNoDisponible();
 
   const body: Record<string, unknown> = {
     textQuery: input.consulta,
     languageCode: 'es',
-    maxResultCount: Math.min(input.limite, 20),
+    pageSize: Math.min(input.limite ?? 20, 20),
   };
-  if (input.centro) {
+  /**
+   * Rectángulo y no círculo, y no por gusto: la búsqueda por TEXTO de Places
+   * API (New) acepta `locationRestriction.rectangle` y rechaza el círculo (el
+   * círculo solo lo entiende `searchNearby`, que a su vez no sabe de texto
+   * libre). Medido contra la API el 16-sep-2026. Como las celdas de la
+   * cuadrícula embonan, restringir por rectángulo cubre la zona completa sin
+   * preguntar dos veces por el mismo negocio.
+   */
+  if (input.caja) {
+    body.locationRestriction = {
+      rectangle: {
+        low: { latitude: input.caja.sur, longitude: input.caja.oeste },
+        high: { latitude: input.caja.norte, longitude: input.caja.este },
+      },
+    };
+  } else if (input.centro) {
     body.locationBias = {
       circle: {
         center: { latitude: input.centro.lat, longitude: input.centro.lng },
@@ -152,56 +240,84 @@ async function porPlaces(input: {
       },
     };
   }
+  // Filtrar del lado de Google es gratis; filtrar aquí ya se pagó la llamada.
+  if (input.minRating && input.minRating > 0) body.minRating = input.minRating;
+  if (input.openNow) body.openNow = true;
+  if (input.pageToken) body.pageToken = input.pageToken;
 
   const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': key,
-      'X-Goog-FieldMask': CAMPOS,
+      'X-Goog-FieldMask': mascara(Boolean(input.horarios)),
     },
     body: JSON.stringify(body),
     cache: 'no-store',
+    signal: input.señal,
   });
   if (!res.ok) {
     const detalle = await res.text().catch(() => '');
     throw new Error(`Google Maps contestó ${res.status}. ${detalle.slice(0, 200)}`);
   }
   const data = await res.json();
-  return ((data?.places ?? []) as any[]).map(normaliza).filter((x): x is Lugar => x !== null);
+  return {
+    lugares: ((data?.places ?? []) as any[]).map(normaliza).filter((x): x is Lugar => x !== null),
+    pageToken: typeof data?.nextPageToken === 'string' ? data.nextPageToken : null,
+  };
 }
 
-async function porComposio(input: {
-  project: Project;
-  consulta: string;
-  limite: number;
-  centro?: { lat: number; lng: number; radioM: number } | null;
-}): Promise<Lugar[]> {
+async function porComposio(input: PeticionLugares): Promise<RespuestaLugares> {
   const cuenta = await activeAccountFor(input.project, 'google_maps');
   if (!cuenta) throw new MapsNoDisponible();
 
-  const slug = input.centro ? 'GOOGLE_MAPS_NEARBY_SEARCH' : 'GOOGLE_MAPS_TEXT_SEARCH';
-  const args: Record<string, unknown> = input.centro
+  /**
+   * Por Composio el recorrido sale por `NEARBY_SEARCH` con el CÍRCULO del
+   * cuadrante, no con su rectángulo: esa herramienta solo entiende círculos. Es
+   * la razón por la que cada cuadrante carga las dos figuras — misma celda,
+   * dos idiomas.
+   */
+  const circulo = input.caja
+    ? null
+    : input.centro;
+  const usarCerca = Boolean(input.caja || input.centro);
+  const centroCerca = input.caja
+    ? {
+        lat: (input.caja.sur + input.caja.norte) / 2,
+        lng: (input.caja.oeste + input.caja.este) / 2,
+        // La media diagonal de la celda: el círculo más chico que la cubre.
+        radioM: Math.max(
+          50,
+          Math.round(
+            (Math.abs(input.caja.norte - input.caja.sur) * 111_320 * Math.SQRT2) / 2,
+          ),
+        ),
+      }
+    : circulo;
+
+  const slug = usarCerca ? 'GOOGLE_MAPS_NEARBY_SEARCH' : 'GOOGLE_MAPS_TEXT_SEARCH';
+  const args: Record<string, unknown> = usarCerca
     ? {
         // `includedTypes` se queda fuera a propósito: el giro viene en palabras
         // del usuario ("restaurantes", "gimnasios") y traducirlo a la taxonomía
         // de Google a ojo mete negocios que nadie pidió.
         locationRestriction: {
           circle: {
-            center: { latitude: input.centro.lat, longitude: input.centro.lng },
-            radius: input.centro.radioM,
+            center: { latitude: centroCerca!.lat, longitude: centroCerca!.lng },
+            radius: centroCerca!.radioM,
           },
         },
-        maxResultCount: Math.min(input.limite, 20),
-        fieldMask: CAMPOS,
+        maxResultCount: Math.min(input.limite ?? 20, 20),
+        fieldMask: mascara(Boolean(input.horarios)),
         languageCode: 'es',
       }
     : {
         textQuery: input.consulta,
-        maxResultCount: Math.min(input.limite, 20),
-        fieldMask: CAMPOS,
+        maxResultCount: Math.min(input.limite ?? 20, 20),
+        fieldMask: mascara(Boolean(input.horarios)),
         languageCode: 'es',
       };
+  if (input.pageToken) args.pageToken = input.pageToken;
 
   const res = await executeTool(slug, {
     userId: cuenta.userId,
@@ -210,7 +326,15 @@ async function porComposio(input: {
   });
   const data: any = cuerpo(res.data ?? res);
   const lista = data?.places ?? data?.results ?? [];
-  return (lista as any[]).map(normaliza).filter((x): x is Lugar => x !== null);
+  return {
+    lugares: (lista as any[]).map(normaliza).filter((x): x is Lugar => x !== null),
+    pageToken: typeof data?.nextPageToken === 'string' ? data.nextPageToken : null,
+  };
+}
+
+/** Le pregunta a Google por el camino que tenga este proyecto. */
+export async function pedirLugares(input: PeticionLugares): Promise<RespuestaLugares> {
+  return input.via === 'composio' ? porComposio(input) : porPlaces(input);
 }
 
 // ---------------------------------------------------------------------------
@@ -294,10 +418,14 @@ export async function buscarNegocios(encargo: EncargoBusqueda): Promise<Resultad
   let lugares: Lugar[] = [];
   let error: string | null = null;
   try {
-    lugares =
-      via === 'composio'
-        ? await porComposio({ project, consulta: encargo.consulta, limite, centro: encargo.centro })
-        : await porPlaces({ consulta: encargo.consulta, limite, centro: encargo.centro });
+    const r = await pedirLugares({
+      project,
+      via,
+      consulta: encargo.consulta,
+      limite,
+      centro: encargo.centro,
+    });
+    lugares = r.lugares;
   } catch (e) {
     error = e instanceof Error ? e.message : 'Google no contestó.';
   }
@@ -344,7 +472,13 @@ export async function buscarNegocios(encargo: EncargoBusqueda): Promise<Resultad
   };
 }
 
-async function guardarLugares(
+/**
+ * Deja los lugares en la lista del proyecto. Lo usan la búsqueda de una frase y
+ * el recorrido por cuadrantes, y tiene que ser el MISMO código en los dos: la
+ * idempotencia por `place_id` y la regla de "los datos se refrescan, el estado
+ * no" son de la lista, no de quien la llena.
+ */
+export async function guardarLugares(
   project: Project,
   lugares: Lugar[],
   searchId: string,
@@ -403,6 +537,95 @@ async function guardarLugares(
     if (fila) out.push({ fila, nuevo: true });
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Dónde queda "Tulum"
+// ---------------------------------------------------------------------------
+
+export interface ZonaUbicada {
+  centro: { lat: number; lng: number };
+  /** Cómo se llama de verdad, según Google: "Tulum, Q.R., México". */
+  nombre: string;
+  /** El radio que cubre la mancha urbana. Es una sugerencia, el usuario manda. */
+  radioSugeridoM: number;
+  via: 'geocoding' | 'busqueda';
+  /** Llamadas facturables que costó ubicarla. Entra al contador del mes. */
+  llamadas: number;
+}
+
+/**
+ * Convierte "Tulum" en un punto y un radio.
+ *
+ * Hace falta porque el recorrido por cuadrantes necesita un CENTRO antes de la
+ * primera búsqueda: sin él no hay cuadrícula que dibujar y la cámara no sabe a
+ * dónde volar. Dos caminos, y el segundo no es un adorno:
+ *
+ *   1. **Geocoding** con la llave de la casa. Devuelve además el `viewport` de
+ *      la zona, que es de dónde sale el radio sugerido — proponer 3 km para
+ *      Tulum y 3 km para la Ciudad de México sería proponer cualquier cosa.
+ *   2. **Una búsqueda de texto** y el promedio de las coordenadas de lo que
+ *      salga. Es el camino cuando la búsqueda va por la cuenta de Google del
+ *      cliente (Composio no expone geocodificación) o cuando la casa no tiene
+ *      llave. Es menos exacto y por eso el radio sugerido se queda en el que
+ *      traía el usuario.
+ */
+export async function ubicarZona(
+  project: Project,
+  zona: string,
+  via: ViaMaps,
+  radioDeRespaldo = 3000,
+): Promise<ZonaUbicada | null> {
+  const key = llaveDeLaCasa();
+  if (key) {
+    try {
+      const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
+      url.searchParams.set('address', zona);
+      url.searchParams.set('language', 'es');
+      url.searchParams.set('key', key);
+      const res = await fetch(url, { cache: 'no-store' });
+      const data: any = res.ok ? await res.json() : null;
+      const r = data?.results?.[0];
+      if (r?.geometry?.location) {
+        const vp = r.geometry.viewport;
+        let radio = radioDeRespaldo;
+        if (vp?.northeast && vp?.southwest) {
+          // La mitad del alto del viewport en metros. Con `Math.round` a
+          // centenas para que el control de radio no arranque en "4 137 m".
+          const altoM = Math.abs(vp.northeast.lat - vp.southwest.lat) * METROS_POR_GRADO_LAT;
+          radio = Math.min(Math.max(Math.round((altoM / 2) / 100) * 100, 800), 25_000);
+        }
+        return {
+          centro: { lat: r.geometry.location.lat, lng: r.geometry.location.lng },
+          nombre: r.formatted_address ?? zona,
+          radioSugeridoM: radio,
+          via: 'geocoding',
+          llamadas: 1,
+        };
+      }
+    } catch {
+      // Se cae al camino de abajo. Una zona que no se pudo geocodificar no es
+      // motivo para no buscar: es motivo para buscar distinto.
+    }
+  }
+
+  try {
+    const r = await pedirLugares({ project, via, consulta: zona, limite: 10 });
+    const conCoords = r.lugares.filter((l) => l.lat !== null && l.lng !== null);
+    if (conCoords.length === 0) return null;
+    return {
+      centro: {
+        lat: conCoords.reduce((s, l) => s + l.lat!, 0) / conCoords.length,
+        lng: conCoords.reduce((s, l) => s + l.lng!, 0) / conCoords.length,
+      },
+      nombre: zona,
+      radioSugeridoM: radioDeRespaldo,
+      via: 'busqueda',
+      llamadas: 1,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -843,6 +1066,36 @@ export async function moverProspecto(
     .returning();
   return fila ?? null;
 }
+
+/**
+ * Lo que sale al navegador de un prospecto.
+ *
+ * Vive aquí y no en cada ruta porque lo que NO lleva es la parte importante:
+ * ni la llave, ni el `search_id` interno, ni el `org_id`. Tres rutas con tres
+ * copias de esta función son tres oportunidades de que a una se le olvide qué
+ * no debía salir.
+ */
+export function paraElNavegador(p: Prospect) {
+  return {
+    id: p.id,
+    name: p.name,
+    address: p.address,
+    phone: p.phone,
+    website: p.website,
+    rating: p.rating !== null ? Number(p.rating) : null,
+    ratingsCount: p.ratingsCount,
+    category: p.category,
+    lat: p.lat,
+    lng: p.lng,
+    mapsUrl: p.mapsUrl,
+    status: p.status,
+    enrichment: p.enrichment,
+    leadId: p.leadId,
+    foundAt: p.foundAt.toISOString(),
+  };
+}
+
+export type ProspectoFuera = ReturnType<typeof paraElNavegador>;
 
 /** El CSV de la lista. Se arma aquí para que la ruta no reinvente el escapado. */
 export function comoCsv(filas: Prospect[]): string {
