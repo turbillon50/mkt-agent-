@@ -48,3 +48,7 @@ capturas-integracion-c8/*
 # Igual para las de la corrida 11. Lo que se versiona es la MEDICIÓN.
 capturas-c11/*
 !capturas-c11/resumen.json
+
+# Corrida 12: se versiona la MEDICIÓN del recorrido, no los PNG pesados.
+capturas-c12/*
+!capturas-c12/resumen.json

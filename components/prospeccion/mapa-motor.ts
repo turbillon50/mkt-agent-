@@ -289,6 +289,16 @@ async function motorMapLibre(el: HTMLElement, centro: Punto, radioM: number): Pr
 // ---------------------------------------------------------------------------
 
 let cargandoGoogle: Promise<void> | null = null;
+/**
+ * Google NO lanza una excepción cuando la llave no sirve para Maps JS —una
+ * llave puede estar habilitada para Places (que paga las búsquedas del
+ * servidor) y NO para Maps JavaScript, que es un permiso aparte—. En vez de
+ * tirar, dispara `window.gm_authFailure` y deja el lienzo en gris. Medido el
+ * 20-sep-2026: la llave del proyecto da `InvalidKeyMapError` en el navegador
+ * aunque Places conteste 200. Esta bandera es cómo el motor se entera para
+ * poder caer a MapLibre en vez de enseñar un mapa muerto.
+ */
+let googleAuthFallo = false;
 
 function cargarGoogle(llave: string): Promise<void> {
   if ((window as any).google?.maps) return Promise.resolve();
@@ -296,6 +306,11 @@ function cargarGoogle(llave: string): Promise<void> {
   // la misma página se pisan y la segunda tira "You have included the Google
   // Maps JavaScript API multiple times".
   if (cargandoGoogle) return cargandoGoogle;
+  // Tiene que quedar puesto ANTES de que el SDK arranque: Google lo llama a él
+  // cuando rechaza la llave, y si llega después ya se perdió el aviso.
+  (window as any).gm_authFailure = () => {
+    googleAuthFallo = true;
+  };
   cargandoGoogle = new Promise<void>((listo, falla) => {
     const s = document.createElement('script');
     const url = new URL('https://maps.googleapis.com/maps/api/js');
@@ -321,6 +336,7 @@ async function motorGoogle(
   // Google mide la caja igual de temprano que MapLibre y se queda igual de
   // ciego si mide cero. Misma espera, mismo motivo.
   await esperarCaja(el);
+  if (googleAuthFallo) throw new Error('Google Maps rechazó la llave (auth).');
   const g = (window as any).google;
   const mapa = new g.maps.Map(el, {
     center: { lat: centro.lat, lng: centro.lng },
@@ -328,6 +344,29 @@ async function motorGoogle(
     disableDefaultUI: true,
     zoomControl: true,
     clickableIcons: false,
+  });
+
+  /*
+   * Confirmar que la llave sirve ANTES de devolver el motor. Se espera a la
+   * primera tanda de teselas —o a 2.5 s— y entonces se revisa la bandera de
+   * `gm_authFailure`. Si la auth falló, se truena para que `crearMotor` caiga a
+   * MapLibre; si sólo van lentas las teselas pero la llave es buena, se sigue.
+   * Sin esta espera el mapa muerto se devolvía como si funcionara y el
+   * recorrido corría sobre un rectángulo gris.
+   */
+  await new Promise<void>((resolver, rechazar) => {
+    const revisar = () => {
+      if (googleAuthFallo) rechazar(new Error('Google Maps rechazó la llave (auth).'));
+      else resolver();
+    };
+    const reloj = setTimeout(() => {
+      g.maps.event.removeListener(escucha);
+      revisar();
+    }, 2500);
+    const escucha = g.maps.event.addListenerOnce(mapa, 'tilesloaded', () => {
+      clearTimeout(reloj);
+      revisar();
+    });
   });
 
   const marcadores = new Map<string, any>();

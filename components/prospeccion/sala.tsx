@@ -502,9 +502,9 @@ export function SalaProspeccion({
         @keyframes goossip-cae{0%{transform:translateY(-18px) scale(.4);opacity:0}
           60%{transform:translateY(2px) scale(1.15);opacity:1}100%{transform:none;opacity:1}}
         /* El punto del centro va FIJO y el anillo aparte. Si el anillo fuera el
-           elemento de afuera, su `opacity:0` del final se heredaría al punto y
-           el cuadrante que se está revisando desaparecería medio ciclo de cada
-           ciclo — justo cuando alguien toma la captura. */
+           elemento de afuera, su opacity:0 del final se heredaria al punto y
+           el cuadrante que se esta revisando desapareceria medio ciclo de cada
+           ciclo, justo cuando alguien toma la captura. */
         .goossip-pulso{position:relative;width:14px;height:14px;border-radius:9999px;
           background:#1d4ed8;box-shadow:0 0 0 3px rgba(255,255,255,.9)}
         .goossip-anillo{position:absolute;left:50%;top:50%;width:34px;height:34px;
