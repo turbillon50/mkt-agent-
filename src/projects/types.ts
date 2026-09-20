@@ -163,6 +163,11 @@ export const PROJECT_EVENT_TYPES = [
   // Corrida 13: la bandeja social y la pauta de Google por proyecto.
   'conversacion_respondida',
   'campana_google_cambiada',
+  // Corrida 12. El recorrido por cuadrantes se anota APARTE de la búsqueda de
+  // una frase: cuesta nueve veces más y dura minutos en vez de segundos, y
+  // mezclarlos en la bitácora haría imposible contestar "¿por qué se gastaron
+  // 40 búsquedas el martes?".
+  'prospeccion_barrido',
 ] as const;
 export type ProjectEventType = (typeof PROJECT_EVENT_TYPES)[number];
 
@@ -188,6 +193,7 @@ export const PROJECT_EVENT_LABEL: Record<ProjectEventType, string> = {
   autonomia_cambiada: 'Nivel de autonomía cambiado',
   conversacion_respondida: 'Respuesta en una conversación',
   campana_google_cambiada: 'Campaña de Google prendida o pausada',
+  prospeccion_barrido: 'Recorrido del mapa por cuadrantes',
 };
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiProject } from '@/lib/project-access';
-import type { Prospect } from '@/src/db/schema';
+import { paraElNavegador as fuera } from '@/src/prospeccion/maps';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -72,12 +72,67 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const {
     buscarNegocios,
+    convertirALead,
     enriquecerProspecto,
     MapsNoDisponible,
+    proponerContacto,
     TopeDeBusquedas,
   } = await import('@/src/prospeccion/maps');
 
   try {
+    /**
+     * El lote del final del recorrido.
+     *
+     * Existe porque el botón que cierra la demo es "mándalos a la cola", en
+     * plural: después de recorrer Tulum hay 35 negocios sin sitio web y nadie
+     * va a dar 35 clics delante del cliente. El tope de 50 y el `for` en serie
+     * no son timidez — cada conversión escribe en `sales_leads` y encola una
+     * acción, y mandar 79 en paralelo desde el navegador es una forma elegante
+     * de tumbarse la propia base.
+     */
+    if (body?.accion === 'convertir-lote' || body?.accion === 'encolar-lote') {
+      const ids = Array.isArray(body?.ids)
+        ? [...new Set((body.ids as unknown[]).map(String))].slice(0, 50)
+        : [];
+      if (ids.length === 0) {
+        return NextResponse.json({ error: 'No me diste a quiénes.' }, { status: 400 });
+      }
+      const encolar = body.accion === 'encolar-lote';
+      let hechos = 0;
+      const fallaron: string[] = [];
+      for (const prospectId of ids) {
+        try {
+          if (encolar) {
+            const r = await proponerContacto({
+              project: gate.ctx.project,
+              prospectId,
+              canal: 'correo',
+              mensaje: `Hola, los vi en Google Maps y quería contarles cómo trabajamos con negocios como el suyo.`,
+              quien,
+            });
+            if (r.ok) hechos += 1;
+            else fallaron.push(r.motivo ?? 'no se pudo');
+          } else {
+            const r = await convertirALead({ project: gate.ctx.project, prospectId, quien });
+            if (r) hechos += 1;
+            else fallaron.push('ya no existe');
+          }
+        } catch (e) {
+          fallaron.push(e instanceof Error ? e.message : 'no se pudo');
+        }
+      }
+      const { logProjectEvent } = await import('@/src/projects/events');
+      await logProjectEvent({
+        orgId: gate.ctx.orgId,
+        projectId: id,
+        type: 'prospecto_convertido',
+        actor: gate.ctx.clerkUserId,
+        actorEmail: gate.ctx.user.email,
+        payload: { lote: ids.length, hechos, encolados: encolar },
+      }).catch(() => undefined);
+      return NextResponse.json({ ok: true, pedidos: ids.length, hechos, fallaron: fallaron.length });
+    }
+
     if (body?.accion === 'enriquecer') {
       const fila = await enriquecerProspecto(gate.ctx.orgId, id, String(body?.prospectId ?? ''));
       if (!fila) return NextResponse.json({ error: 'not found' }, { status: 404 });
@@ -128,23 +183,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 }
 
-/** Lo que sale al navegador. Nunca la llave, nunca el `search_id` interno. */
-function fuera(p: Prospect) {
-  return {
-    id: p.id,
-    name: p.name,
-    address: p.address,
-    phone: p.phone,
-    website: p.website,
-    rating: p.rating !== null ? Number(p.rating) : null,
-    ratingsCount: p.ratingsCount,
-    category: p.category,
-    lat: p.lat,
-    lng: p.lng,
-    mapsUrl: p.mapsUrl,
-    status: p.status,
-    enrichment: p.enrichment,
-    leadId: p.leadId,
-    foundAt: p.foundAt.toISOString(),
-  };
-}
+/*
+ * Lo que sale al navegador —sin la llave, sin el `search_id` interno, sin el
+ * `org_id`— lo decide `paraElNavegador` en `src/prospeccion/maps.ts`, una sola
+ * vez para las tres rutas que devuelven prospectos.
+ */

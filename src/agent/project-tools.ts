@@ -796,6 +796,91 @@ export function toolsParaProyecto(ctx: AgentContext) {
     },
   });
 
+  /**
+   * "Busca restaurantes sin sitio web en Tulum" → abre la Sala y la corre.
+   *
+   * Esta herramienta NO busca: **arma el enlace**. Y es a propósito. El
+   * recorrido dura minutos, hace hasta diez llamadas que cuestan dinero y su
+   * gracia entera es que se VEA pasar en el mapa; hacerlo dentro del turno del
+   * Asistente sería cobrarlo todo para devolver un párrafo con nombres, que es
+   * justo la pantalla que esta corrida vino a reemplazar. El modelo entiende lo
+   * que le pidieron, lo traduce a zona + giros + filtros, y manda al usuario a
+   * verlo. Para la búsqueda de un tirón ya está `buscar-negocios`.
+   */
+  const recorrerZonaEnVivo = createTool({
+    id: 'recorrer-zona-en-vivo',
+    description:
+      'Abre la Sala de Prospección con el mapa en vivo y deja lista (o corriendo) una búsqueda por zona y giro. Úsala cuando pidan "busca restaurantes sin sitio web en Tulum", "enséñame los gimnasios de la zona", "quiero verlo recorrer el mapa", "haz una demo de prospección" o cuando quieran ENSEÑARLE la búsqueda a alguien. Devuelve un enlace: preséntalo como enlace para que lo abran. Solo negocios: nunca personas.',
+    inputSchema: z.object({
+      zona: z.string().min(3).describe('La zona con sus palabras: "Tulum", "Polanco".'),
+      giros: z
+        .array(z.string().min(3))
+        .min(1)
+        .max(6)
+        .describe('Los giros en SINGULAR: ["restaurante", "cafetería"].'),
+      sinSitio: z.boolean().optional().describe('Solo los que no tienen sitio web.'),
+      radioKm: z.number().min(0.5).max(15).optional(),
+      demo: z.boolean().optional().describe('Modo Presentación: más lento, pantalla completa.'),
+    }),
+    outputSchema: z.object({
+      enlace: z.string(),
+      zona: z.string(),
+      giros: z.array(z.string()),
+      cuadrantes: z.number(),
+      busquedasQueVaACostar: z.number(),
+      tope: z.number(),
+      busquedasDelMes: z.number(),
+      aviso: z.string().nullable(),
+    }),
+    execute: async (input) => {
+      soloOperadores(ctx, 'prospectar');
+      const { busquedasDelMes, topeDeBusquedas, viaDisponible } = await import(
+        '../prospeccion/maps'
+      );
+      const { costoPrevisto } = await import('../prospeccion/barrido');
+
+      const via = await viaDisponible(project);
+      const tope = topeDeBusquedas(project);
+      const mes = await busquedasDelMes(project.id);
+      const costo = costoPrevisto({
+        lado: 3,
+        giros: input.giros.length,
+        paginas: 1,
+        geocodificar: true,
+      });
+
+      const qs = new URLSearchParams({
+        zona: input.zona,
+        giros: input.giros.join(','),
+        auto: '1',
+      });
+      if (input.sinSitio) qs.set('sinSitio', '1');
+      if (input.radioKm) qs.set('radio', String(Math.round(input.radioKm * 1000)));
+      if (input.demo) qs.set('demo', '1');
+
+      // El aviso sale ANTES de que el usuario haga clic. Enterarse de que no
+      // había con qué buscar —o de que no alcanzaba el mes— después de abrir la
+      // pantalla y ver el mapa girando es la peor forma de enterarse.
+      const aviso =
+        via === null
+          ? 'Ojo: este proyecto no tiene Google Maps conectado ni llave de la casa, así que la Sala va a abrir pero el recorrido no va a poder arrancar. Conecta Google Maps en Conexiones.'
+          : tope > 0 && mes + costo > tope
+            ? `Ojo: el recorrido pide ${costo} búsquedas y a este proyecto le quedan ${Math.max(tope - mes, 0)} en el mes.`
+            : null;
+
+      return {
+        enlace: `/projects/${project.id}/prospeccion?${qs.toString()}`,
+        zona: input.zona,
+        giros: input.giros,
+        cuadrantes: 9,
+        busquedasQueVaACostar: costo,
+        tope,
+        busquedasDelMes: mes,
+        aviso,
+      };
+    },
+  });
+
   // -------------------------------------------------------- competencia
   const leerCompetencia = createTool({
     id: 'leer-competencia',
@@ -861,6 +946,7 @@ export function toolsParaProyecto(ctx: AgentContext) {
     leerUrl,
     buscarEnWeb,
     buscarNegocios,
+    recorrerZonaEnVivo,
     leerCompetencia,
   };
 }
