@@ -27,6 +27,16 @@ const isPublicRoute = createRouteMatcher([
   // Archivo de firma con el que TikTok comprueba que el dominio es nuestro.
   // Lo pide sin sesion; si contesta redirect, la app no se puede verificar.
   '/tiktok(.*)',
+  // Iconos que Next genera desde app/icon.tsx y app/apple-icon.tsx.
+  //
+  // El matcher de abajo deja fuera del middleware todo lo que traiga
+  // extension (.svg, .png, .webmanifest), pero estas dos rutas NO tienen
+  // punto, asi que caian aqui y contestaban 307 a /sign-in. iOS pide
+  // /apple-icon SIN sesion al agregar la app a la pantalla de inicio: un
+  // redirect ahi significa icono en blanco. Mismo caso para /icon en el
+  // manifiesto.
+  '/icon',
+  '/apple-icon',
   '/api/cron/(.*)',
   // Mantenimiento con CRON_SECRET, no sesión. Se listan uno por uno: el
   // comodín dejaba abierto todo lo nuevo bajo /api/admin, que ahora es el
