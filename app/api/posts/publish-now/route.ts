@@ -123,7 +123,8 @@ export async function POST(req: NextRequest) {
       postId: out.postId,
       attemptId: out.attemptId,
       cuenta: `la cuenta de ${project.name}`,
-      conImagen: Boolean(media),
+      conImagen: Boolean(media) && out.mediaPublicada !== false,
+      advertencia: out.advertencia ?? null,
     });
   } catch (e) {
     return NextResponse.json(

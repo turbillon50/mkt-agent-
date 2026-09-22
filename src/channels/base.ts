@@ -165,6 +165,14 @@ export interface PublishResult {
   toolkit: string;
   id: string | null;
   url: string | null;
+  /**
+   * `false` cuando se pidió publicar con imagen y el canal solo pudo mandar el
+   * texto. Sin este campo, Goossip marcaba la pieza como publicada aunque en
+   * la red no hubiera ninguna imagen (medido en la QA del 16-sep-2026).
+   */
+  mediaPublicada?: boolean;
+  /** Lo que hay que decirle al usuario, en español, cuando algo salió a medias. */
+  advertencia?: string | null;
 }
 
 export interface KnowledgeDoc {
