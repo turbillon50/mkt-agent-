@@ -24,7 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import {
   canSeeSection,
-  PROJECT_SECTION_LABEL,
+  PROJECT_SECTION_LABEL_CORTO,
   type ProjectSection,
 } from '@/src/projects/types';
 import { useProjects, type ProjectSummary } from './projects-provider';
@@ -166,7 +166,7 @@ export function ProjectNav({ onNavigate }: { onNavigate?: () => void }) {
               <Fila
                 key={s}
                 href={href(s)}
-                label={PROJECT_SECTION_LABEL[s]}
+                label={PROJECT_SECTION_LABEL_CORTO[s]}
                 Icon={SECTION_ICON[s]}
                 activo={activo(href(s), s === 'inicio')}
                 badge={badgeDe(s)}
@@ -186,7 +186,7 @@ export function ProjectNav({ onNavigate }: { onNavigate?: () => void }) {
               <Fila
                 key={s}
                 href={href(s)}
-                label={PROJECT_SECTION_LABEL[s]}
+                label={PROJECT_SECTION_LABEL_CORTO[s]}
                 Icon={SECTION_ICON[s]}
                 activo={activo(href(s))}
                 onNavigate={onNavigate}

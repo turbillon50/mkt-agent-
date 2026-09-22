@@ -39,7 +39,9 @@ import {
   type DesignCategory,
   type DesignSource,
 } from '../src/design/knowledge';
-import { FORMATOS, RED_LABEL, specEnPalabras } from '../src/creative/specs';
+import { FORMATOS, RED_LABEL, REDES, specEnPalabras, type RedSlug } from '../src/creative/specs';
+import { REGLAS, LIMITES, reglaEnPalabras } from '../src/creative/reglas';
+import { CORTES, corteEnPalabras } from '../src/creative/cortes';
 import { config } from '../src/config';
 
 const VAULT = process.env.SKILLS_VAULT_DIR || '/root/skills-vault';
@@ -172,6 +174,90 @@ function fuentesDeSpecs(): DesignSource[] {
 }
 
 /**
+ * Las REGLAS de cada red y las leyes mexicanas (corrida 10).
+ *
+ * Una fuente por regla, y el `source_path` ES la URL oficial con el id en el
+ * ancla. Eso es lo que hace que `buscar_en_diseno("límite de posts por día en
+ * X")` conteste con la página de X y no con "según mis conocimientos": la
+ * procedencia viaja PEGADA al texto, no en un comentario que nadie lee.
+ *
+ * `metadata.network` va en cada pedazo porque el issue lo pide por red y porque
+ * el panel "cómo se postea aquí" filtra por ahí.
+ */
+function fuentesDeReglas(): DesignSource[] {
+  const fuentes: DesignSource[] = REGLAS.map((r) => {
+    const texto = [
+      reglaEnPalabras(r),
+      `Palabras con las que se pregunta esto: ${
+        r.ambito === 'mexico' ? 'México, ley, PROFECO, LFPC, LFPDPPP' : RED_LABEL[r.ambito as RedSlug]
+      }, ${r.titulo}, ${r.familia}, política, regla, límite, prohibido, baneo, sanción.`,
+    ].join('\n\n');
+    return {
+      sourcePath: `${r.fuente}#${r.id}`,
+      sourceHash: hashOf(texto),
+      category: 'reglas' as const,
+      title: r.titulo,
+      chunks: [
+        {
+          content: texto,
+          metadata: {
+            network: r.ambito,
+            regla: r.id,
+            familia: r.familia,
+            peso: r.peso,
+            fuente: r.fuente,
+            leidoEl: r.leidoEl,
+          },
+        },
+      ],
+    };
+  });
+
+  // Los topes por red, dichos en una sola ficha por red. Es la respuesta
+  // literal a "¿cuántas publicaciones al día acepta X?", que es la prueba 4.
+  for (const red of REDES) {
+    const l = LIMITES[red];
+    const corte = CORTES[red];
+    const texto = [
+      `Cuántas publicaciones al día acepta ${RED_LABEL[red]} por su API.`,
+      l.porDia === null
+        ? `${RED_LABEL[red]} NO publica un tope de publicaciones al día. ${l.nota}`
+        : `${RED_LABEL[red]} acepta ${l.porDia} publicaciones por cuenta en 24 horas. ${l.nota}`,
+      l.unidadesDia
+        ? `Además lleva cuota por unidades: ${l.unidadesDia.total} unidades al día, ${l.unidadesDia.subidasDia} subidas de video, y cada escritura cuesta ${l.unidadesDia.porPublicar} unidades.`
+        : null,
+      corteEnPalabras(corte),
+      `Palabras con las que se pregunta esto: límite de posts por día en ${RED_LABEL[red]}, cuántas publicaciones, cuota, rate limit, tope diario, caracteres, ver más.`,
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const regla = REGLAS.find((r) => r.id === l.regla);
+    fuentes.push({
+      sourcePath: `${regla?.fuente ?? 'https://goossip.app'}#limites-${red}`,
+      sourceHash: hashOf(texto),
+      category: 'reglas',
+      title: `${RED_LABEL[red]} — límites de publicación y de texto`,
+      chunks: [
+        {
+          content: texto,
+          metadata: {
+            network: red,
+            tipo: 'limites',
+            porDia: l.porDia,
+            publicado: l.publicado,
+            fuente: regla?.fuente ?? null,
+            leidoEl: regla?.leidoEl ?? null,
+          },
+        },
+      ],
+    });
+  }
+
+  return fuentes;
+}
+
+/**
  * El Brain, si se puede. Se piden las memorias de diseño, marca, campaña y
  * pieza que NO estén marcadas como caducas y que tengan importancia de 6 para
  * arriba — las de abajo son bitácora del día, no conocimiento.
@@ -247,12 +333,14 @@ async function main() {
 
   const { fuentes: deSkills, faltantes } = await fuentesDeSkills();
   const deSpecs = fuentesDeSpecs();
+  const deReglas = fuentesDeReglas();
   const { fuentes: deBrain, nota: notaBrain } = await fuentesDelBrain();
 
-  const todas = [...deSkills, ...deSpecs, ...deBrain];
+  const todas = [...deSkills, ...deSpecs, ...deReglas, ...deBrain];
 
   console.log(`  skills-vault : ${deSkills.length} archivos`);
   console.log(`  specs por red: ${deSpecs.length} formatos`);
+  console.log(`  reglas       : ${deReglas.length} (${REGLAS.length} políticas + ${REDES.length} fichas de límites)`);
   console.log(`  brain        : ${deBrain.length} memorias · ${notaBrain}`);
   for (const f of faltantes) console.log(`  (no existe, se salta) ${f}`);
 

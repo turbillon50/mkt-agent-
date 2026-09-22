@@ -1,0 +1,93 @@
+{
+  "corrida": "c10",
+  "base": "http://127.0.0.1:3100",
+  "redes": 6,
+  "http200": 6,
+  "conLienzo": 6,
+  "conGuia": 6,
+  "conContador": 6,
+  "conSemaforo": 6,
+  "erroresJs": 0,
+  "jerga": 0,
+  "limpias": 6,
+  "compuertaRoja": {
+    "rojo": true,
+    "citaMeta": true,
+    "citaLey": true,
+    "sinBotonAprobar": true
+  },
+  "detalle": [
+    {
+      "red": "facebook",
+      "status": 200,
+      "lienzo": true,
+      "semaforo": "verde",
+      "guia": true,
+      "contador": true,
+      "citaFuente": true,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c10/01-sala-facebook-1440.png"
+    },
+    {
+      "red": "instagram",
+      "status": 200,
+      "lienzo": true,
+      "semaforo": "verde",
+      "guia": true,
+      "contador": true,
+      "citaFuente": true,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c10/02-sala-instagram-1440.png"
+    },
+    {
+      "red": "linkedin",
+      "status": 200,
+      "lienzo": true,
+      "semaforo": "verde",
+      "guia": true,
+      "contador": true,
+      "citaFuente": false,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c10/03-sala-linkedin-1440.png"
+    },
+    {
+      "red": "twitter",
+      "status": 200,
+      "lienzo": true,
+      "semaforo": "verde",
+      "guia": true,
+      "contador": true,
+      "citaFuente": false,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c10/04-sala-twitter-1440.png"
+    },
+    {
+      "red": "tiktok",
+      "status": 200,
+      "lienzo": true,
+      "semaforo": "verde",
+      "guia": true,
+      "contador": true,
+      "citaFuente": false,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c10/05-sala-tiktok-1440.png"
+    },
+    {
+      "red": "youtube",
+      "status": 200,
+      "lienzo": true,
+      "semaforo": "verde",
+      "guia": true,
+      "contador": true,
+      "citaFuente": false,
+      "erroresJs": [],
+      "jerga": [],
+      "archivo": "/root/repos/goossip-ventas-20260915/capturas-c10/06-sala-youtube-1440.png"
+    }
+  ]
+}

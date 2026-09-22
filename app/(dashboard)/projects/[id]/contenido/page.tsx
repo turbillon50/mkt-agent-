@@ -5,6 +5,7 @@ import { ProjectHeader } from '@/components/projects/project-header';
 import { guardProject } from '@/components/projects/project-guard';
 import { GaleriaPiezas } from '@/components/marca/galeria-piezas';
 import { VistaSemana } from '@/components/contenido/semana';
+import { Sala } from '@/components/contenido/sala';
 import { getBrandKit, kitCompleto } from '@/src/creative/brand-kit';
 import { listPosts } from '@/lib/data';
 import { formatDate, cn } from '@/lib/utils';
@@ -12,16 +13,26 @@ import { formatDate, cn } from '@/lib/utils';
 export const dynamic = 'force-dynamic';
 
 /**
- * Contenido: las PIEZAS, la SEMANA y lo publicado.
+ * La SALA DE ARTE Y COMUNICACIÓN (antes "Contenido").
  *
- * La pestaña "Semana" sustituye al Calendario global (corrida 7). Un calendario
- * que mezclaba el contenido de tres clientes no servía para planear el de
- * ninguno; lo que se quiere ver es "qué sale esta semana de ESTE cliente, en
- * qué red y con qué estado de aprobación".
+ * El nombre cambió porque cambió lo que se hace aquí. "Contenido" era una
+ * galería: se miraban las piezas. Esto es una sala de revisión: se mira la
+ * pieza EN LA RED, se comprueba que la red la va a aceptar, y se decide.
  *
- * Las piezas van arriba a propósito: la pantalla se abre para hacer la de hoy,
- * no para releer lo del mes pasado. Lo publicado sigue estando, debajo, que es
- * donde se va a buscar cuando se busca.
+ * La ruta se queda en `/contenido` a propósito: hay enlaces vivos en el Inicio,
+ * en la guía del Asistente y en los correos que ya salieron. Renombrar la ruta
+ * habría roto todos por un nombre más bonito en la barra de direcciones.
+ *
+ * Tres pestañas, en el orden en que se usan:
+ *
+ *   Sala    — el visor fiel por red, la compuerta anti-baneo y la guía de cómo
+ *             se postea en cada una. Es la que abre por omisión: quien entra
+ *             aquí viene a revisar algo, no a hacer inventario.
+ *   Piezas  — la galería y el botón de generar. Es de donde salen.
+ *   Semana  — qué sale esta semana, por día y por red.
+ *
+ * Lo publicado sigue estando, debajo, que es donde se va a buscar cuando se
+ * busca.
  */
 export default async function ContenidoPage({
   params,
@@ -42,6 +53,8 @@ export default async function ContenidoPage({
   ]);
 
   const enSemana = vista === 'semana';
+  const enPiezas = vista === 'piezas';
+  const enSala = !enSemana && !enPiezas;
 
   return (
     <div className="space-y-6">
@@ -50,12 +63,15 @@ export default async function ContenidoPage({
         name={project.name}
         kind={project.kind}
         role={projectRole}
-        section="Contenido"
-        description="Tus piezas, cómo se ven en cada red antes de publicarlas, y qué sale esta semana."
+        section="Sala de arte y comunicación"
+        description="Cómo se va a ver tu pieza en cada red, si la red la va a aceptar, y cómo se postea ahí sin que te cierren la cuenta."
       />
 
       <nav className="flex gap-1 border-b border-[var(--color-border)]">
-        <Pestana href={`/projects/${id}/contenido`} activo={!enSemana}>
+        <Pestana href={`/projects/${id}/contenido`} activo={enSala}>
+          Sala
+        </Pestana>
+        <Pestana href={`/projects/${id}/contenido?vista=piezas`} activo={enPiezas}>
           Piezas
         </Pestana>
         <Pestana href={`/projects/${id}/contenido?vista=semana`} activo={enSemana}>
@@ -65,11 +81,18 @@ export default async function ContenidoPage({
 
       {enSemana ? (
         <VistaSemana projectId={id} />
-      ) : (
+      ) : enPiezas ? (
         <GaleriaPiezas
           projectId={id}
           puedeEditar={can('operar')}
           kitCompleto={kitCompleto(kit)}
+          nombreProyecto={project.name}
+          logo={kit?.logoUrl ?? null}
+        />
+      ) : (
+        <Sala
+          projectId={id}
+          puedeEditar={can('operar')}
           nombreProyecto={project.name}
           logo={kit?.logoUrl ?? null}
         />

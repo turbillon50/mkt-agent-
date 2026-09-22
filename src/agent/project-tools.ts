@@ -405,10 +405,12 @@ export function toolsParaProyecto(ctx: AgentContext) {
   const buscarEnDiseno = createTool({
     id: 'buscar-en-diseno',
     description:
-      'Busca en la memoria de diseño de Goossip: cómo se diseña para cada red, cómo se usa Higgsfield, el protocolo de diseño de la casa y los manuales de marca. Úsala antes de opinar de diseño.',
+      'Busca en la memoria de diseño de Goossip: cómo se diseña para cada red, las REGLAS y políticas oficiales de cada red (qué te banea, cuántas publicaciones al día acepta la API) y las leyes mexicanas de publicidad y datos, cómo se usa Higgsfield, el protocolo de diseño de la casa y los manuales de marca. Úsala antes de opinar de diseño o de decir qué se puede publicar. Contesta SIEMPRE citando la URL oficial que devuelve.',
     inputSchema: z.object({
       pregunta: z.string().min(4),
-      tema: z.enum(['higgsfield', 'diseno', 'marca', 'spec-red', 'playbook', 'brain']).optional(),
+      tema: z
+        .enum(['higgsfield', 'diseno', 'marca', 'spec-red', 'playbook', 'brain', 'reglas'])
+        .optional(),
     }),
     outputSchema: z.object({
       hallazgos: z.array(z.object({ titulo: z.string(), texto: z.string(), fuente: z.string() })),
@@ -419,6 +421,8 @@ export function toolsParaProyecto(ctx: AgentContext) {
         hallazgos: hits.map((h) => ({
           titulo: h.title ?? 'sin título',
           texto: h.content.slice(0, 1200),
+          // `sourcePath` de una regla ES su URL oficial. Por eso la respuesta
+          // puede citar la fuente sin que nadie tenga que buscarla.
           fuente: h.sourcePath,
         })),
       };

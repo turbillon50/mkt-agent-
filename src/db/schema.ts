@@ -701,7 +701,24 @@ export const designKnowledge = pgTable('design_knowledge', {
   vecIdx: index('design_knowledge_vec_idx').using('hnsw', sql`${t.embedding} vector_cosine_ops`),
 }));
 
-export type DesignCategory = 'higgsfield' | 'diseno' | 'marca' | 'spec-red' | 'playbook' | 'brain';
+/**
+ * `reglas` (corrida 10) son las POLÍTICAS: lo que cada red prohíbe, sus topes
+ * de publicación y las leyes mexicanas de publicidad y datos personales.
+ *
+ * Es categoría propia y no `spec-red` a propósito: una spec dice cuánto mide un
+ * reel y una regla dice qué te cierra la cuenta. Preguntar "¿cuánto mide un
+ * reel?" y que conteste con la ventana de 24 horas de Messenger sería peor
+ * respuesta que no contestar. La columna es `text` en la base, así que sumar
+ * una categoría no pide migración.
+ */
+export type DesignCategory =
+  | 'higgsfield'
+  | 'diseno'
+  | 'marca'
+  | 'spec-red'
+  | 'playbook'
+  | 'brain'
+  | 'reglas';
 export type DesignKnowledge = typeof designKnowledge.$inferSelect;
 export type NewDesignKnowledge = typeof designKnowledge.$inferInsert;
 

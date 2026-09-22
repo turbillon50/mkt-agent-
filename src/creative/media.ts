@@ -38,7 +38,18 @@ export function almacenListo(): boolean {
   return secreto() !== null;
 }
 
-async function relayExec(cmd: string): Promise<string> {
+/**
+ * Correr una orden en el servidor donde viven los medios.
+ *
+ * Está exportada desde la corrida 10 porque la adaptación de VIDEO la necesita:
+ * Vercel no trae ffmpeg ni ffprobe —se midió— y el servidor sí (ffmpeg 6.1.1).
+ * Recodificar un reel que no cumple la spec tiene que pasar por aquí o no pasa.
+ *
+ * Devuelve la salida junta (stdout + stderr) a propósito: ffmpeg escribe TODO
+ * lo interesante en stderr, incluidos los errores, y separarlos obligaría a
+ * cada quien a acordarse de mirar los dos.
+ */
+export async function relayExec(cmd: string): Promise<string> {
   const s = secreto();
   if (!s) throw new SinAlmacen();
   const res = await fetch(RELAY_URL, {
@@ -50,6 +61,9 @@ async function relayExec(cmd: string): Promise<string> {
   const data = (await res.json().catch(() => ({}))) as { stdout?: string; stderr?: string };
   return (data.stdout || '') + (data.stderr || '');
 }
+
+/** Dónde quedan los archivos y con qué dirección pública se sirven. */
+export const MEDIA = { dir: DIR, publicBase: PUBLIC_BASE } as const;
 
 /**
  * Sube bytes y devuelve la URL pública.

@@ -71,7 +71,11 @@ export const PROJECT_SECTION_LABEL: Record<ProjectSection, string> = {
   leads: 'Leads',
   conversaciones: 'Conversaciones',
   campanas: 'Campañas',
-  contenido: 'Contenido',
+  // Corrida 10: se renombró la sección, no la ruta. El id sigue siendo
+  // `contenido` porque está guardado en los permisos por sección de cada
+  // miembro y en la bitácora de todos los proyectos vivos; cambiarlo habría
+  // dejado a la gente sin acceso a su propia Sala.
+  contenido: 'Sala de arte y comunicación',
   marca: 'Marca',
   competencia: 'Competencia',
   automatizaciones: 'Automatizaciones',
@@ -79,6 +83,19 @@ export const PROJECT_SECTION_LABEL: Record<ProjectSection, string> = {
   conexiones: 'Conexiones',
   equipo: 'Equipo',
   ajustes: 'Ajustes',
+};
+
+/**
+ * El nombre CORTO, para la barra lateral.
+ *
+ * "Sala de arte y comunicación" es el nombre de la sección y así se lee en su
+ * cabecera. En una barra lateral de 200 px se partiría en tres renglones y
+ * empujaría todo lo demás, así que ahí va "Sala de arte". Es la misma cosa
+ * dicha en el espacio que hay.
+ */
+export const PROJECT_SECTION_LABEL_CORTO: Record<ProjectSection, string> = {
+  ...PROJECT_SECTION_LABEL,
+  contenido: 'Sala de arte',
 };
 
 /** Las que solo manda el dueño del proyecto. */
@@ -163,6 +180,12 @@ export const PROJECT_EVENT_TYPES = [
   // Corrida 13: la bandeja social y la pauta de Google por proyecto.
   'conversacion_respondida',
   'campana_google_cambiada',
+  // Corrida 10. Cada paso de la pieza por la compuerta anti-baneo queda aquí
+  // con las reglas que se evaluaron y su resultado: dentro de seis meses, "¿por
+  // qué esta salió y aquella no?" tiene que contestarse mirando la bitácora, no
+  // acordándose.
+  'compuerta_revisada',
+  'pieza_adaptada',
 ] as const;
 export type ProjectEventType = (typeof PROJECT_EVENT_TYPES)[number];
 
@@ -188,6 +211,8 @@ export const PROJECT_EVENT_LABEL: Record<ProjectEventType, string> = {
   autonomia_cambiada: 'Nivel de autonomía cambiado',
   conversacion_respondida: 'Respuesta en una conversación',
   campana_google_cambiada: 'Campaña de Google prendida o pausada',
+  compuerta_revisada: 'Revisión anti-baneo',
+  pieza_adaptada: 'Pieza adaptada a la medida de la red',
 };
 
 // ---------------------------------------------------------------------------

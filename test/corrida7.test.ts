@@ -423,7 +423,15 @@ function pruebaVisor() {
   ok('detecta el corte', p.cortado);
   ok('el visible llega al límite', p.visible.length === p.limite, `${p.visible.length}`);
   ok('lo escondido es el resto', p.visible.length + p.oculto.length === 400);
-  ok('avisa del corte', p.avisos.some((a) => a.severidad === 'aviso' && a.texto.includes('ver más')));
+  // Sin distinguir mayúsculas desde la corrida 10: el aviso ahora cita la
+  // etiqueta REAL del botón de cada red, y la de Facebook es "Ver más" con
+  // mayúscula. Lo que esta línea comprueba es que el aviso nombre el botón, no
+  // cómo lo escribe Facebook.
+  ok(
+    'avisa del corte',
+    p.avisos.some((a) => a.severidad === 'aviso' && /ver más/i.test(a.texto)),
+    p.avisos.map((a) => `${a.severidad}:${a.texto.slice(0, 60)}`).join(' | '),
+  );
 
   const corto = vistaPrevia({ red: 'facebook', formatoId: 'facebook-feed', texto: 'hola' });
   ok('un texto corto no se corta', !corto.cortado && corto.oculto === '');

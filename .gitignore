@@ -48,3 +48,7 @@ capturas-integracion-c8/*
 # Igual para las de la corrida 11. Lo que se versiona es la MEDICIÓN.
 capturas-c11/*
 !capturas-c11/resumen.json
+
+# Corrida 10 — la Sala, seis redes a 1440. Se versiona la medición, no los PNG.
+capturas-c10/*
+!capturas-c10/resumen.json

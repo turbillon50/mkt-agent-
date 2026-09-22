@@ -361,14 +361,25 @@ function pruebaCanales(): void {
   if (antes === undefined) delete process.env.META_OWN_APP;
   else process.env.META_OWN_APP = antes;
 
-  // WhatsApp con número pero sin permiso para escribir: NO se pinta de verde.
+  /*
+    WhatsApp: NO se pinta de verde, y desde la corrida 10 tampoco ofrece
+    conectar.
+
+    Antes, con el número guardado y sin permiso para escribir, la tarjeta salía
+    "sin conectar" con un pendiente. Ahora sale "próximamente" y el chip dice
+    "Más adelante": decisión de Luis, y la bandera `WHATSAPP_ENABLED` —apagada
+    por omisión— es la que manda. Lo que esta prueba defiende no cambió: con el
+    número a medias, WhatsApp NUNCA dice "Conectado".
+  */
   const conNumero = buildChannelCards(
     { ...proyecto, channels: { waba_phone_id: '123456789012345' } } as any,
     [],
   );
   const wa = conNumero.cards.find((c) => c.id === 'whatsapp')!;
-  eq_('WhatsApp a medias no dice Conectado', wa.state, 'sin_conectar');
-  check('WhatsApp a medias explica qué falta', Boolean(wa.pending), 'no avisó');
+  check('WhatsApp a medias no dice Conectado', wa.state !== 'conectado', wa.state);
+  eq_('WhatsApp no ofrece conectar (decisión de Luis)', wa.state, 'proximamente');
+  eq_('y el chip dice "Más adelante"', wa.espera, 'Más adelante');
+  check('WhatsApp explica por qué todavía no', Boolean(wa.pending), 'no avisó');
 }
 
 // ---------------------------------------------------------------------------
