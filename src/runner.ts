@@ -190,7 +190,7 @@ export async function runOnce(
           })
           .returning({ id: posts.id });
 
-        if (fila && pieza) await marcarPublicada(pieza.id, fila.id);
+        if (fila && pieza && out.mediaPublicada !== false) await marcarPublicada(pieza.id, fila.id);
 
         if (fila) {
           await remember({
@@ -282,7 +282,7 @@ export async function publicarProgramadas(
           metadata: { programada: true, piezaId: pieza.id },
         })
         .returning({ id: posts.id });
-      await marcarPublicada(pieza.id, fila?.id ?? null);
+      if (out.mediaPublicada !== false) await marcarPublicada(pieza.id, fila?.id ?? null);
       publicados.push({
         projectId: project.id,
         projectName: project.name,

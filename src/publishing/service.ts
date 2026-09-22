@@ -111,7 +111,13 @@ export async function publishForProject(input: PublishForProjectInput) {
       })
       .returning({ id: posts.id });
 
-    if (input.pieceId) await marcarPublicada(input.pieceId, post?.id ?? null);
+    /**
+     * Solo se marca publicada la pieza que de verdad salió. Si el canal mandó
+     * el texto sin la imagen, la pieza se queda aprobada y el usuario lo lee
+     * en la respuesta.
+     */
+    const mediaPublicada = out.mediaPublicada !== false;
+    if (input.pieceId && mediaPublicada) await marcarPublicada(input.pieceId, post?.id ?? null);
 
     await db
       .update(publicationAttempts)
@@ -122,6 +128,7 @@ export async function publishForProject(input: PublishForProjectInput) {
         externalId: out.id,
         externalUrl: out.url,
         completedAt: new Date(),
+        ...(mediaPublicada ? {} : { errorMessage: out.advertencia ?? 'Publicado sin la imagen.' }),
       })
       .where(eq(publicationAttempts.id, attemptId));
 
@@ -131,9 +138,10 @@ export async function publishForProject(input: PublishForProjectInput) {
       platform,
       status: 'published',
       externalId: out.id,
+      mediaPublicada,
     });
 
-    return { ...out, postId: post?.id ?? null, attemptId };
+    return { ...out, mediaPublicada, postId: post?.id ?? null, attemptId };
   } catch (error) {
     const message = sanitizePublicationError(error);
     const providerCode =

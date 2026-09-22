@@ -54,6 +54,37 @@ export interface ResultadoComposicion {
   fuentes: { listo: boolean; familia: string; falta: string[] };
 }
 
+/**
+ * Contraste WCAG entre dos colores hex (#rgb o #rrggbb).
+ *
+ * Existe por un bug medido el 22-sep: el color del texto del CTA se elegia
+ * segun el brillo de LA FOTO, no del boton. Sobre foto oscura salia texto
+ * casi negro encima del boton azul de marca (#0B5FFF): 3.83:1, cuando en
+ * blanco daba 5.13:1. El texto va encima del boton, asi que el boton es lo
+ * unico contra lo que hay que medirlo.
+ */
+function luminancia(hex: string): number {
+  let h = hex.replace('#', '').trim();
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return 0;
+  const canal = (v: number) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  const r = canal(parseInt(h.slice(0, 2), 16) / 255);
+  const g = canal(parseInt(h.slice(2, 4), 16) / 255);
+  const b = canal(parseInt(h.slice(4, 6), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+export function contraste(a: string, b: string): number {
+  const la = luminancia(a);
+  const lb = luminancia(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/** El color de texto que mas contrasta contra `fondo`. */
+export function textoSobre(fondo: string): string {
+  return contraste('#FFFFFF', fondo) >= contraste('#0B0B0F', fondo) ? '#FFFFFF' : '#0B0B0F';
+}
+
 /** XML no perdona: un "&" en el copy del cliente rompe el SVG entero. */
 function escapar(s: string): string {
   return s
@@ -145,6 +176,13 @@ export async function componer(input: {
   const capas: sharp.OverlayOptions[] = [];
   const puso = { titular: false, cta: false, logo: false };
 
+  // Techo del bloque de texto. El logo se dibuja DESPUES del titular y hasta
+  // el 22-sep lo hacia a ciegas: en lienzo ancho y bajo (1200x628 de LinkedIn
+  // y X, 1280x720 de YouTube) el bloque de texto se topa con el borde de
+  // arriba, y el logo aterrizaba encima de la primera letra. Medido en las
+  // piezas de MOMENTUM del 20-sep.
+  let techoTexto = H;
+
   // La familia del kit al frente y, detrás, la pila que fontconfig SÍ puede
   // resolver con las fuentes que viajan en el bundle. Antes esto terminaba en
   // `Helvetica, Arial, sans-serif` y en Vercel eso no existe: librsvg no
@@ -182,13 +220,15 @@ export async function componer(input: {
       width: Math.min(anchoUtil, W - margen),
       height: Math.min(altoBloque + Math.round(tamTitular * 0.8), H - top),
     };
+    techoTexto = franja.top;
     const brillo = await brilloDe(sharp(lienzo), franja);
     const claro = brillo > 140;
     const colorTexto = claro ? '#0B0B0F' : '#FFFFFF';
     const colorVelo = claro ? '255,255,255' : '0,0,0';
 
     const primario = colorDe(kit, 'primario') ?? '#0B5FFF';
-    const textoCta = claro ? '#FFFFFF' : '#0B0B0F';
+    // Contra el BOTON, no contra la foto. Ver contraste() arriba.
+    const textoCta = textoSobre(primario);
 
     let y = top + tamTitular;
     const lineas = renglones
@@ -235,19 +275,25 @@ export async function componer(input: {
     const bytes = await bajarImagen(kit.logoUrl);
     if (bytes) {
       try {
-        const anchoLogo = Math.round(W * 0.2);
-        const logo = await sharp(bytes)
-          .resize({ width: anchoLogo, withoutEnlargement: true })
-          .png()
-          .toBuffer();
-        const meta = await sharp(logo).metadata();
-        capas.push({
-          input: logo,
-          left: margen,
-          top: Math.max(z.arriba + Math.round(H * 0.01), Math.round(H * 0.04)),
-        });
-        puso.logo = true;
-        void meta;
+        const topLogo = Math.max(z.arriba + Math.round(H * 0.01), Math.round(H * 0.04));
+        // Lo que queda entre el logo y el techo del texto, con un respiro.
+        const alto = techoTexto - topLogo - Math.round(H * 0.02);
+        // Por debajo de esto el logo sale como una mancha ilegible: antes de
+        // encimarlo o de pintar una miniatura sucia, no se pone y se dice.
+        const minimo = Math.round(W * 0.05);
+        if (alto >= minimo) {
+          const logo = await sharp(bytes)
+            .resize({
+              width: Math.round(W * 0.2),
+              height: alto,
+              fit: 'inside',
+              withoutEnlargement: true,
+            })
+            .png()
+            .toBuffer();
+          capas.push({ input: logo, left: margen, top: topLogo });
+          puso.logo = true;
+        }
       } catch {
         // Un logo que sharp no sabe leer (un SVG raro, un archivo a medias) no
         // tira la pieza entera: sale sin logo y se dice en la nota.

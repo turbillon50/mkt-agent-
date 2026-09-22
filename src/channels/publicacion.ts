@@ -225,10 +225,23 @@ export const linkedin: ChannelAdapter = {
      */
     const id: string | null = headers['x-restli-id'] ?? (data as any)?.id ?? null;
 
+    /**
+     * La imagen NO viaja. LinkedIn exige subir el binario con `PUT` a una URL
+     * temporal firmada con el token del usuario, y Composio (auth administrada)
+     * no expone ese token ni deja pasar cuerpos binarios por su proxy. Hasta
+     * tener app propia de LinkedIn, aquí sale solo el texto — y se dice, en vez
+     * de dar la pieza por publicada.
+     */
+    const mediaPublicada = !input.media;
+
     return {
       toolkit: 'linkedin',
       id,
       url: id ? `https://www.linkedin.com/feed/update/${id}/` : null,
+      mediaPublicada,
+      advertencia: mediaPublicada
+        ? null
+        : 'LinkedIn recibió solo el texto: la imagen no se puede subir por Composio. La pieza sigue aprobada, no publicada.',
     };
   },
 };
