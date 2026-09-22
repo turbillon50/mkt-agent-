@@ -1,25 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Goossip">
+  <!--
+    Version a sangre, para purpose="maskable" y para iOS.
+    Sin esquinas redondeadas a proposito: el sistema operativo aplica SU
+    propia mascara (circulo, squircle, gota). Si el archivo ya viniera
+    redondeado, el sistema lo redondearia otra vez y se comeria el borde.
+    La marca vive dentro del circulo seguro (radio 40% = 204.8 px desde el
+    centro): su punto mas lejano esta a 169 px, asi que ninguna mascara la corta.
+  -->
   <defs>
-    <linearGradient id="g" x1="0.05" y1="0" x2="0.95" y2="1">
+    <linearGradient id="gm" x1="0.05" y1="0" x2="0.95" y2="1">
       <stop offset="0%" stop-color="#8B4DFF"/>
       <stop offset="48%" stop-color="#C77DFF"/>
       <stop offset="100%" stop-color="#FF6FAE"/>
     </linearGradient>
-    <radialGradient id="w" cx="0.82" cy="0.86" r="0.6">
+    <radialGradient id="wm" cx="0.82" cy="0.86" r="0.6">
       <stop offset="0%" stop-color="#FF5C93" stop-opacity="0.55"/>
       <stop offset="100%" stop-color="#FF5C93" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="s" x1="0" y1="0" x2="0.2" y2="1">
+    <linearGradient id="sm" x1="0" y1="0" x2="0.2" y2="1">
       <stop offset="0%" stop-color="#ffffff" stop-opacity="0.26"/>
       <stop offset="48%" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="114" fill="url(#g)"/>
-  <rect width="512" height="512" rx="114" fill="url(#w)"/>
-  <rect width="512" height="512" rx="114" fill="url(#s)"/>
+  <rect width="512" height="512" fill="url(#gm)"/>
+  <rect width="512" height="512" fill="url(#wm)"/>
+  <rect width="512" height="512" fill="url(#sm)"/>
   <g fill="none" stroke="#0b0817" stroke-width="34" stroke-linecap="round">
     <circle cx="168" cy="256" r="64"/>
     <circle cx="344" cy="256" r="64"/>
   </g>
-  <rect x="1.5" y="1.5" width="509" height="509" rx="112.5" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="3"/>
 </svg>
