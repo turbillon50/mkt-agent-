@@ -37,6 +37,15 @@ const isPublicRoute = createRouteMatcher([
   // manifiesto.
   '/icon',
   '/apple-icon',
+  // /.well-known/* va publico y sin sesion, siempre.
+  //
+  // Google Play valida un TWA pidiendo /.well-known/assetlinks.json SIN
+  // sesion: si contesta redirect, la app no se puede publicar. Lo mismo hace
+  // Apple con apple-app-site-association. El matcher de abajo deja fuera del
+  // middleware lo que trae extension, pero excluye .json a proposito
+  // (`js(?!on)`) para proteger las rutas de API, y por eso assetlinks.json
+  // caia aqui y contestaba 307. Medido el 24-sep.
+  '/.well-known/(.*)',
   '/api/cron/(.*)',
   // Mantenimiento con CRON_SECRET, no sesión. Se listan uno por uno: el
   // comodín dejaba abierto todo lo nuevo bajo /api/admin, que ahora es el
