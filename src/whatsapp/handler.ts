@@ -1,7 +1,7 @@
 import { config } from '../config';
 import { upsertInbound, insertMessage } from './repo';
 import { sendViaBridge } from './bridge';
-import { chat } from '../openrouter';
+import { chat, chatJSON } from '../openrouter';
 import { recall, remember } from '../memory/index';
 import { buildClientManifesto } from '../agent/manifesto';
 
@@ -38,6 +38,35 @@ function buildClientUserPrompt(p: InboundPayload, recentBodies: string[]): strin
   ].join('\n');
 }
 
+// (#9) Pregunta a la IA si el mensaje muestra interés de compra/cotización.
+// Si sí, registra el contacto como lead caliente (dispara alerta de WhatsApp).
+async function qualifyBuyingInterest(payload: InboundPayload): Promise<void> {
+  let interest = false;
+  try {
+    const out = await chatJSON<{ interest?: boolean }>(
+      [
+        {
+          role: 'system',
+          content:
+            'Clasificas mensajes de WhatsApp. Responde SOLO JSON {"interest": boolean}. interest=true si el mensaje muestra intención de compra, cotización, precio, disponibilidad, agendar o contratar. false si es saludo, queja o charla sin intención comercial.',
+        },
+        { role: 'user', content: `Mensaje: "${payload.body}"` },
+      ],
+      { model: config.openrouter.modelReply, temperature: 0, maxTokens: 200 },
+    );
+    interest = out?.interest === true;
+  } catch {
+    return; // si la IA falla, no marcamos nada (sin inventar)
+  }
+  if (!interest) return;
+  try {
+    const { captureWhatsappInterestLead } = await import('@/lib/lead-signals');
+    await captureWhatsappInterestLead({ from: payload.from, pushName: payload.pushName, text: payload.body });
+  } catch {
+    /* best-effort */
+  }
+}
+
 export async function handleInbound(payload: InboundPayload): Promise<InboundResult> {
   const inbound = await upsertInbound({
     externalId: payload.externalId,
@@ -59,6 +88,11 @@ export async function handleInbound(payload: InboundPayload): Promise<InboundRes
   if (!config.whatsapp.autoReply) {
     return { stored: true, replied: false };
   }
+
+  // (#9) Califica interés de compra con IA (MESH) y, si aplica, marca el
+  // contacto como lead caliente + notifica (vía hot-leads). Best-effort, no
+  // bloquea ni rompe la respuesta automática.
+  await qualifyBuyingInterest(payload).catch(() => undefined);
 
   let replyText = '';
   try {

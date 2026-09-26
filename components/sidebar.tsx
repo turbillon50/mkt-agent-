@@ -41,6 +41,7 @@ const items: Item[] = [
   { href: '/campaigns', label: 'Campañas', Icon: IconFolder },
   { href: '/ads', label: 'Google Ads', Icon: IconTarget },
   { href: '/leads', label: 'Prospectos', Icon: IconUsers },
+  { href: '/hot-leads', label: 'Leads calientes', Icon: IconBolt },
   { href: '/ofertas', label: 'Ofertas Flash', Icon: IconBolt },
   { href: '/landings', label: 'Landings', Icon: IconFile },
   { href: '/embajadores', label: 'Embajadores', Icon: IconUsers },

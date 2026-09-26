@@ -60,6 +60,13 @@ export async function capturePublicLead(input: CapturePublicLeadInput): Promise<
     } catch {
       /* nunca tronar la captura por una falla de automatizacion */
     }
+    try {
+      // Toda captura pública es una señal de compra para hot-leads (#7).
+      const { recordSignal } = await import('./lead-signals');
+      await recordSignal({ userId: input.userId, leadId: row.id, type: input.source, weight: 2 });
+    } catch {
+      /* señales son best-effort */
+    }
   }
   return row ?? null;
 }

@@ -508,6 +508,21 @@ export async function recordResendEvent(payload: ResendEvent): Promise<{ ok: boo
   }
   await db.update(emailLog).set(set).where(eq(emailLog.id, row.id));
 
+  // Hot-leads (#7): abrir o clickear un correo es señal de compra.
+  if (row.leadId && (type === 'email.opened' || type === 'email.clicked')) {
+    try {
+      const { recordSignal } = await import('./lead-signals');
+      await recordSignal({
+        userId: row.userId,
+        leadId: row.leadId,
+        type: type === 'email.opened' ? 'email_open' : 'email_click',
+        weight: type === 'email.clicked' ? 2 : 1,
+      });
+    } catch {
+      /* señales best-effort */
+    }
+  }
+
   // Salud del lead: rebote => correo inválido; queja => baja inmediata.
   if (row.leadId && (type === 'email.bounced' || type === 'email.complained')) {
     const leadSet: Record<string, unknown> =
