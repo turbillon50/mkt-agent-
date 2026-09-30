@@ -23,7 +23,7 @@ import {
 } from './procedencia';
 import { valorEnPalabras } from './radar';
 import { ETAPA_LABEL, ETAPAS } from './publicos';
-import { METRICA_DE_OBJETIVO } from './plan';
+import { METRICA_DE_OBJETIVO, OBJETIVO_LABEL } from './plan';
 import { solidezDeFicha } from './ficha';
 import { RED_LABEL, type RedSlug } from '../creative/specs';
 
@@ -62,6 +62,7 @@ export interface FilaPlan {
   redLabel: string;
   publico: string | null;
   etapaLabel: string | null;
+  /** En palabras, no la llave de la columna: eso se enseña. */
   objetivo: string;
   metrica: string;
   metricaPorque: string;
@@ -215,7 +216,7 @@ export function armarPantalla(input: {
       redLabel: RED_LABEL[f.red as RedSlug] ?? f.red,
       publico: pub?.nombre ?? null,
       etapaLabel: pub ? ETAPA_LABEL[pub.etapa] : null,
-      objetivo: f.objetivo,
+      objetivo: OBJETIVO_LABEL[f.objetivo] ?? f.objetivo,
       metrica: f.metrica,
       metricaPorque: m.porque,
       // La frecuencia lleva número, así que se declara.

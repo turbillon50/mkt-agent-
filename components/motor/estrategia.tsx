@@ -21,9 +21,9 @@ import { Badge } from '@/components/ui/badge';
 import type { EstrategiaEnPantalla } from '@/src/motor/pantalla';
 
 const CALIDAD_COLOR: Record<string, string> = {
-  alta: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
-  media: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
-  baja: 'border-rose-500/40 bg-rose-500/10 text-rose-300',
+  alta: 'border-emerald-600/30 bg-emerald-50 text-emerald-800',
+  media: 'border-amber-600/30 bg-amber-50 text-amber-800',
+  baja: 'border-rose-600/30 bg-rose-50 text-rose-800',
 };
 
 const CALIDAD_LEYENDA: Record<string, string> = {
@@ -98,8 +98,8 @@ function Ficha({ e }: { e: EstrategiaEnPantalla }) {
             <p className="text-xs text-[var(--color-muted-foreground)]">{f.solidez}</p>
 
             {f.deducidos.length > 0 && (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-                <p className="text-sm font-medium text-amber-300">Esto lo deduje yo, no me lo dijo nadie</p>
+              <div className="rounded-lg border border-amber-600/30 bg-amber-50 p-3">
+                <p className="text-sm font-medium text-amber-800">Esto lo deduje yo, no me lo dijo nadie</p>
                 <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
                   {f.deducidos.join(' · ')}. Trátalo como suposición hasta que el dueño lo confirme.
                 </p>
@@ -146,7 +146,7 @@ function Campo({ titulo, valor, aviso }: { titulo: string; valor: string | null;
     <div>
       <dt className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">{titulo}</dt>
       <dd className="mt-1 text-sm">{valor ?? 'Sin dato'}</dd>
-      {aviso && <p className="mt-1 text-xs text-amber-300">{aviso}</p>}
+      {aviso && <p className="mt-1 text-xs text-amber-700">{aviso}</p>}
     </div>
   );
 }
@@ -267,11 +267,11 @@ function Publicos({ e }: { e: EstrategiaEnPantalla }) {
             {p.sinApoyo ? (
               // Sin medición detrás se dice, y se dice fuerte: es la diferencia
               // entre una estrategia sostenida y una corazonada bien escrita.
-              <p className="mt-2 text-xs text-amber-300">
+              <p className="mt-2 text-xs text-amber-700">
                 No hay ninguna medición que lo sostenga: es una propuesta del analista, no un hallazgo.
               </p>
             ) : (
-              <p className="mt-2 text-xs text-emerald-300">
+              <p className="mt-2 text-xs text-emerald-700">
                 Lo sostienen {p.apoyos} {p.apoyos === 1 ? 'medición' : 'mediciones'} de las de arriba.
               </p>
             )}

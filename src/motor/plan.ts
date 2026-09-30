@@ -67,6 +67,21 @@ export const METRICA_DE_OBJETIVO: Record<ObjetivoPlan, { metrica: string; unidad
   },
 };
 
+/**
+ * El objetivo, en palabras.
+ *
+ * Los valores de la columna (`descubrimiento`, `consideracion`, …) son llaves, no
+ * texto de pantalla. Se colaron crudos a la captura del 30-sep y ahí se vio el
+ * problema: decían "retencion", sin acento, porque un identificador no lleva
+ * acentos. Nadie le enseña "retencion" a un cliente.
+ */
+export const OBJETIVO_LABEL: Record<ObjetivoPlan, string> = {
+  descubrimiento: 'Que te descubran',
+  consideracion: 'Que te consideren',
+  conversion: 'Que te contacten',
+  retencion: 'Que el que ya te compró vuelva',
+};
+
 /** La etapa del público manda el objetivo. Esto es criterio de la casa, explícito. */
 export const OBJETIVO_DE_ETAPA: Record<Audience['etapa'], ObjetivoPlan> = {
   descubre: 'descubrimiento',
