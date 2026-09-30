@@ -10,7 +10,8 @@
  * La protección no se pierde: quien lo use desde una pantalla lo importa por
  * `lib/gemini-image`, que sí conserva el candado.
  */
-const MODEL = 'gemini-2.5-flash-image';
+// 2.5-flash-image se apaga el 2-oct-2026 (aviso oficial de Google). Configurable por env para migrar sin redeploy de código.
+const MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image';
 
 export type GeneratedImage = {
   dataUrl: string;
@@ -18,7 +19,7 @@ export type GeneratedImage = {
 };
 
 /**
- * Genera una imagen real con Gemini (gemini-2.5-flash-image / "nano banana").
+ * Genera una imagen real con Gemini (gemini-3.1-flash-image / "Nano Banana 2").
  * Devuelve un data URL listo para <img src> o para guardar en metadata del chat.
  *
  * `aspectRatio` (corrida 6) le pide a Gemini el lienzo de la red. Lo acepta,

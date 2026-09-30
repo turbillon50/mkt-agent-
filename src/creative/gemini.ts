@@ -18,7 +18,7 @@ import { kitComoPrompt, type ProjectBrandKit } from './brand-kit';
 import { zonaSeguraPx, type FormatoSpec } from './specs';
 import type { Project } from '../db/schema';
 
-export const MODELO_IMAGEN = 'gemini-2.5-flash-image';
+export const MODELO_IMAGEN = process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image';
 
 /** Las proporciones que Gemini admite. La de la spec se acerca a una de estas. */
 const RATIOS_GEMINI = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9'];
