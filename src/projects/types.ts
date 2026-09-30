@@ -46,6 +46,10 @@ export const PROJECT_ROLE_HELP: Record<ProjectRole, string> = {
 
 export const PROJECT_SECTIONS = [
   'inicio',
+  // Corrida 14. Va ARRIBA de todo lo demás a propósito: es el paso 0 del motor y
+  // lo que explica por qué el resto del proyecto está armado como está. Quien
+  // entra a ver "qué le vamos a hacer a este negocio" entra aquí, no a Campañas.
+  'estrategia',
   'leads',
   'conversaciones',
   'campanas',
@@ -68,6 +72,7 @@ export type ProjectSection = (typeof PROJECT_SECTIONS)[number];
 
 export const PROJECT_SECTION_LABEL: Record<ProjectSection, string> = {
   inicio: 'Inicio',
+  estrategia: 'Estrategia',
   leads: 'Leads',
   conversaciones: 'Conversaciones',
   campanas: 'Campañas',

@@ -184,6 +184,20 @@ export function fecha(d: Date): string {
 --------------------------------------------------------------------------- */
 export interface Afirmacion {
   /**
+   * El NOMBRE de lo que se midió ("Proyectos cuyo presupuesto no pasa de 500 USD").
+   *
+   * Va aparte de la prosa porque es otra clase de texto, y la diferencia importa:
+   * el número que trae una etiqueta es un PARÁMETRO DE LA PREGUNTA —el umbral que
+   * se usó para medir— y vive descrito en el `metodo` de la propia cifra. No es una
+   * afirmación sobre el mundo.
+   *
+   * Y no es un agujero, porque el arnés le pone una condición: **los dígitos de la
+   * etiqueta solo se permiten si la afirmación trae una cifra con procedencia
+   * completa, o un hueco declarado.** Una etiqueta sola que diga "el mercado creció
+   * 30%" sigue reprobando, porque no hay medición a la que ese 30% pertenezca.
+   */
+  etiqueta?: string;
+  /**
    * El texto, con `{cifra}` donde va el número y `{nombre}` donde va un
    * parámetro declarado. Sin dígitos sueltos: los pone `render`.
    */
@@ -207,7 +221,7 @@ export function render(a: Afirmacion): string {
   // diciéndolo, no se deja el hueco crudo: en pantalla se vería como una falla.
   else if (a.hueco) t = t.split('{cifra}').join(SIN_DATO);
   for (const [k, v] of Object.entries(a.parametros ?? {})) t = t.split(`{${k}}`).join(v);
-  return t;
+  return a.etiqueta ? `${a.etiqueta}: ${t}` : t;
 }
 
 /** El renglón completo como se enseña: la frase y, pegada, de dónde salió. */
@@ -295,6 +309,20 @@ export function auditar(donde: string, afirmaciones: Afirmacion[], ahora: Date =
           `número escrito a mano en la prosa (${cuales.join(', ')}): ` +
           `si es un hallazgo va en \`cifra\`, si es parámetro de la pregunta va en \`parametros\`. ` +
           `Plantilla: "${a.plantilla}"`,
+      });
+    }
+
+    // La etiqueta puede traer el parámetro de la pregunta ("...no pasa de 500 USD"),
+    // pero SOLO si hay una medición a la que ese número pertenezca. Sin cifra y sin
+    // hueco, una etiqueta con dígitos es un número sin dueño y reprueba igual.
+    if (a.etiqueta && DIGITO.test(a.etiqueta) && !a.cifra && !a.hueco) {
+      const cuales = a.etiqueta.match(/\d[\d.,]*/g) ?? [];
+      defectos.push({
+        donde: ubi,
+        clase: 'numero_sin_fuente',
+        detalle:
+          `la etiqueta trae números (${cuales.join(', ')}) pero la afirmación no trae ninguna medición ` +
+          `ni declara un hueco, así que esos números no son de nadie. Etiqueta: "${a.etiqueta}"`,
       });
     }
 

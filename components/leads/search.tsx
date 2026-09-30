@@ -122,7 +122,7 @@ export function ProspectSearch({ onAdded }: { onAdded?: () => void }) {
           Buscador de prospectos
         </CardTitle>
         <CardDescription>
-          Describe a quién buscas (ej. "agencias de marketing digital en Cancún").{' '}
+          Describe a quién buscas (ej. &ldquo;agencias de marketing digital en Cancún&rdquo;).{' '}
           {mapsReady ? 'Usa Google Maps — datos reales' : 'Usa Google Search verificado'} (dirección,
           teléfono, rating). Nunca inventa nombres ni links.
         </CardDescription>

@@ -15,7 +15,7 @@
     "test:orgs": "tsx test/orgs.test.ts",
     "seed:vliving": "tsx scripts/seed-vliving.ts",
     "import:vl-leads": "tsx scripts/import-vl-leads.ts",
-    "lint": "next lint",
+    "lint": "eslint .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -158,9 +159,9 @@ export function SalesPipeline({ whatsapp = false }: { whatsapp?: boolean }) {
       <Card>
         <CardContent className="py-10 text-center text-sm text-[var(--color-muted-foreground)]">
           Todavía no tienes proyectos. Crea el primero en{' '}
-          <a href="/projects" className="text-[var(--color-primary)] hover:underline">
+          <Link href="/projects" className="text-[var(--color-primary)] hover:underline">
             Proyectos
-          </a>
+          </Link>
           .
         </CardContent>
       </Card>

@@ -85,6 +85,44 @@ const WORKANA: Cifra = {
       hueco: { que: 'TikTok no abre esa métrica a terceros', comoMedirlo: 'encuesta de una pregunta en el checkout durante dos semanas' },
     }], AHORA).length === 0);
 
+  // La etiqueta de una medición puede traer el parámetro de la pregunta, pero solo
+  // si hay una medición a la que ese número pertenezca.
+  {
+    const conMedicion: Afirmacion = {
+      etiqueta: 'Proyectos cuyo presupuesto no pasa de 500 USD',
+      plantilla: '{cifra}',
+      cifra: WORKANA,
+    };
+    ok('etiqueta con números pasa si trae la medición que los respalda',
+      auditar('prueba', [conMedicion], AHORA).length === 0,
+      JSON.stringify(auditar('prueba', [conMedicion], AHORA)));
+    ok('y el render la pone delante del valor',
+      render(conMedicion).startsWith('Proyectos cuyo presupuesto no pasa de 500 USD: 85.7%'),
+      render(conMedicion));
+
+    const huecoConEtiqueta: Afirmacion = {
+      etiqueta: 'Búsquedas mensuales de "departamento Miami" en los últimos 12 meses',
+      plantilla: '{cifra}',
+      hueco: { que: 'pytrends no está instalado en el servidor', comoMedirlo: 'instalar pytrends-modern y leer Google Trends' },
+    };
+    ok('etiqueta con números pasa también con un hueco declarado',
+      auditar('prueba', [huecoConEtiqueta], AHORA).length === 0);
+    ok('y el hueco se rellena diciendo que no hay dato',
+      render(huecoConEtiqueta).includes('sin dato'), render(huecoConEtiqueta));
+
+    // EL AGUJERO QUE NO SE ABRE: una etiqueta con números pero sin medición
+    // detrás sigue reprobando. Si esto pasara, bastaría meter cualquier cifra
+    // inventada en una etiqueta para esquivar el arnés por completo.
+    const etiquetaPelona: Afirmacion = {
+      etiqueta: 'El mercado creció 30% este año',
+      plantilla: 'Eso nos conviene.',
+    };
+    const d = auditar('prueba', [etiquetaPelona], AHORA);
+    ok('CONTRAPRUEBA: etiqueta con números SIN medición detrás reprueba',
+      d.some((x) => x.clase === 'numero_sin_fuente'),
+      `salió: ${d.map((x) => x.clase).join(',') || 'nada'}`);
+  }
+
   // Las medidas DE LA RED no son una excepción: también se declaran. Antes había
   // una lista de formas permitidas (3:4, 1080x1350, 0-3 s) y se quitó porque una
   // lista de excepciones es el agujero por donde se cuela "el mercado creció 30%"

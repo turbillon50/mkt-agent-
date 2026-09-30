@@ -18,6 +18,7 @@ import {
   IconPlug,
   IconPlus,
   IconSettings,
+  IconSignal,
   IconTarget,
   IconUsers,
 } from '@/components/icons';
@@ -42,6 +43,9 @@ import { useProjects, type ProjectSummary } from './projects-provider';
 
 const SECTION_ICON: Record<ProjectSection, React.ElementType> = {
   inicio: IconHome,
+  // Señal, no lupa ni brújula: la Estrategia se sostiene en las señales de
+  // mercado medidas, y es lo que la sección enseña con sus fuentes a la vista.
+  estrategia: IconSignal,
   leads: IconTarget,
   conversaciones: IconChat,
   // Megáfono, no gráfica de barras: la gráfica ya es Competencia y dos
