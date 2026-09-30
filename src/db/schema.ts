@@ -1149,6 +1149,294 @@ export const assistantFiles = pgTable('assistant_files', {
 export type AssistantFile = typeof assistantFiles.$inferSelect;
 export type NewAssistantFile = typeof assistantFiles.$inferInsert;
 
+/* ---------------------------------------------------------------------------
+   Corrida 14 — el motor de análisis (0023).
+
+   Agnóstico al producto: nada de aquí sabe que Goossip vendió apps alguna vez.
+   Una fábrica de software y unos departamentos en Miami usan las mismas tablas.
+
+   El hilo que las cose es la PROCEDENCIA: cada cifra carga fuente, fecha,
+   muestra y método, y los CHECK de la 0023 no dejan insertar una que no los
+   traiga. La regla no vive en una prueba que se puede olvidar de correr; vive
+   en la base.
+--------------------------------------------------------------------------- */
+
+/** De dónde salió un campo de la ficha. `modelo` es el más débil: lo dedujo la IA. */
+export type OrigenCampo = 'dueño' | 'sitio' | 'anuncios' | 'leads' | 'modelo';
+
+export interface ProcedenciaCampo {
+  origen: OrigenCampo;
+  url?: string;
+  fecha?: string;
+  metodo?: string;
+}
+
+export interface MercadoFicha {
+  ciudad?: string;
+  pais?: string;
+  prioridad?: number;
+}
+
+/** Lo que falta preguntarle al dueño, con el porqué de la pregunta. */
+export interface PreguntaPendiente {
+  clave: string;
+  pregunta: string;
+  porque: string;
+}
+
+export type BriefEstado = 'vacia' | 'borrador' | 'confirmada';
+
+/**
+ * La ficha del proyecto: el paso 0 y el documento de contexto que leen todas las
+ * etapas. Se arma sola del sitio, de los anuncios activos y de los leads; al
+ * dueño solo se le hacen las preguntas que NO se pueden medir.
+ *
+ * El precio es nullable a propósito: no saberlo es un estado legítimo que la
+ * pantalla dice. Rellenarlo con un promedio de internet sería inventar.
+ */
+export const projectBrief = pgTable('project_brief', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  queVende: text('que_vende'),
+  categoria: text('categoria'),
+  propuestaValor: text('propuesta_valor'),
+  precioMin: numeric('precio_min', { precision: 14, scale: 2 }),
+  precioMax: numeric('precio_max', { precision: 14, scale: 2 }),
+  moneda: text('moneda'),
+  precioNota: text('precio_nota'),
+  mercados: jsonb('mercados').$type<MercadoFicha[]>().notNull().default([]),
+  idiomas: jsonb('idiomas').$type<string[]>().notNull().default([]),
+  /** Lo más valioso que tiene el dueño y lo que nadie le pregunta. */
+  yaFunciono: text('ya_funciono'),
+  yaNoFunciono: text('ya_no_funciono'),
+  /** Campo por campo, de dónde salió. Sin esto la ficha es una opinión anónima. */
+  origenes: jsonb('origenes').$type<Record<string, ProcedenciaCampo>>().notNull().default({}),
+  /** El documento en prosa que se le inyecta a cada etapa como contexto. */
+  resumen: text('resumen'),
+  preguntasPendientes: jsonb('preguntas_pendientes').$type<PreguntaPendiente[]>().notNull().default([]),
+  estado: text('estado').$type<BriefEstado>().notNull().default('vacia'),
+  confirmadaPor: text('confirmada_por'),
+  confirmadaEn: timestamp('confirmada_en', { withTimezone: true }),
+  armadaEn: timestamp('armada_en', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  orgIdx: index('project_brief_org_idx').on(t.orgId),
+}));
+
+export type ProjectBrief = typeof projectBrief.$inferSelect;
+export type NewProjectBrief = typeof projectBrief.$inferInsert;
+
+/**
+ * El peso de una fuente, de la más fuerte a la más débil. Un blog de agencia NO
+ * vale lo que una medición propia, y la pantalla tiene que poder decir cuál es
+ * cuál en vez de presentar las dos como "datos del mercado".
+ */
+export type FuenteTipo =
+  | 'medicion_propia'
+  | 'oficial'
+  | 'plataforma'
+  | 'prensa'
+  | 'blog'
+  | 'modelo';
+
+/** Bandera de calidad. La calcula el CÓDIGO, nunca el modelo. */
+export type CalidadDato = 'alta' | 'media' | 'baja';
+
+/**
+ * Una señal de mercado: un número (o un hueco declarado) con todo lo que hace
+ * falta para defenderlo enfrente del comprador.
+ *
+ * `hueco = true` es el estado honesto cuando no hay dato: no lleva valor ni
+ * fuente, pero SÍ lleva `comoMedirlo`. Un hueco sin propuesta de medición es un
+ * encogimiento de hombros, y eso no es transparencia.
+ */
+export const marketSignals = pgTable('market_signals', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  tema: text('tema').notNull(),
+  /** Estable, para comparar la misma medición en el tiempo. */
+  clave: text('clave').notNull(),
+  /** Para la pantalla: español, sin jerga. */
+  etiqueta: text('etiqueta').notNull(),
+  pregunta: text('pregunta'),
+  valorNum: numeric('valor_num', { precision: 18, scale: 4 }),
+  valorTexto: text('valor_texto'),
+  unidad: text('unidad'),
+  fuenteTipo: text('fuente_tipo').$type<FuenteTipo>(),
+  fuenteNombre: text('fuente_nombre'),
+  fuenteUrl: text('fuente_url'),
+  medidoEn: timestamp('medido_en', { withTimezone: true }),
+  muestra: integer('muestra'),
+  muestraDe: integer('muestra_de'),
+  metodo: text('metodo'),
+  calidad: text('calidad').$type<CalidadDato>().notNull().default('baja'),
+  calidadMotivo: text('calidad_motivo'),
+  hueco: boolean('hueco').notNull().default(false),
+  comoMedirlo: text('como_medirlo'),
+  /** Lo crudo, para reauditar la cifra sin volver a salir a la red. */
+  crudo: jsonb('crudo').$type<Record<string, unknown>>().notNull().default({}),
+  radarRunId: uuid('radar_run_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('market_signals_project_idx').on(t.projectId, t.createdAt),
+  claveIdx: index('market_signals_clave_idx').on(t.projectId, t.clave, t.medidoEn),
+  temaIdx: index('market_signals_tema_idx').on(t.projectId, t.tema),
+}));
+
+export type MarketSignal = typeof marketSignals.$inferSelect;
+export type NewMarketSignal = typeof marketSignals.$inferInsert;
+
+export type RadarEstado = 'corriendo' | 'listo' | 'fallido' | 'parcial';
+
+/**
+ * Una corrida del radar. Lo que necesita navegador vive como worker en `motor/`
+ * y escribe aquí; la app en Vercel solo LEE.
+ *
+ * `negadas` pesa tanto como `hallazgos`: que Freelancer.com.mx fallara por
+ * certificado es información sobre el mercado, no un renglón que se borra.
+ */
+export const radarRuns = pgTable('radar_runs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  tipo: text('tipo').notNull(),
+  estado: text('estado').$type<RadarEstado>().notNull().default('corriendo'),
+  worker: text('worker'),
+  consultas: jsonb('consultas').$type<Array<Record<string, unknown>>>().notNull().default([]),
+  negadas: jsonb('negadas').$type<Array<Record<string, unknown>>>().notNull().default([]),
+  hallazgos: integer('hallazgos').notNull().default(0),
+  huecos: integer('huecos').notNull().default(0),
+  error: text('error'),
+  iniciadoEn: timestamp('iniciado_en', { withTimezone: true }).defaultNow().notNull(),
+  terminadoEn: timestamp('terminado_en', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('radar_runs_project_idx').on(t.projectId, t.iniciadoEn),
+}));
+
+export type RadarRun = typeof radarRuns.$inferSelect;
+export type NewRadarRun = typeof radarRuns.$inferInsert;
+
+/** Dónde está el público respecto de la compra. Decide red, formato y tono. */
+export type EtapaPublico = 'descubre' | 'compara' | 'compra' | 'ya_te_busco';
+
+/**
+ * Un público: segmento → dolor → oferta → etapa.
+ *
+ * `porque` es NOT NULL a propósito. Un público sin argumento es una suposición
+ * con nombre bonito, y el issue pide estrategias ARGUMENTADAS. Si `evidencia`
+ * viene vacía, la pantalla lo marca como propuesta del modelo sin medición.
+ */
+export const audiences = pgTable('audiences', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  nombre: text('nombre').notNull(),
+  segmento: text('segmento').notNull(),
+  dolor: text('dolor').notNull(),
+  oferta: text('oferta').notNull(),
+  etapa: text('etapa').$type<EtapaPublico>().notNull(),
+  porque: text('porque').notNull(),
+  /** Ids de `market_signals` que lo sostienen. */
+  evidencia: jsonb('evidencia').$type<string[]>().notNull().default([]),
+  tamanoEstimado: integer('tamano_estimado'),
+  /** Si hay tamaño, apunta a la señal que lo respalda. Lo obliga un CHECK. */
+  tamanoSenalId: uuid('tamano_senal_id').references(() => marketSignals.id, { onDelete: 'set null' }),
+  prioridad: integer('prioridad').notNull().default(5),
+  estado: text('estado').$type<'propuesto' | 'aprobado' | 'descartado'>().notNull().default('propuesto'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('audiences_project_idx').on(t.projectId, t.prioridad),
+  etapaIdx: index('audiences_etapa_idx').on(t.projectId, t.etapa),
+}));
+
+export type Audience = typeof audiences.$inferSelect;
+export type NewAudience = typeof audiences.$inferInsert;
+
+export type ObjetivoPlan = 'descubrimiento' | 'consideracion' | 'conversion' | 'retencion';
+
+/**
+ * El plan: red ↔ público ↔ objetivo ↔ métrica.
+ *
+ * `metrica` y `porque` son NOT NULL: una fila sin métrica no se puede evaluar
+ * nunca, y sin porqué no se le puede enseñar al dueño.
+ */
+export const channelPlan = pgTable('channel_plan', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  red: text('red').notNull(),
+  audienceId: uuid('audience_id').references(() => audiences.id, { onDelete: 'cascade' }),
+  objetivo: text('objetivo').$type<ObjetivoPlan>().notNull(),
+  metrica: text('metrica').notNull(),
+  metaValor: numeric('meta_valor', { precision: 18, scale: 4 }),
+  metaUnidad: text('meta_unidad'),
+  formato: text('formato'),
+  frecuenciaSemanal: numeric('frecuencia_semanal', { precision: 6, scale: 2 }),
+  porque: text('porque').notNull(),
+  evidencia: jsonb('evidencia').$type<string[]>().notNull().default([]),
+  /** Qué regla de specs/social-playbooks se aplicó, para poder citarla. */
+  reglasAplicadas: jsonb('reglas_aplicadas').$type<string[]>().notNull().default([]),
+  estado: text('estado').$type<'propuesto' | 'aprobado' | 'descartado' | 'pausado'>().notNull().default('propuesto'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('channel_plan_project_idx').on(t.projectId, t.red),
+  audienceIdx: index('channel_plan_audience_idx').on(t.audienceId),
+}));
+
+export type ChannelPlan = typeof channelPlan.$inferSelect;
+export type NewChannelPlan = typeof channelPlan.$inferInsert;
+
+/**
+ * Veredicto de una hipótesis. `sin_datos` es un final legítimo: LinkedIn hoy no
+ * devuelve métricas y decirlo es más honesto que estimarlas.
+ */
+export type VeredictoHipotesis = 'pendiente' | 'se_cumplio' | 'no_se_cumplio' | 'sin_datos';
+
+/**
+ * La hipótesis con la que nació una publicación (principio 5). Sin esto no hay
+ * aprendizaje: hay historial.
+ *
+ * El resultado lo escribe la MEDICIÓN, nunca el modelo, y trae su fuente. Un
+ * veredicto resuelto sin el número que lo resolvió no se puede guardar.
+ */
+export const postHypotheses = pgTable('post_hypotheses', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: text('org_id').notNull(),
+  projectId: uuid('project_id').notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  postId: uuid('post_id').references(() => posts.id, { onDelete: 'set null' }),
+  pieceId: uuid('piece_id').references(() => creativePieces.id, { onDelete: 'set null' }),
+  planId: uuid('plan_id').references(() => channelPlan.id, { onDelete: 'set null' }),
+  audienceId: uuid('audience_id').references(() => audiences.id, { onDelete: 'set null' }),
+  red: text('red').notNull(),
+  hipotesis: text('hipotesis').notNull(),
+  metrica: text('metrica').notNull(),
+  metaValor: numeric('meta_valor', { precision: 18, scale: 4 }),
+  metaUnidad: text('meta_unidad'),
+  resultadoValor: numeric('resultado_valor', { precision: 18, scale: 4 }),
+  resultadoEn: timestamp('resultado_en', { withTimezone: true }),
+  resultadoFuente: text('resultado_fuente'),
+  resultadoMetodo: text('resultado_metodo'),
+  veredicto: text('veredicto').$type<VeredictoHipotesis>().notNull().default('pendiente'),
+  veredictoPorque: text('veredicto_porque'),
+  leccionId: uuid('leccion_id').references(() => lessons.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  projectIdx: index('post_hypotheses_project_idx').on(t.projectId, t.createdAt),
+  postIdx: index('post_hypotheses_post_idx').on(t.postId),
+  veredictoIdx: index('post_hypotheses_veredicto_idx').on(t.projectId, t.veredicto),
+  planIdx: index('post_hypotheses_plan_idx').on(t.planId),
+}));
+
+export type PostHypothesis = typeof postHypotheses.$inferSelect;
+export type NewPostHypothesis = typeof postHypotheses.$inferInsert;
+
 /** Alias de dominio: en la base es `campaigns`, en la app es un proyecto. */
 export const projects = campaigns;
 export type Project = Campaign;
