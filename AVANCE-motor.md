@@ -10,7 +10,7 @@ Rama `vulcano/motor-c14`. Base de DESARROLLO (`goossip-dev-motor`). No merges a 
 | P0.1 Migración del esquema | **HECHO Y VERIFICADO** |
 | P0.2 Ficha del proyecto | **HECHO** (falta correrla en los zz-) |
 | P0.3 Radar de mercado | **HECHO Y VERIFICADO** (precios; tendencias = hueco) |
-| P0.4 Públicos + plan con hipótesis | PENDIENTE |
+| P0.4 Públicos + plan con hipótesis | **HECHO Y VERIFICADO** |
 | P0.5 Pantalla Estrategia | PENDIENTE |
 | Aceptación 3 (arnés números sin fuente) | **HECHO Y VERIFICADO** |
 | Aceptación 1+2 (zz-Momentum / zz-Miami) | PENDIENTE |
@@ -205,10 +205,57 @@ zz-miami     1a8357df-8ff3-4087-9004-4705869de58b
 Las altas traen SOLO lo que pondría un dueño (giro, sitio, ciudad, tono). Ninguna explicación
 para el motor: si se la damos, la aceptación 1 no prueba nada.
 
+## P0.4 — Públicos y plan con hipótesis (HECHO, corrido en los dos zz-)
+
+`src/motor/publicos.ts` · `src/motor/plan.ts` · `src/motor/correr.ts` (orquestador)
+`scripts/motor-correr.ts` — corre el motor y compara las dos corridas a ojo.
+
+El candado que importa: **la evidencia que cita el modelo se comprueba contra las señales
+REALES del proyecto.** Un id que no existe se tira (mismo patrón que `creative/compliance.ts`
+con las reglas inventadas). Sin eso, la pantalla enseñaría "sostenido por la medición X"
+apuntando a nada.
+
+El CÓDIGO pone la métrica (`METRICA_DE_OBJETIVO`, derivada de la etapa del público), la
+frecuencia y las reglas de red (de `SOCIAL_PLAYBOOKS`/`FORMATOS`, con URL y fecha).
+`cifraDeSpec()` en plan.ts es la deuda que dejó el arnés al quitar FORMAS_DE_RED: ya está pagada.
+
+### ACEPTACIÓN 1 — VERIFICADA (30-sep)
+
+```
+[   ok    ] ofertas idénticas: ninguna
+[   ok    ] dolores idénticos: ninguno
+[   ok    ] argumentos del plan idénticos: ninguno
+[   ok    ] mismo juego de redes: zz-Miami: facebook,instagram,linkedin
+                                · zz-Momentum: facebook,instagram,linkedin,twitter,youtube
+VEREDICTO: las dos estrategias son distintas. No es plantilla.
+```
+`compararCorridas()` está escrito para ACUSAR, no para tranquilizar. Ojo con un matiz honesto:
+"mismo juego de redes" NO cuenta como sospechoso por sí solo (dos negocios distintos pueden
+coincidir en que Instagram les sirve); lo que acusa es que además coincidan los argumentos.
+
+**La diferencia es real, no cosmética:** zz-Momentum cita las mediciones de Workana en el porqué
+de sus públicos (84%, mediana 36 propuestas, tope 250 USD). zz-Miami **no tiene mercado medido**
+(0 señales) y sus 4 públicos quedan marcados "SIN medición — propuesta del analista" en vez de
+inventarse un respaldo. Eso es el comportamiento correcto, y es una deuda abierta: falta un worker
+de portales inmobiliarios (ver "Lo que falta").
+
+### Tres defectos que SOLO se vieron corriéndolo (arreglados)
+1. El modelo metía ids crudos en la prosa, uno **en la OFERTA**: "ajustado al rango medio de
+   250 USD (id=520ac5f5-...)" — texto que se le enseña a un comprador. El id no se borra: se
+   MUEVE a `evidencia`. Su intención era citar la fuente; el error era el lugar.
+2. La frase de la hipótesis se partía en dos: "...de último minuto. ofreciéndole asesoría...".
+   El dolor y la oferta venían con punto final y se cosían tal cual.
+3. Un público bautizado con el nombre de su etapa salía "Listo para comprar (Listo para comprar)".
+
 ## Qué sigue
 
-1. P0.4 (públicos + plan con hipótesis) → P0.5 (pantalla Estrategia).
-2. `src/motor/estudio.ts` le debe `cifraDeSpec` a `procedencia.ts` (el comentario que
-   reemplazó a FORMAS_DE_RED lo promete): construir una cifra `oficial` desde SOCIAL_PLAYBOOKS.
-3. Correr la ficha en los dos zz- y el radar en zz-Miami (su mercado NO es Workana: le toca
-   portales inmobiliarios, y si no hay worker para eso, hueco declarado).
+1. P0.5 la pantalla Estrategia (con `exigirProcedencia` encima).
+2. P2.2 `test:creative`, P2.1 PR #59, P1 medición, P3 estudio por red.
+3. Prueba automática del motor (`test:motor`) que corra la comparación de la aceptación 1.
+
+## Lo que falta / deudas abiertas
+
+- **zz-Miami no tiene radar.** Su mercado no es Workana: le tocan portales inmobiliarios. Hoy
+  sale con 0 señales y públicos sin respaldo — honesto, pero incompleto. Si no alcanza el tiempo
+  para el worker, hay que sembrar los HUECOS declarados con su `como_medirlo`.
+- Google Trends: `pytrends` no está en el servidor. Hueco declarado.
