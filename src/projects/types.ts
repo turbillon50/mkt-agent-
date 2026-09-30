@@ -191,6 +191,11 @@ export const PROJECT_EVENT_TYPES = [
   // acordándose.
   'compuerta_revisada',
   'pieza_adaptada',
+  // Corrida 12. El recorrido por cuadrantes se anota APARTE de la búsqueda de
+  // una frase: cuesta nueve veces más y dura minutos en vez de segundos, y
+  // mezclarlos en la bitácora haría imposible contestar "¿por qué se gastaron
+  // 40 búsquedas el martes?".
+  'prospeccion_barrido',
 ] as const;
 export type ProjectEventType = (typeof PROJECT_EVENT_TYPES)[number];
 
@@ -218,6 +223,7 @@ export const PROJECT_EVENT_LABEL: Record<ProjectEventType, string> = {
   campana_google_cambiada: 'Campaña de Google prendida o pausada',
   compuerta_revisada: 'Revisión anti-baneo',
   pieza_adaptada: 'Pieza adaptada a la medida de la red',
+  prospeccion_barrido: 'Recorrido del mapa por cuadrantes',
 };
 
 // ---------------------------------------------------------------------------

@@ -60,3 +60,7 @@ capturas-c10/*
 #   npx tsx scripts/capturas-c14-pantalla.ts
 capturas-c14/*
 !capturas-c14/resultados.json
+
+# Corrida 12: se versiona la MEDICIÓN del recorrido, no los PNG pesados.
+capturas-c12/*
+!capturas-c12/resumen.json
