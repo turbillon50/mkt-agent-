@@ -34,7 +34,8 @@
     "test:social-os": "tsx test/social-os.test.ts",
     "test:channel-identities": "tsx test/channel-identities.test.ts",
     "test:account-selection": "tsx test/account-selection.test.ts",
-    "test:procedencia": "tsx test/procedencia.test.ts"
+    "test:procedencia": "tsx test/procedencia.test.ts",
+    "test:motor": "tsx test/motor.test.ts"
   },
   "engines": {
     "node": ">=20"

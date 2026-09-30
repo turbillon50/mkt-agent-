@@ -224,9 +224,18 @@ export interface ConsultaRadar {
 export function consultasDeFicha(f: ProjectBrief | null, nombreProyecto: string): ConsultaRadar[] {
   const out: ConsultaRadar[] = [];
   const visto = new Set<string>();
-  const push = (clave: string, texto: string | null | undefined, porque: string) => {
+  /**
+   * `minimo` existe por un caso que la prueba encontró: el respaldo por nombre de
+   * proyecto usaba el mismo mínimo de 3 letras que los fragmentos de prosa, así
+   * que un proyecto llamado "Z" o "V&L" devolvía CERO consultas **en silencio** —
+   * el radar no medía nada y nadie se enteraba de por qué.
+   *
+   * Los fragmentos que se sacan de la ficha sí necesitan el mínimo (un "de" o un
+   * "el" no es una búsqueda). El nombre que alguien escribió a propósito, no.
+   */
+  const push = (clave: string, texto: string | null | undefined, porque: string, minimo = 3) => {
     const t = (texto ?? '').trim();
-    if (!t || t.length < 3) return;
+    if (t.length < minimo) return;
     const k = t.toLowerCase();
     if (visto.has(k)) return;
     visto.add(k);
@@ -249,7 +258,12 @@ export function consultasDeFicha(f: ProjectBrief | null, nombreProyecto: string)
   if (f?.categoria) push('categoria_precio', `${f.categoria} precio`, 'quien ya está comparando precio: ahí se ve el piso del mercado');
 
   if (!out.length) {
-    push('nombre', nombreProyecto, 'no hay ficha todavía, así que se busca por el nombre del proyecto y se dice que es un arranque pobre');
+    push(
+      'nombre',
+      nombreProyecto,
+      'no hay ficha todavía, así que se busca por el nombre del proyecto y se dice que es un arranque pobre',
+      1,
+    );
   }
   return out.slice(0, 6);
 }
