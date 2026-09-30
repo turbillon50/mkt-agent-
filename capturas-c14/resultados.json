@@ -1,31 +1,5 @@
 [
   {
-    "proyecto": "zz-miami",
-    "tamano": "1440",
-    "jerga": [],
-    "uuids": 0,
-    "ceros": [],
-    "faltantes": [],
-    "desborde": 0,
-    "numerosSinFuente": 0,
-    "afirmaciones": 8,
-    "archivo": "/root/worktrees/goossip-motor/capturas-c14/estrategia-zz-miami-1440.png",
-    "alto": 4717
-  },
-  {
-    "proyecto": "zz-miami",
-    "tamano": "movil",
-    "jerga": [],
-    "uuids": 0,
-    "ceros": [],
-    "faltantes": [],
-    "desborde": 0,
-    "numerosSinFuente": 0,
-    "afirmaciones": 8,
-    "archivo": "/root/worktrees/goossip-motor/capturas-c14/estrategia-zz-miami-movil.png",
-    "alto": 10437
-  },
-  {
     "proyecto": "zz-momentum",
     "tamano": "1440",
     "jerga": [],
@@ -36,7 +10,7 @@
     "numerosSinFuente": 0,
     "afirmaciones": 13,
     "archivo": "/root/worktrees/goossip-motor/capturas-c14/estrategia-zz-momentum-1440.png",
-    "alto": 5943
+    "alto": 5895
   },
   {
     "proyecto": "zz-momentum",
@@ -49,6 +23,32 @@
     "numerosSinFuente": 0,
     "afirmaciones": 13,
     "archivo": "/root/worktrees/goossip-motor/capturas-c14/estrategia-zz-momentum-movil.png",
-    "alto": 13049
+    "alto": 13069
+  },
+  {
+    "proyecto": "zz-miami",
+    "tamano": "1440",
+    "jerga": [],
+    "uuids": 0,
+    "ceros": [],
+    "faltantes": [],
+    "desborde": 0,
+    "numerosSinFuente": 0,
+    "afirmaciones": 11,
+    "archivo": "/root/worktrees/goossip-motor/capturas-c14/estrategia-zz-miami-1440.png",
+    "alto": 5347
+  },
+  {
+    "proyecto": "zz-miami",
+    "tamano": "movil",
+    "jerga": [],
+    "uuids": 0,
+    "ceros": [],
+    "faltantes": [],
+    "desborde": 0,
+    "numerosSinFuente": 0,
+    "afirmaciones": 11,
+    "archivo": "/root/worktrees/goossip-motor/capturas-c14/estrategia-zz-miami-movil.png",
+    "alto": 11833
   }
 ]

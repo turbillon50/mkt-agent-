@@ -332,6 +332,79 @@ export async function guardarHueco(
   return s!;
 }
 
+/**
+ * Declara los huecos de un mercado que el radar todavía NO sabe medir.
+ *
+ * Existe por un caso concreto y honesto: el radar de precios sabe leer
+ * plataformas de proyectos (Workana), que sirven para un negocio de servicios y
+ * no sirven para nada si lo que se vende son departamentos en Miami. Ese proyecto
+ * se quedaba con CERO señales, y cero señales se ve igual que "no hemos corrido
+ * el radar" — cuando en realidad es "no tenemos con qué medir este mercado".
+ *
+ * La diferencia importa: un hueco declarado trae `como_medirlo`, o sea la
+ * siguiente tarea concreta. Un vacío no trae nada y se olvida.
+ *
+ * Las preguntas salen de la ficha, así que sirven para cualquier giro. Esto NO
+ * inventa datos: cada renglón que escribe dice, explícitamente, que no hay dato.
+ */
+export async function sembrarHuecos(
+  input: { orgId: string; projectId: string; radarRunId?: string },
+  huecos: Array<{ tema: string; clave: string; etiqueta: string; pregunta?: string; comoMedirlo: string; motivo: string }>,
+): Promise<MarketSignal[]> {
+  const out: MarketSignal[] = [];
+  for (const h of huecos) {
+    const [s] = await db
+      .insert(marketSignals)
+      .values(senalHueco(
+        { orgId: input.orgId, projectId: input.projectId, tema: h.tema, clave: h.clave, etiqueta: h.etiqueta, pregunta: h.pregunta, radarRunId: input.radarRunId },
+        h.comoMedirlo,
+        h.motivo,
+      ) as NewMarketSignal)
+      .returning();
+    if (s) out.push(s);
+  }
+  return out;
+}
+
+/**
+ * Los huecos que le tocan a un proyecto según su ficha, cuando el radar no tiene
+ * worker para su mercado. Agnóstico: la plaza y el giro salen de la ficha.
+ */
+export function huecosDeFicha(f: ProjectBrief | null, nombreProyecto: string) {
+  const giro = f?.categoria ?? f?.queVende ?? nombreProyecto;
+  const plaza = f?.mercados?.[0];
+  const donde = [plaza?.ciudad, plaza?.pais].filter(Boolean).join(', ') || 'su plaza';
+
+  return [
+    {
+      tema: 'precios_mercado',
+      clave: 'precio_mercado',
+      etiqueta: `A qué precio vende la competencia de ${giro} en ${donde}`,
+      pregunta: `¿Cuánto cobra la competencia?`,
+      comoMedirlo:
+        `escribir un worker en motor/radar/ que lea los portales donde se publica ${giro} en ${donde} ` +
+        `y saque la mediana del precio publicado, con su muestra y su fecha`,
+      motivo: 'el radar de precios de hoy solo sabe leer plataformas de proyectos, que no sirven para este giro',
+    },
+    {
+      tema: 'competencia',
+      clave: 'competidores_activos',
+      etiqueta: `Cuántos anuncian ${giro} en ${donde} ahora mismo`,
+      comoMedirlo:
+        `correr motor/radar/meta_ad_library.py con las consultas de este giro y esta plaza, ` +
+        `y revisar a mano cuántos anunciantes venden de verdad lo mismo`,
+      motivo: 'todavía no se ha corrido la Biblioteca de Anuncios para este proyecto',
+    },
+    {
+      tema: 'demanda',
+      clave: 'tendencia_busquedas',
+      etiqueta: `Si la gente busca más o menos ${giro} que hace un año`,
+      comoMedirlo: 'instalar pytrends-modern en el servidor y leer Google Trends para el giro y la plaza',
+      motivo: 'pytrends no está instalado en el servidor (medido el 30-sep: import pytrends falla)',
+    },
+  ];
+}
+
 /* ---------------------------------------------------------------------------
    Lectura, para la pantalla y para las etapas siguientes.
 --------------------------------------------------------------------------- */

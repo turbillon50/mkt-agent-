@@ -140,8 +140,21 @@ export async function armarPublicos(
     return { publicos: [], descartes };
   }
 
-  // El conjunto de ids que EXISTEN de verdad. Todo lo demás es invención.
+  // Los ids que EXISTEN de verdad. Todo lo demás es invención.
   const idsReales = new Set(senales.map((s) => s.id));
+
+  /*
+   * Y de esos, los que además MIDEN algo.
+   *
+   * Un hueco es una señal legítima —dice que no sabemos y cómo se sabría— pero NO
+   * puede sostener una afirmación. Medido el 30-sep en zz-Miami, donde las tres
+   * señales eran huecos: un público salió citando uno como evidencia y la pantalla
+   * lo presentó como "Lo sostienen 1 medición de las de arriba". Eso es lo
+   * contrario de lo que el hueco dice. La ausencia de un dato no es un dato a
+   * favor, y presentarla así es exactamente el autoengaño que el motor viene a
+   * evitar.
+   */
+  const idsQueMiden = new Set(senales.filter((s) => !s.hueco).map((s) => s.id));
   const filas: NewAudience[] = [];
   const ofertasVistas = new Set<string>();
 
@@ -192,15 +205,23 @@ export async function armarPublicos(
     for (const id of [...(p.evidencia ?? []), ...idsEnProsa]) {
       if (typeof id !== 'string') continue;
       if (evidencia.includes(id)) continue;
-      if (idsReales.has(id)) evidencia.push(id);
-      else descartes.push(`"${nombre}": se tiró un id de evidencia que no existe (${String(id).slice(0, 40)})`);
+      if (idsQueMiden.has(id)) {
+        evidencia.push(id);
+      } else if (idsReales.has(id)) {
+        // Existe, pero es un hueco: dice que NO hay dato. No sostiene nada.
+        descartes.push(`"${nombre}": se tiró una evidencia que en realidad es un hueco declarado (dice que no hay dato, no puede sostener la afirmación)`);
+      } else {
+        descartes.push(`"${nombre}": se tiró un id de evidencia que no existe (${String(id).slice(0, 40)})`);
+      }
     }
 
     // El tamaño solo pasa si su señal existe. Lo exige también un CHECK de la base.
     let tamanoEstimado: number | null = null;
     let tamanoSenalId: string | null = null;
     if (typeof p.tamano_estimado === 'number' && Number.isFinite(p.tamano_estimado) && p.tamano_estimado > 0) {
-      if (p.tamano_senal && idsReales.has(p.tamano_senal)) {
+      // Mismo criterio: un hueco no respalda un tamaño. Si el respaldo dice "no
+      // sabemos", el tamaño no se puede guardar.
+      if (p.tamano_senal && idsQueMiden.has(p.tamano_senal)) {
         tamanoEstimado = Math.round(p.tamano_estimado);
         tamanoSenalId = p.tamano_senal;
       } else {
@@ -250,7 +271,22 @@ function texto(v: unknown, max: number): string | null {
   return t ? t.slice(0, max) : null;
 }
 
-const UUID = /\(?\s*(?:id\s*=\s*)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\)?/gi;
+const UUID = /\(?\s*(?:ids?\s*[:=]\s*)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*\)?/gi;
+
+/**
+ * La basura que queda cuando se quitan los ids de en medio de la prosa.
+ *
+ * Medido el 30-sep en zz-Miami: el modelo escribió "(ids: <uuid>, <uuid>)" y al
+ * sacar los UUID quedó "(ids," a media frase — que en pantalla se ve peor que el
+ * UUID original, porque parece que el texto se rompió.
+ */
+const RESTOS_DE_CITA = [
+  /\(\s*ids?\s*[:=]?\s*[,;]?\s*\)/gi, // "(ids:)" "(id = )"
+  /\(\s*ids?\s*[:=]?\s*[,;]\s*/gi,    // "(ids," sin cerrar
+  /\bids?\s*[:=]\s*[,;)]/gi,          // "ids:," suelto
+  /\(\s*[,;]\s*\)/g,                  // "( , )"
+  /\(\s*\)/g,                         // "()"
+];
 
 /**
  * Saca los ids de señal que el modelo escribió DENTRO de la prosa.
@@ -274,12 +310,11 @@ export function limpiarCitas(t: string, idsReales: Set<string>): { texto: string
     else inventados.push(id);
     return '';
   });
-  return {
-    // Al quitar "(id=...)" quedan espacios dobles y espacios antes del punto.
-    texto: limpio.replace(/\s{2,}/g, ' ').replace(/\s+([.,;:)])/g, '$1').replace(/\(\s*\)/g, '').trim(),
-    ids,
-    inventados,
-  };
+  let texto = limpio;
+  for (const r of RESTOS_DE_CITA) texto = texto.replace(r, '');
+  // Al quitar las citas quedan espacios dobles y espacios antes del punto.
+  texto = texto.replace(/\s{2,}/g, ' ').replace(/\s+([.,;:)])/g, '$1').trim();
+  return { texto, ids, inventados };
 }
 
 export async function publicosDe(orgId: string, projectId: string): Promise<Audience[]> {

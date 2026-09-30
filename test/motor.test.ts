@@ -45,6 +45,7 @@ import { armarPantalla, auditarPantalla, limpiarNumero } from '../src/motor/pant
 import { contextoDeFicha, precioDeTexto } from '../src/motor/ficha';
 import { compararCorridas, type CorridaDelMotor } from '../src/motor/correr';
 import { RECETAS, recetaEnAfirmaciones, aplicarParametros, proponerKit, distanciaColor, briefDeRed } from '../src/motor/estudio';
+import { limpiarCitas } from '../src/motor/publicos';
 
 const SUFIJO = Date.now().toString(36);
 const ORG = `org_motortest_${SUFIJO}`;
@@ -292,6 +293,25 @@ function pruebasPuras() {
   ok('millones no se confunde con mil', precioDeTexto('1.5 millones de pesos')?.min === 1_500_000);
   ok('los separadores de miles se leen bien', precioDeTexto('USD 3,000-8,000')?.max === 8000);
   ok('sin moneda no hay precio', precioDeTexto('como 50 mil') === null);
+
+  // limpiarCitas: el id sale de la prosa y no deja basura donde estaba.
+  const reales = new Set(['520ac5f5-040f-4a86-bffd-3ab422abb1fb', 'd19d430d-e442-4729-a7c5-0e41569ed6b8']);
+  const c1 = limpiarCitas('Ajustado al rango medio (id=520ac5f5-040f-4a86-bffd-3ab422abb1fb).', reales);
+  ok('el id se saca de la prosa', !/[0-9a-f]{8}-/.test(c1.texto), c1.texto);
+  ok('y se guarda como evidencia', c1.ids.length === 1);
+  ok('sin dejar espacio antes del punto', c1.texto.endsWith('medio.'), c1.texto);
+
+  // La forma que dejó basura en zz-Miami: "(ids: x, y)".
+  const c2 = limpiarCitas(
+    'No hay mediciones de precios (ids: 520ac5f5-040f-4a86-bffd-3ab422abb1fb, d19d430d-e442-4729-a7c5-0e41569ed6b8), así que se propone otra vía.',
+    reales,
+  );
+  ok('la forma "(ids: a, b)" no deja restos', !/\(ids|ids:/.test(c2.texto), c2.texto);
+  ok('y no deja paréntesis huérfanos', !/\(\s*[,;)]/.test(c2.texto), c2.texto);
+  ok('y recupera los dos ids', c2.ids.length === 2, String(c2.ids.length));
+
+  const c3 = limpiarCitas('Según 11111111-2222-3333-4444-555555555555 el mercado crece.', reales);
+  ok('un id inventado se tira y se reporta', c3.inventados.length === 1 && c3.ids.length === 0);
 
   // La calidad la calcula el código.
   const base = { fuenteTipo: 'medicion_propia' as const, medidoEn: new Date(), muestra: 120 };
