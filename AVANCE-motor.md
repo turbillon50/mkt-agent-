@@ -12,7 +12,7 @@ Rama `vulcano/motor-c14`. Base de DESARROLLO (`goossip-dev-motor`). No merges a 
 | P0.3 Radar de mercado | PENDIENTE |
 | P0.4 Públicos + plan con hipótesis | PENDIENTE |
 | P0.5 Pantalla Estrategia | PENDIENTE |
-| Aceptación 3 (arnés números sin fuente) | PENDIENTE |
+| Aceptación 3 (arnés números sin fuente) | **HECHO Y VERIFICADO** |
 | Aceptación 1+2 (zz-Momentum / zz-Miami) | PENDIENTE |
 | P2.1 PR #59 | PENDIENTE |
 | P2.2 test:creative | DIAGNOSTICADO, sin arreglar |
@@ -104,7 +104,49 @@ rechazados: 11/11 · colados: 0 · el dato bien formado entró: SI
 
 **Para producción:** falta aplicar `0023_motor_analisis.sql`. Es aditiva; no requiere ventana.
 
+## Aceptación 3 — el arnés (HECHO) · `src/motor/procedencia.ts` + `test/procedencia.test.ts`
+
+`npm run test:procedencia` → **65 pasadas · 0 fallidas**, exit 0.
+
+La procedencia se defiende en tres niveles y los tres hacen falta:
+1. La base (0023): no deja INSERTAR un número sin fuente/fecha/método.
+2. El código (`calidadDe`): la calidad del dato la calcula una función, no el modelo.
+   Un modelo al que le preguntas si su dato es bueno contesta que sí.
+3. La pantalla y el reporte (`auditar`): reprueba lo que se va a MOSTRAR.
+
+Para que el nivel 3 sea exacto y no adivinanza, las cifras no se escriben dentro de la prosa.
+La prosa las llama por nombre y el arnés exige que, quitando los huecos declarados, **no quede
+ni un dígito** en el texto literal:
+
+```ts
+{ plantilla: '{cifra} de los proyectos de apps en Workana pide menos de {umbral}.',
+  cifra: <la medición, con fuente>, parametros: { umbral: 'USD 500' } }
+```
+
+### Un agujero que abrí y cerré (queda escrito para que nadie lo reabra)
+
+La primera versión traía `FORMAS_DE_RED`: una lista de excepciones para escribir a mano las
+medidas de plataforma (`3:4`, `1080x1350`, `0-3 s`). La prueba la reventó con "8-12 láminas",
+que no matcheaba. **La tentación era ampliar la lista; se quitó completa.** Dos razones:
+una lista de excepciones crece hasta que por ahí se cuela "el mercado creció 30%" disfrazado de
+rango; y la premisa era falsa — una medida de red SÍ tiene fuente buenísima, la spec oficial que
+este repo ya guarda con URL y versión en `SOCIAL_PLAYBOOKS[red].fuente`/`.version`.
+Ahora no hay excepciones: un número de red se declara como cualquier otro. La prueba verifica
+las dos caras (declarada pasa / a mano reprueba).
+
+### La contraprueba, corrida a mano el 30-sep (fuera del archivo de prueba)
+
+Pantalla escrita como la escribiría alguien de prisa:
+```
+El mercado mexicano de apps creció 30% en 2026 y ya vale 1,200 millones de dólares.
+La mayoría de los competidores cobra entre USD 3,000 y USD 8,000.
+```
+Resultado: **reprobada, 2 defectos**, señalando los dígitos exactos (30, 2026, 1,200 / 3,000, 8,000).
+Dentro de la prueba hay además 10 pantallas malas a propósito y las 10 reprueban, cada una
+clasificada con el nombre de su defecto.
+
 ## Qué sigue
 
-1. P0.2 → P0.5 en orden.
-2. El arnés de números sin fuente antes de los zz-, para que los zz- nazcan ya vigilados.
+1. P0.2 (ficha) → P0.3 (radar) → P0.4 (públicos/plan) → P0.5 (pantalla).
+2. `src/motor/estudio.ts` le debe `cifraDeSpec` a `procedencia.ts` (el comentario que
+   reemplazó a FORMAS_DE_RED lo promete): construir una cifra `oficial` desde SOCIAL_PLAYBOOKS.
