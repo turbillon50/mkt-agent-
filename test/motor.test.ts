@@ -44,6 +44,7 @@ import { consultasDeFicha, pctBajoUmbral, medianaDe, valorEnPalabras } from '../
 import { armarPantalla, auditarPantalla, limpiarNumero } from '../src/motor/pantalla';
 import { contextoDeFicha, precioDeTexto } from '../src/motor/ficha';
 import { compararCorridas, type CorridaDelMotor } from '../src/motor/correr';
+import { RECETAS, recetaEnAfirmaciones, aplicarParametros, proponerKit, distanciaColor, briefDeRed } from '../src/motor/estudio';
 
 const SUFIJO = Date.now().toString(36);
 const ORG = `org_motortest_${SUFIJO}`;
@@ -336,6 +337,70 @@ function pruebasPuras() {
 }
 
 /* ======================================================================
+   6. El estudio por red (P3): una receta por red, y distintas de verdad.
+====================================================================== */
+function pruebaEstudio() {
+  console.log('\n— el estudio por red —');
+
+  const redes = Object.keys(RECETAS) as Array<keyof typeof RECETAS>;
+
+  // Que las formas sean DISTINTAS es la prueba de que no es una plantilla con
+  // el nombre de la red cambiado.
+  ok('cada red tiene su propia forma de pieza',
+    new Set(redes.map((r) => RECETAS[r].forma)).size === redes.length,
+    redes.map((r) => `${r}=${RECETAS[r].forma}`).join(' · '));
+  ok('cada red tiene su propio hero', new Set(redes.map((r) => RECETAS[r].hero)).size === redes.length);
+  ok('cada red tiene su propio CTA', new Set(redes.map((r) => RECETAS[r].cta)).size === redes.length);
+  ok('cada red dice qué evitar', redes.every((r) => RECETAS[r].evitar.length >= 2));
+
+  // Lo que pide la corrida, red por red.
+  ok('LinkedIn es carrusel documento', RECETAS.linkedin.forma === 'carrusel_documento');
+  ok('y declara el rango de láminas en vez de escribirlo suelto', RECETAS.linkedin.parametros.laminas === '8-12');
+  ok('Instagram cuida el centro que recorta el perfil',
+    RECETAS.instagram.parametros.centro === '3:4' && /recorte/i.test(RECETAS.instagram.que));
+  ok('TikTok es un guion por segundos', RECETAS.tiktok.forma === 'guion_por_segundos');
+  ok('con la propuesta al arranque y el gancho antes del sexto segundo',
+    !!RECETAS.tiktok.parametros.propuesta && !!RECETAS.tiktok.parametros.gancho);
+  ok('y el CTA en pantalla', RECETAS.tiktok.pasos.some((p) => /EN PANTALLA/.test(p)));
+  ok('X es una sola idea', RECETAS.twitter.forma === 'una_sola_idea');
+
+  // EL ARNÉS sobre el estudio: ni un número de red escrito a mano.
+  for (const red of redes) {
+    const d = auditar(`estudio/${red}`, recetaEnAfirmaciones(red));
+    ok(`la receta de ${red} no trae números sin fuente`, d.length === 0,
+      d.map((x) => `${x.clase}: ${x.detalle.slice(0, 100)}`).join(' | '));
+  }
+
+  // Las medidas de red entran como cifra OFICIAL, no como excepción.
+  const afLinkedIn = recetaEnAfirmaciones('linkedin');
+  ok('el lienzo se cita con su fuente oficial',
+    afLinkedIn.some((a) => a.cifra?.fuenteTipo === 'oficial' && (a.cifra.fuenteUrl ?? '').startsWith('https://')));
+
+  // aplicarParametros: la conversión que evita pedirle sintaxis a quien escribe.
+  const conv = aplicarParametros('El carrusel va de 8-12 láminas.', { laminas: '8-12' });
+  ok('aplicarParametros saca el número de la prosa', conv.plantilla === 'El carrusel va de {laminas} láminas.', conv.plantilla);
+  ok('y lo deja declarado', conv.usados.laminas === '8-12');
+  ok('el resultado pasa el arnés', auditar('x', [{ plantilla: conv.plantilla, parametros: conv.usados }]).length === 0);
+
+  // El kit: PROPONE, no cambia. Es regla dura de la corrida.
+  const medido = { colores: [{ hex: '#E8175D', porcentaje: 44 }], muestra: 12, fuente: 'anuncios subidos', medidoEn: new Date(), metodo: 'x' };
+  const distinto = proponerKit(medido, { primario: '#1A2B3C' });
+  ok('cuando el kit medido difiere, se marca', distinto.difiere);
+  ok('y se PROPONE sin cambiar nada', /No se cambió nada/.test(distinto.propuesta), distinto.propuesta.slice(0, 80));
+  ok('y se deja la decisión al dueño', /lo decide el dueño/.test(distinto.propuesta));
+
+  const igual = proponerKit({ ...medido, colores: [{ hex: '#1b2b3d', porcentaje: 51 }] }, { primario: '#1A2B3C' });
+  ok('dos hex del mismo color no se marcan como distintos', !igual.difiere,
+    `distancia ${distanciaColor('#1b2b3d', '#1A2B3C')}`);
+  ok('la comparación de color es por distancia, no por texto', distanciaColor('#1A2B3C', '#1b2b3d') < 5);
+  ok('un hex inválido no truena', Number.isFinite(distanciaColor('no-es-color', '#000000')) === false);
+
+  ok('el brief de red junta playbook y receta',
+    /Cómo se arma/.test(briefDeRed('linkedin')) && /Lienzo/.test(briefDeRed('linkedin')));
+  ok('el brief de cada red es distinto', briefDeRed('linkedin') !== briefDeRed('tiktok'));
+}
+
+/* ======================================================================
    5. La pantalla: nada de lo que muestra puede ir sin fuente.
 ====================================================================== */
 async function pruebaPantalla(proyecto: Project) {
@@ -373,6 +438,7 @@ async function main() {
     await pruebaMedicion(proyecto);
     await pruebaCapacidadYReporte(proyecto);
     pruebasPuras();
+    pruebaEstudio();
     await pruebaPantalla(proyecto);
   } catch (e) {
     fallidas.push(`explotó: ${e instanceof Error ? e.message : String(e)}`);
