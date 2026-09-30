@@ -33,6 +33,7 @@ import {
   organizations,
   postHypotheses,
   projectBrief,
+  projectMembers,
   radarRuns,
   users,
   type Project,
@@ -101,6 +102,18 @@ async function crear(): Promise<Project[]> {
       continue;
     }
     const [p] = await db.insert(campaigns).values({ ...alta, orgId: ORG_ZZ, userId }).returning();
+
+    // El DUEÑO, en `project_members`. No es un adorno: la migración 0014 sostiene
+    // que todo proyecto tiene dueño, y `test:projects` lo verifica con
+    // "proyectos sin dueño — esperaba 0". La primera versión de este guion
+    // insertaba el proyecto y nada más, y rompió esa prueba con los dos zz-.
+    // Un dato de prueba tiene que cumplir las mismas reglas que un dato de verdad;
+    // si no, la prueba se vuelve ruido y se aprende a ignorarla.
+    await db
+      .insert(projectMembers)
+      .values({ orgId: ORG_ZZ, projectId: p!.id, userId, role: 'dueño', status: 'activo' })
+      .onConflictDoNothing();
+
     salida.push(p!);
   }
   return salida;
@@ -124,6 +137,7 @@ async function borrar(): Promise<void> {
   await db.delete(marketSignals).where(inArray(marketSignals.projectId, ids));
   await db.delete(radarRuns).where(inArray(radarRuns.projectId, ids));
   await db.delete(projectBrief).where(inArray(projectBrief.projectId, ids));
+  await db.delete(projectMembers).where(inArray(projectMembers.projectId, ids));
   await db.delete(campaigns).where(inArray(campaigns.id, ids));
   console.log(`borrados ${ids.length} proyectos zz- y todo lo que el motor les colgó`);
 }

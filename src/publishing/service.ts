@@ -35,7 +35,14 @@ export async function publishForProject(input: PublishForProjectInput) {
 
   const account = await activeAccountFor(project, platform).catch(() => null);
   if (!account) {
-    throw new Error(`${project.name} no tiene ${platform} conectado y listo para publicar.`);
+    // Con la RUTA EXACTA para arreglarlo, no solo con el diagnóstico. Decir "no
+    // está conectado" y dejar a la persona buscando dónde se conecta es mandarla
+    // a adivinar; el mensaje tiene que traer el nombre del proyecto (que puede
+    // tener varios) y la sección donde se resuelve.
+    throw new Error(
+      `${project.name} no tiene ${platform} conectado y listo para publicar. ` +
+        `Se engancha en Conexiones, dentro del proyecto: /projects/${project.id}/conexiones`,
+    );
   }
   if (platform === 'instagram' && !input.media) {
     throw new Error('Instagram no deja publicar sin una pieza visual aprobada.');

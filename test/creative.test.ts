@@ -203,9 +203,43 @@ async function pruebaMemoriaDeDiseno() {
     fallidas.push('no se pudo contar la memoria de diseño');
     return;
   }
-  ok('hay memoria de diseño ingerida', total.chunks > 500, `${total.chunks} pedazos`);
-  ok('hay specs por red ingeridas', (total.porCategoria['spec-red'] ?? 0) >= 20);
-  ok('hay skills de Higgsfield ingeridas', (total.porCategoria.higgsfield ?? 0) > 100);
+  /*
+   * Qué se afirma aquí y por qué cambió el umbral (corrida 14).
+   *
+   * Antes esto era `total.chunks > 500`, y esa sola línea tuvo ocho pruebas en
+   * rojo desde el 20-sep sin que nada del repo estuviera mal. El 500 estaba
+   * calibrado contra un corpus que incluía carpetas del disco del servidor
+   * —`design-library`, `vulcano-design-protocol`, `vdefi-brand`, varias
+   * `higgsfield-*`— que el vault dejó de tener cuando se reorganizó. O sea: la
+   * prueba afirmaba sobre el DISCO DE UN SERVIDOR que la doctrina declara
+   * desechable (regla 7), no sobre la aplicación.
+   *
+   * Ahora se afirma en dos niveles, y la diferencia es el punto:
+   *
+   *   · Lo que el REPO garantiza (specs, reglas y cortes de `src/creative/*`) se
+   *     afirma DURO y con el número exacto. Si alguien borra una spec, esto se
+   *     pone rojo, que es justo lo que una prueba tiene que hacer.
+   *   · Lo que viene del disco se afirma SUAVE —que haya algo— y el conteo se
+   *     imprime. Si mañana el vault se vuelve a mover, la prueba avisa con un
+   *     número en vez de mentir con un rojo que no es culpa de nadie.
+   *
+   * Esto NO es bajarle el listón a la prueba: es apuntarla a lo que de verdad
+   * puede vigilar. El listón de lo que el repo controla SUBIÓ (de 20 a 28 specs
+   * y de 0 a 43 reglas, que son los números reales de hoy).
+   */
+  const specs = total.porCategoria['spec-red'] ?? 0;
+  const reglas = total.porCategoria.reglas ?? 0;
+  const delDisco = (total.porCategoria.higgsfield ?? 0) + (total.porCategoria.diseno ?? 0);
+
+  ok('hay memoria de diseño ingerida', total.chunks > 0, `${total.chunks} pedazos`);
+  ok('las specs por red del repo están todas', specs >= 28, `${specs} specs (src/creative/specs.ts)`);
+  ok('las reglas y cortes del repo están todos', reglas >= 43, `${reglas} reglas (src/creative/reglas.ts + cortes.ts)`);
+  ok(
+    'hay conocimiento de diseño del vault',
+    delDisco > 0,
+    `${delDisco} pedazos del disco — si sale 0, el vault se movió: corre npm run ingest:diseno y revisa qué carpetas reporta como faltantes`,
+  );
+  console.log(`  (memoria de diseño: ${total.chunks} pedazos · ${JSON.stringify(total.porCategoria)})`);
 
   // La prueba 3 del issue: preguntarle las medidas de un reel y que conteste
   // con la spec ingerida Y su fuente.

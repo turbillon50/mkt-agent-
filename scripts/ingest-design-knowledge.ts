@@ -44,7 +44,28 @@ import { REGLAS, LIMITES, reglaEnPalabras } from '../src/creative/reglas';
 import { CORTES, corteEnPalabras } from '../src/creative/cortes';
 import { config } from '../src/config';
 
-const VAULT = process.env.SKILLS_VAULT_DIR || '/root/skills-vault';
+/**
+ * Dónde buscar las carpetas de diseño, en orden.
+ *
+ * Antes era UNA sola ruta (`/root/skills-vault`) y eso fue lo que rompió
+ * `test:creative`: el vault se reorganizó y las carpetas que traen el volumen
+ * —`_higgsfield-docs`, `higgsfield-*`, `design-library`, `vulcano-design-protocol`,
+ * `vdefi-brand`— dejaron de estar ahí. Hoy las skills de Higgsfield viven en
+ * `/root/.claude/skills`, que es a donde `vl-publicar-skills` las deja.
+ *
+ * Medido el 30-sep: de las 14 carpetas que pide este guion, solo 2 seguían en
+ * skills-vault. El resultado era `design_knowledge` con CERO filas y ocho pruebas
+ * en rojo, sin que nada del repo estuviera mal.
+ *
+ * Buscar en varias raíces no arregla el problema de fondo —que esto depende del
+ * disco de un servidor que la doctrina declara desechable— pero sí lo hace
+ * resistente a que el vault se reacomode. Lo que el REPO sí garantiza (specs,
+ * reglas y cortes de `src/creative/*`) se ingiere siempre, venga lo que venga del
+ * disco, y es sobre eso que la prueba afirma de verdad.
+ */
+const RAICES = (process.env.SKILLS_VAULT_DIR || '/root/skills-vault:/root/.claude/skills')
+  .split(':')
+  .filter(Boolean);
 const SECO = process.argv.includes('--dry');
 
 /**
@@ -54,6 +75,12 @@ const SECO = process.argv.includes('--dry');
  */
 const CARPETAS: Array<{ dir: string; category: DesignCategory }> = [
   { dir: '_higgsfield-docs', category: 'higgsfield' },
+  // El paquete grande de Higgsfield vive hoy aquí, y es el que trae el volumen
+  // (30 archivos). Ojo con el detalle que costó rato y que la doctrina ya avisa
+  // en su regla 5 ("existencia no es contenido"): al lado de esta carpeta hay
+  // varios `higgsfield-*` que `ls` enseña como si existieran, pero son ENLACES
+  // ROTOS a `../../.agents/skills/...`, que no está. Tienen 0 archivos.
+  { dir: 'higgsfield', category: 'higgsfield' },
   { dir: 'higgsfield-generate', category: 'higgsfield' },
   { dir: 'higgsfield-brandkit', category: 'higgsfield' },
   { dir: 'higgsfield-soul-id', category: 'higgsfield' },
@@ -106,9 +133,12 @@ async function fuentesDeSkills(): Promise<{ fuentes: DesignSource[]; faltantes: 
   const faltantes: string[] = [];
 
   for (const { dir, category } of CARPETAS) {
-    const abs = path.join(VAULT, dir);
-    if (!existsSync(abs)) {
-      faltantes.push(abs);
+    // La primera raíz que la tenga gana. Si no está en ninguna, se ANOTA en
+    // `faltantes` con todas las rutas probadas: un "no está" que no dice dónde se
+    // buscó no sirve para nada.
+    const abs = RAICES.map((r) => path.join(r, dir)).find((p) => existsSync(p));
+    if (!abs) {
+      faltantes.push(`${dir} (probado en: ${RAICES.join(', ')})`);
       continue;
     }
     for (const archivo of await archivosMd(abs)) {
