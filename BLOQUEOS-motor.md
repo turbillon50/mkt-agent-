@@ -92,7 +92,41 @@ empresa). Si no, se queda fuera y el motor lo declara como hueco.
 
 ---
 
-## 6. Decisión tuya, no bloqueo técnico: el escalón del linter
+## 6. El preview de Vercel está detrás del SSO de Vercel
+
+**Qué pasa.** El preview del PR #64 quedó **READY** (Vercel reportó `success`), pero pedirle
+`/sign-in` desde fuera no contesta 200: contesta **302** hacia `vercel.com/sso-api`. No es un
+problema de la app — es la **Protección de Despliegues** del proyecto en Vercel, que pide sesión
+de Vercel para abrir cualquier preview.
+
+```
+$ curl -D - https://goossip-git-vulcano-motor-c14-...vercel.app/sign-in
+HTTP/2 302
+location: https://vercel.com/sso-api?url=...
+x-robots-tag: noindex
+```
+
+**Por qué no lo destrabé yo.** Se arregla apagando la Protección de Despliegues o generando un
+token de bypass, y las dos cosas son tocar la configuración de Vercel, que esta corrida me
+prohíbe expresamente. Busqué un `VERCEL_AUTOMATION_BYPASS_SECRET` en el entorno y en
+`/etc/vl-secrets/`: no hay.
+
+**Qué se hizo en su lugar.** Se verificó `/sign-in` contra el **mismo código** compilado en modo
+producción, corriendo en el servidor:
+
+```
+$ NODE_OPTIONS=--max-old-space-size=3072 npm run build   → exit 0
+$ npm run start -- -p 3417
+$ curl -o /dev/null -w "%{http_code}" http://127.0.0.1:3417/sign-in   → 200
+```
+
+**Qué necesito de ti.** Una de dos: apagar la Protección de Despliegues para los previews de este
+proyecto, o darme un token de bypass. Con cualquiera de las dos corro la comprobación contra el
+preview real en un minuto.
+
+---
+
+## 7. Decisión tuya, no bloqueo técnico: el escalón del linter
 
 No te bloquea nada, pero es una decisión que no me toca tomar a mí.
 

@@ -16,9 +16,9 @@ Rama `vulcano/motor-c14`. Base de DESARROLLO (`goossip-dev-motor`). No merges a 
 | Aceptación 1+2 (zz-Momentum / zz-Miami) | **VERIFICADAS** |
 | P2.1 PR #59 | **INTEGRADO** |
 | P2.2 test:creative | **ARREGLADO** (y 3 suites más) |
-| P1 Medición y aprendizaje | PENDIENTE |
-| P3 Estudio por red | PENDIENTE |
-| Cierre (verde, capturas, preview, reporte) | PENDIENTE |
+| P1 Medición y aprendizaje | **HECHO** |
+| P3 Estudio por red | **HECHO** |
+| Cierre (verde, capturas, preview, reporte) | **HECHO** — preview READY, /sign-in tras el SSO de Vercel |
 
 ## Medido en el arranque (30-sep, no repetir)
 
@@ -338,3 +338,29 @@ Verificado sobre el árbol mezclado: tsc 0 · lint 0 · build 0 · 15 suites ver
 3. Cierre: preview de Vercel + `/sign-in` 200, `REPORTE-motor.md`, PR y comentario en #63.
 4. Deuda viva: zz-Miami sigue sin radar (su mercado no es Workana). Si no da el tiempo para un
    worker de portales inmobiliarios, hay que sembrarle los HUECOS declarados con su `como_medirlo`.
+
+---
+
+# CIERRE (30-sep)
+
+Todo lo de la corrida está hecho. El detalle completo vive en **`REPORTE-motor.md`**
+(termina en `FIN-MOTOR`) y lo que solo Luis puede resolver, en **`BLOQUEOS-motor.md`** (7 puntos).
+
+- **PR abierto:** https://github.com/turbillon50/mkt-agent-/pull/64 — NO mergeado, como se pidió.
+- **Verde:** tsc 0 · lint 0 (39 avisos, ninguno del motor) · build 0 · **16 suites en verde**.
+- **Preview de Vercel:** READY (`success`). `/sign-in` da **302** porque el proyecto tiene
+  Protección de Despliegues y redirige al SSO de Vercel — no es la app, y apagarla es tocar la
+  configuración de Vercel, que esta corrida prohíbe. Verificado contra el MISMO código en
+  producción local: `/sign-in` → **200**. → BLOQUEOS #6.
+- **Capturas:** 4, miradas, 0 defectos. Dos defectos encontrados al mirarlas y arreglados
+  (contraste ilegible en tema claro, valores crudos de columna en pantalla).
+
+## Si alguien relanza esto
+
+Ya no hay bloque pendiente. Lo que queda son deudas con nombre, todas en BLOQUEOS:
+llaves de Clerk en dev · `ads_read` de Meta · permiso de LinkedIn · `pytrends` · Reddit ·
+la Protección de Despliegues de Vercel · el escalón del linter.
+
+La única deuda **técnica** abierta: **zz-Miami no tiene radar** porque no hay worker de portales
+inmobiliarios. Hoy sale con 3 huecos declarados y su `como_medirlo`, que es el comportamiento
+honesto; construir ese worker es el siguiente paso natural del motor.
