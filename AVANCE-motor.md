@@ -8,8 +8,8 @@ Rama `vulcano/motor-c14`. Base de DESARROLLO (`goossip-dev-motor`). No merges a 
 | Bloque | Estado |
 |---|---|
 | P0.1 Migración del esquema | **HECHO Y VERIFICADO** |
-| P0.2 Ficha del proyecto | PENDIENTE |
-| P0.3 Radar de mercado | PENDIENTE |
+| P0.2 Ficha del proyecto | **HECHO** (falta correrla en los zz-) |
+| P0.3 Radar de mercado | **HECHO Y VERIFICADO** (precios; tendencias = hueco) |
 | P0.4 Públicos + plan con hipótesis | PENDIENTE |
 | P0.5 Pantalla Estrategia | PENDIENTE |
 | Aceptación 3 (arnés números sin fuente) | **HECHO Y VERIFICADO** |
@@ -145,8 +145,70 @@ Resultado: **reprobada, 2 defectos**, señalando los dígitos exactos (30, 2026,
 Dentro de la prueba hay además 10 pantallas malas a propósito y las 10 reprueban, cada una
 clasificada con el nombre de su defecto.
 
+## P0.2 — Ficha (`src/motor/ficha.ts`)
+
+Lee sitio (reusa `leerWebPublica` de competencia/lectura), señales de anuncios ya medidas y leads.
+El modelo interpreta; el CÓDIGO decide la procedencia y la verifica: si el modelo dice que un campo
+salió del sitio pero el sitio no se pudo leer, el origen baja a `modelo`.
+No inventa precio: sin moneda no hay precio y en su lugar va una pregunta al dueño con su porqué.
+`contextoDeFicha()` incluye a propósito lo que NO se sabe.
+
+Dos bugs propios, encontrados midiendo el parser de precio (los 10 casos ya pasan):
+- `'1.5 millones'` se leía como 1,500 — la alternancia de regex es por orden, no por longitud, y
+  `mil` matcheaba dentro de `millones`. Error de tres ceros en un precio.
+- `'de 1,500 a 2 millones'` perdía los millones: había dos lecturas del texto y la de separadores
+  de miles le ganaba a la otra.
+
+## P0.3 — Radar (HECHO, corrido de verdad)
+
+```
+motor/radar/workana.py   mide con navegador (servidor) → JSON estructurado
+motor/radar/ingesta.ts   calcula y guarda → market_signals + radar_runs
+src/motor/radar.ts       el cálculo puro: sin red, sin navegador, sin modelo
+```
+Corrido contra zz-Momentum en dev: **5 señales, 0 negadas**, calidad calculada por código.
+Crudo guardado en `motor/radar/mediciones/workana-2026-09-30.json` (35 observaciones).
+
+### ACEPTACIÓN 2 — CONTESTADA MIDIENDO (30-sep-2026)
+
+> ¿Qué % de los proyectos de apps publicados en Workana tiene presupuesto menor a USD 500?
+
+| | |
+|---|---|
+| **No pasa de USD 500** (`tope <= 500`) | **84%** — 21 de 25 |
+| **Menos de USD 500** (`tope < 500`) | **52%** — 13 de 25 |
+| En el filo exacto de 500 | 8 |
+| Observados / entraron | 35 / 25 (10 por hora fuera) |
+| Mediana del tope | USD 250 · Propuestas (mediana): 36 |
+| Fuente | Workana, proyectos abiertos, 5 subcategorías × página 1 |
+
+**Dos decisiones de método que cambian el número.** (a) Los proyectos POR HORA salen del numerador
+y del denominador: uno a USD 15-45/hora puede acabar en USD 5,000. El README semilla decía "6 de 7
+con USD 100-500 **o por hora**" (~86%), juntando las dos cosas. (b) Se publican los DOS cortes,
+porque las bandas tienen topes redondos y "USD 250-500" cae justo en el filo: la misma medición
+dice 84% o 52% según el corte. Enseñar uno solo sin decir cuál es el truco más fácil para que un
+número verdadero diga lo que uno quiere.
+
+### Límites medidos (no supuestos), anotados en `radar_runs.negadas`
+- Cloudflare corta `&page=2` Y la segunda navegación del mismo contexto. El worker abre contexto
+  nuevo por subcategoría con 25 s de pausa y ensancha a lo ancho. No se le da la vuelta.
+- Freelancer.com.mx: falla por certificado. Reddit: bloqueado. Los dos quedan fuera y se dice.
+- Google Trends: `pytrends` NO está instalado en el servidor (medido). Entra como hueco declarado.
+
+## Datos de las pruebas en dev (ya creados, no recrear)
+
+`scripts/zz-proyectos.ts` — `crear` / `borrar` / `ids`. Org `org_zz_motor`.
+```
+zz-momentum  ab7ba957-97dc-44ed-ae02-676fae95b682
+zz-miami     1a8357df-8ff3-4087-9004-4705869de58b
+```
+Las altas traen SOLO lo que pondría un dueño (giro, sitio, ciudad, tono). Ninguna explicación
+para el motor: si se la damos, la aceptación 1 no prueba nada.
+
 ## Qué sigue
 
-1. P0.2 (ficha) → P0.3 (radar) → P0.4 (públicos/plan) → P0.5 (pantalla).
+1. P0.4 (públicos + plan con hipótesis) → P0.5 (pantalla Estrategia).
 2. `src/motor/estudio.ts` le debe `cifraDeSpec` a `procedencia.ts` (el comentario que
    reemplazó a FORMAS_DE_RED lo promete): construir una cifra `oficial` desde SOCIAL_PLAYBOOKS.
+3. Correr la ficha en los dos zz- y el radar en zz-Miami (su mercado NO es Workana: le toca
+   portales inmobiliarios, y si no hay worker para eso, hueco declarado).
