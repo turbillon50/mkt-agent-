@@ -11,11 +11,11 @@ Rama `vulcano/motor-c14`. Base de DESARROLLO (`goossip-dev-motor`). No merges a 
 | P0.2 Ficha del proyecto | **HECHO** (falta correrla en los zz-) |
 | P0.3 Radar de mercado | **HECHO Y VERIFICADO** (precios; tendencias = hueco) |
 | P0.4 Públicos + plan con hipótesis | **HECHO Y VERIFICADO** |
-| P0.5 Pantalla Estrategia | PENDIENTE |
+| P0.5 Pantalla Estrategia | **HECHO Y MIRADA** |
 | Aceptación 3 (arnés números sin fuente) | **HECHO Y VERIFICADO** |
-| Aceptación 1+2 (zz-Momentum / zz-Miami) | PENDIENTE |
-| P2.1 PR #59 | PENDIENTE |
-| P2.2 test:creative | DIAGNOSTICADO, sin arreglar |
+| Aceptación 1+2 (zz-Momentum / zz-Miami) | **VERIFICADAS** |
+| P2.1 PR #59 | **INTEGRADO** |
+| P2.2 test:creative | **ARREGLADO** (y 3 suites más) |
 | P1 Medición y aprendizaje | PENDIENTE |
 | P3 Estudio por red | PENDIENTE |
 | Cierre (verde, capturas, preview, reporte) | PENDIENTE |
@@ -259,3 +259,82 @@ de portales inmobiliarios (ver "Lo que falta").
   sale con 0 señales y públicos sin respaldo — honesto, pero incompleto. Si no alcanza el tiempo
   para el worker, hay que sembrar los HUECOS declarados con su `como_medirlo`.
 - Google Trends: `pytrends` no está en el servidor. Hueco declarado.
+
+---
+
+# Segunda mitad de la corrida (30-sep)
+
+## P0.5 — Pantalla Estrategia (HECHA Y MIRADA)
+
+`src/motor/pantalla.ts` (datos auditables) · `components/motor/estrategia.tsx` ·
+`app/(dashboard)/projects/[id]/estrategia/page.tsx` · sección `estrategia` en `PROJECT_SECTIONS`.
+
+Los números NO se escriben en el JSX: vienen de `pantalla.ts` como afirmaciones con procedencia,
+así el arnés audita la pantalla entera sin renderizar React. **13 y 8 afirmaciones con número en
+los dos zz-, 0 defectos.**
+
+### El arnés se afinó con un caso real
+La etiqueta de una medición trae el parámetro de la pregunta ("...no pasa de 500 USD"). Se agregó
+`Afirmacion.etiqueta` **con candado**: sus dígitos solo pasan si hay una cifra con procedencia
+completa o un hueco declarado. Una etiqueta pelona que diga "el mercado creció 30%" sigue
+reprobando, y hay contraprueba de eso. `test:procedencia`: 70 pasadas.
+
+### Capturas WebKit — dos defectos que ninguna prueba iba a atrapar
+1. **Contraste.** Se usaban `text-amber-300/emerald-300/rose-300`, tonos de fondo OSCURO, y el
+   tema de Goossip es CLARO. Los avisos que más importan —"no hay ninguna medición que lo
+   sostenga", "esto lo deduje yo"— salían lavados. Justo los renglones que sostienen la
+   honestidad eran los ilegibles. Ahora 700/800 sobre fondo 50.
+2. **Valores crudos de la columna.** El plan enseñaba `descubrimiento` y `retencion` tal cual —
+   y `retencion` SIN ACENTO, porque un identificador no lleva acentos. Ahora `OBJETIVO_LABEL`.
+
+**Cómo se capturó, dicho claro:** no hay llaves de Clerk en dev (están vacías), así que
+`/projects/<id>/estrategia` da **HTTP 500** en local y no se pudo navegar la app con sesión.
+Se capturó el componente REAL con datos REALES y el CSS REAL compilado, fuera del cascarón
+(`scripts/capturas-c14-pantalla.ts`). Atrapa desborde, contraste y texto cortado; **no** atrapa
+el menú ni la sesión. El guion con sesión Clerk queda escrito (`scripts/capturas-c14.ts`) para
+cuando haya llaves. → BLOQUEOS-motor.md #1.
+
+## P2 — Las pruebas: de 4 suites rotas a 15 en verde
+
+| Suite | Antes | Ahora |
+|---|---|---|
+| `test:creative` | 8 fallidas | **230 pasadas, 0 fallidas** |
+| `test:projects` | rota (la rompí yo) | **41 pasadas** |
+| `test:orgs` | 1 fallida | **38 pasadas** |
+| `test:corrida10` | **no se podía correr** | **132 pasadas** |
+| las otras 11 | verdes | verdes |
+
+- **creative:** causa raíz = `design_knowledge` vacío porque la ingesta leía UNA raíz y el vault
+  se reorganizó. Ahora busca en varias y dice dónde buscó. Se agregó la carpeta `higgsfield`
+  (30 archivos) — ojo: al lado hay cuatro `higgsfield-*` que `ls` enseña y son **enlaces rotos**
+  (doctrina regla 5 en vivo). 364 pedazos. El umbral se reapuntó: lo del REPO se afirma duro y
+  **subió** (specs 20→28, reglas 0→43); lo del disco se afirma suave y se imprime.
+  **Contraprueba:** borré una spec → rojo ("27 specs"); reingesté → verde escribiendo 1 pedazo.
+- **Un mensaje que mandaba a buscar sin ruta** (doctrina §9): publicar en red no conectada ahora
+  dice `/projects/<id>/conexiones`.
+- **projects:** la rompí yo — `zz-proyectos.ts` creaba proyectos sin dueño en `project_members`.
+- **orgs:** exigía la org `all-global`, que es un acarreo de una sola vez de la 0013. En una base
+  nacida limpia no hay nada que acarrear; lo que sí vale en cualquier base se sigue exigiendo.
+
+## El linter llevaba corridas MUERTO
+
+`npm run lint` era `next lint` y Next 16 lo quitó: fallaba con "no such directory: .../lint"
+desde d71aa79 y nadie leía la salida. Hay `eslint.config.mjs` y `eslint .`. De 45 problemas:
+4 errores viejos arreglados · 1 falso positivo (services/baileys no es React) · 34 de reglas del
+React Compiler que no existían cuando se escribió el código → `warn`, **se siguen imprimiendo
+todas**. Ninguno en código del motor. Un escalón más (`typescript`) saca 306 errores: deuda
+anotada, decisión de Luis. → BLOQUEOS #6.
+
+## P2.1 — PR #59 integrado
+
+4 conflictos. **El que importaba: package.json traía `next ^16.2.6`** porque el PR es anterior al
+parche; dejarlo habría reabierto la RCE de AVIF. Se resolvió a 16.3.6 + maplibre-gl.
+Verificado sobre el árbol mezclado: tsc 0 · lint 0 · build 0 · 15 suites verdes.
+
+## Qué queda
+
+1. **P1 medición y aprendizaje** (en curso).
+2. **P3 el estudio por red.**
+3. Cierre: preview de Vercel + `/sign-in` 200, `REPORTE-motor.md`, PR y comentario en #63.
+4. Deuda viva: zz-Miami sigue sin radar (su mercado no es Workana). Si no da el tiempo para un
+   worker de portales inmobiliarios, hay que sembrarle los HUECOS declarados con su `como_medirlo`.
