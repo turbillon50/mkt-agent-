@@ -15,7 +15,7 @@
     "test:orgs": "tsx test/orgs.test.ts",
     "seed:vliving": "tsx scripts/seed-vliving.ts",
     "import:vl-leads": "tsx scripts/import-vl-leads.ts",
-    "lint": "next lint",
+    "lint": "eslint .",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
@@ -29,10 +29,13 @@
     "test:asistente": "tsx test/asistente.test.ts",
     "test:metaads": "tsx test/metaads.test.ts",
     "capturas:c11": "tsx scripts/capturas-c11.ts",
+    "test:corrida10": "tsx test/corrida10.test.ts",
     "test:corrida13": "tsx test/corrida13.test.ts",
     "test:social-os": "tsx test/social-os.test.ts",
     "test:channel-identities": "tsx test/channel-identities.test.ts",
-    "test:account-selection": "tsx test/account-selection.test.ts"
+    "test:account-selection": "tsx test/account-selection.test.ts",
+    "test:procedencia": "tsx test/procedencia.test.ts",
+    "test:motor": "tsx test/motor.test.ts"
   },
   "engines": {
     "node": ">=20"
@@ -59,6 +62,7 @@
     "fflate": "^0.8.3",
     "geist": "^1.7.2",
     "mammoth": "^1.12.3",
+    "maplibre-gl": "^5.24.0",
     "next": "^16.3.6",
     "node-cron": "^3.0.3",
     "openai": "^4.67.3",

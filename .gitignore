@@ -52,3 +52,15 @@ capturas-c11/*
 # Corrida 10 — la Sala, seis redes a 1440. Se versiona la medición, no los PNG.
 capturas-c10/*
 !capturas-c10/resumen.json
+
+# Corrida 14 — las capturas de la Estrategia. Se guarda el resultado medido, no
+# los PNG: 13 MB de imágenes en el repo no le sirven a nadie y el barrido del
+# servidor se las lleva. Para volver a sacarlas:
+#   NODE_OPTIONS=--max-old-space-size=3072 npm run build
+#   npx tsx scripts/capturas-c14-pantalla.ts
+capturas-c14/*
+!capturas-c14/resultados.json
+
+# Corrida 12: se versiona la MEDICIÓN del recorrido, no los PNG pesados.
+capturas-c12/*
+!capturas-c12/resumen.json

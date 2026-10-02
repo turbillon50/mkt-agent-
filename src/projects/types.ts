@@ -46,6 +46,10 @@ export const PROJECT_ROLE_HELP: Record<ProjectRole, string> = {
 
 export const PROJECT_SECTIONS = [
   'inicio',
+  // Corrida 14. Va ARRIBA de todo lo demás a propósito: es el paso 0 del motor y
+  // lo que explica por qué el resto del proyecto está armado como está. Quien
+  // entra a ver "qué le vamos a hacer a este negocio" entra aquí, no a Campañas.
+  'estrategia',
   'leads',
   'conversaciones',
   'campanas',
@@ -68,6 +72,7 @@ export type ProjectSection = (typeof PROJECT_SECTIONS)[number];
 
 export const PROJECT_SECTION_LABEL: Record<ProjectSection, string> = {
   inicio: 'Inicio',
+  estrategia: 'Estrategia',
   leads: 'Leads',
   conversaciones: 'Conversaciones',
   campanas: 'Campañas',
@@ -186,6 +191,11 @@ export const PROJECT_EVENT_TYPES = [
   // acordándose.
   'compuerta_revisada',
   'pieza_adaptada',
+  // Corrida 12. El recorrido por cuadrantes se anota APARTE de la búsqueda de
+  // una frase: cuesta nueve veces más y dura minutos en vez de segundos, y
+  // mezclarlos en la bitácora haría imposible contestar "¿por qué se gastaron
+  // 40 búsquedas el martes?".
+  'prospeccion_barrido',
 ] as const;
 export type ProjectEventType = (typeof PROJECT_EVENT_TYPES)[number];
 
@@ -213,6 +223,7 @@ export const PROJECT_EVENT_LABEL: Record<ProjectEventType, string> = {
   campana_google_cambiada: 'Campaña de Google prendida o pausada',
   compuerta_revisada: 'Revisión anti-baneo',
   pieza_adaptada: 'Pieza adaptada a la medida de la red',
+  prospeccion_barrido: 'Recorrido del mapa por cuadrantes',
 };
 
 // ---------------------------------------------------------------------------
