@@ -7,21 +7,21 @@ import { getMastraMemory } from './memory';
 
 // Mesh Router propio (Cerebras + GPUs propias) hablando el protocolo
 // OpenAI-compatible — por eso usamos el provider generico de OpenAI en vez
-// del de OpenRouter. Cero dependencia de OpenRouter.
+// del mesh propio.
 function buildModel() {
-  if (!config.openrouter.apiKey) {
+  if (!config.llm.apiKey) {
     throw new Error('MESH_API_KEY is not set.');
   }
   const provider = createOpenAI({
-    apiKey: config.openrouter.apiKey,
-    baseURL: config.openrouter.baseUrl,
+    apiKey: config.llm.apiKey,
+    baseURL: config.llm.baseUrl,
   });
-  return provider.chat(config.openrouter.modelAgent);
+  return provider.chat(config.llm.modelAgent);
 }
 
 // gpt-oss-120b razona antes de contestar — sin un piso de tokens de salida
 // se queda a medias. Esto se inyecta en cada llamada a .generate().
-const MODEL_SETTINGS = { maxOutputTokens: config.openrouter.minMaxTokens || 800 };
+const MODEL_SETTINGS = { maxOutputTokens: config.llm.minMaxTokens || 800 };
 
 const memory = getMastraMemory();
 

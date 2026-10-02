@@ -2,7 +2,7 @@
 
 Autonomous social media agent with **persistent semantic memory**.
 
-- LLM via **OpenRouter** for generation and planning
+- LLM via the **mesh router** (Cerebras) for generation and planning
 - **Neon Postgres + pgvector** for storage and vector recall
 - **Drizzle** ORM and migrations
 - **Twitter/X** and **LinkedIn** posters
@@ -19,13 +19,13 @@ npm install
 
 # 2. Configure
 cp .env.example .env
-# Edit .env: OPENROUTER_API_KEY, OPENAI_API_KEY (embeddings),
+# Edit .env: MESH_API_KEY, EMBEDDINGS_API_KEY (embeddings),
 #            DATABASE_URL (Neon), TWITTER_* and/or LINKEDIN_*
 
 # 3. Apply the database schema (creates pgvector extension + tables)
 npm run db:migrate
 
-# 4. Probe connections (OpenRouter, embeddings, DB, enabled networks)
+# 4. Probe connections (mesh LLM, embeddings, DB, enabled networks)
 npm test
 
 # 5. Generate without publishing
@@ -69,7 +69,7 @@ npm run dev -- ingest ./brand-book.md   # seed the knowledge base
 
 ### Mastra agent
 
-The agent (`src/agent/index.ts`) runs on the same OpenRouter model and is wired to six tools that map directly to the persistence and posting primitives. Examples:
+The agent (`src/agent/index.ts`) runs on the same mesh model and is wired to six tools that map directly to the persistence and posting primitives. Examples:
 
 ```bash
 npm run dev -- ask "what have we posted on linkedin this week?"
@@ -95,7 +95,7 @@ embeddings   1536-dim vectors keyed by (ref_type, ref_id)
 ```
 src/
   config.ts           env loading
-  openrouter.ts       chat client
+  llm.ts              chat client
   generator.ts        post + weekly-plan generation, with semantic recall
   planner.ts          DB-backed plan persistence
   runner.ts           one round: pick item -> generate -> publish -> remember

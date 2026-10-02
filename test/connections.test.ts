@@ -1,6 +1,6 @@
 import '../src/env';
 import { config } from '../src/config.js';
-import { getClient as openrouterClient } from '../src/openrouter.js';
+import { getClient as llmClient } from '../src/llm.js';
 import { twitter, linkedin } from '../src/posters/index.js';
 import { embed } from '../src/memory/embed.js';
 
@@ -9,9 +9,9 @@ interface Check { name: string; fn: () => Promise<void> }
 const checks: Check[] = [];
 const add = (name: string, fn: () => Promise<void>) => checks.push({ name, fn });
 
-add('openrouter env', async () => {
-  if (!config.openrouter.apiKey) throw new Error('OPENROUTER_API_KEY missing');
-  openrouterClient();
+add('mesh llm env', async () => {
+  if (!config.llm.apiKey) throw new Error('MESH_API_KEY missing');
+  llmClient();
 });
 
 add('embeddings api', async () => {

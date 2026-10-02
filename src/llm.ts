@@ -4,13 +4,13 @@ import { config } from './config';
 let client: OpenAI | null = null;
 
 export function getClient(): OpenAI {
-  if (!config.openrouter.apiKey) {
-    throw new Error(`${config.openrouter.provider.toUpperCase()}_API_KEY is not set.`);
+  if (!config.llm.apiKey) {
+    throw new Error(`${config.llm.provider.toUpperCase()}_API_KEY is not set.`);
   }
   if (!client) {
     client = new OpenAI({
-      apiKey: config.openrouter.apiKey,
-      baseURL: config.openrouter.baseUrl,
+      apiKey: config.llm.apiKey,
+      baseURL: config.llm.baseUrl,
       defaultHeaders: {
         'HTTP-Referer': 'https://github.com/turbillon50/mkt-agent-',
         'X-Title': 'social-media-agent',
@@ -27,11 +27,11 @@ export async function chat(
   opts: { temperature?: number; maxTokens?: number; model?: string } = {},
 ): Promise<string> {
   const requested = opts.maxTokens ?? 800;
-  const maxTokens = Math.max(requested, config.openrouter.minMaxTokens);
+  const maxTokens = Math.max(requested, config.llm.minMaxTokens);
   let completion;
   try {
     completion = await getClient().chat.completions.create({
-      model: opts.model || config.openrouter.model,
+      model: opts.model || config.llm.model,
       messages,
       temperature: opts.temperature ?? 0.8,
       max_tokens: maxTokens,

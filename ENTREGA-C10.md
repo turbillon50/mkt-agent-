@@ -146,7 +146,7 @@ postea en X" está en las seis, sin jerga de desarrollo ni imágenes rotas.
   `origin/main` limpio** (medido). Es de la tubería de publicación que
   reescribieron las corridas 11/13, no de la Sala. No la toqué para no invadir
   ese dominio; queda señalada aquí.
-- La compuerta usa el modelo (OpenRouter). Sin la llave del proveedor, la
+- La compuerta usa el modelo (mesh/Cerebras). Sin la llave del proveedor, la
   revisión con modelo cae a **ámbar con aviso honesto** (no verde): no haber
   podido revisar no es estar limpio.
 - Hay que correr `npm run ingest:diseno` al mergear si se quiere refrescar la

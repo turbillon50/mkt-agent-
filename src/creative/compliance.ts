@@ -30,7 +30,7 @@
 import { and, desc, eq, ne } from 'drizzle-orm';
 import { db } from '../db/client';
 import { creativePieces, posts, type Project } from '../db/schema';
-import { chatJSON } from '../openrouter';
+import { chatJSON } from '../llm';
 import { config } from '../config';
 import { logProjectEvent } from '../projects/events';
 import { puedeSolo } from '../autonomia/niveles';
@@ -416,7 +416,7 @@ async function revisionDelModelo(
   input: EntradaCompuerta,
   reglas: Regla[],
 ): Promise<{ hallazgos: Hallazgo[]; aviso: string | null }> {
-  if (input.sinModelo || !config.openrouter.apiKey) {
+  if (input.sinModelo || !config.llm.apiKey) {
     return {
       hallazgos: [],
       aviso:
@@ -581,7 +581,7 @@ export async function corregir(input: EntradaCompuerta): Promise<Correccion> {
     };
   }
 
-  if (!config.openrouter.apiKey) {
+  if (!config.llm.apiKey) {
     return {
       textoCorregido: input.texto,
       cambio: false,

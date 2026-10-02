@@ -1,12 +1,12 @@
 import { neon } from "@neondatabase/serverless";
 import { NextRequest, NextResponse } from "next/server";
 import { speakInFamily } from "@/lib/family/client";
+import { chat } from "@/src/llm";
+import { config } from "@/src/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
-
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 interface RequestBody {
   messageId: string;
@@ -81,10 +81,9 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ ok: true, skipped: "sender is an agent" });
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
+  if (!config.llm.apiKey) {
     return NextResponse.json(
-      { ok: false, error: "OPENROUTER_API_KEY not configured" },
+      { ok: false, error: "MESH_API_KEY not configured" },
       { status: 503 },
     );
   }
@@ -117,35 +116,13 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   let replyText = "";
   try {
-    const res = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": "https://vliving.life",
-        "X-Title": "Gossip / family",
-      },
-      body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL ?? "anthropic/claude-3.5-sonnet",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userTurn },
-        ],
-        max_tokens: 500,
-        stream: false,
-      }),
-    });
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      return NextResponse.json(
-        { ok: false, error: `openrouter ${res.status}: ${txt.slice(0, 200)}` },
-        { status: 500 },
-      );
-    }
-    const j = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    replyText = (j.choices?.[0]?.message?.content ?? "").trim();
+    replyText = await chat(
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userTurn },
+      ],
+      { model: config.llm.modelReply, maxTokens: 500 },
+    );
   } catch (e) {
     const msg = e instanceof Error ? e.message : "unknown error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
