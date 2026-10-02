@@ -1,7 +1,7 @@
 import { config } from '../config';
 import { upsertInbound, insertMessage } from './repo';
 import { sendViaBridge } from './bridge';
-import { chat } from '../openrouter';
+import { chat } from '../llm';
 import { recall, remember } from '../memory/index';
 import { buildClientManifesto } from '../agent/manifesto';
 
@@ -77,7 +77,7 @@ export async function handleInbound(payload: InboundPayload): Promise<InboundRes
           { role: 'system', content: buildClientManifesto(config.brand) + knowledgeBlock },
           { role: 'user', content: userPrompt },
         ],
-        { model: config.openrouter.modelReply, temperature: 0.7, maxTokens: 400 },
+        { model: config.llm.modelReply, temperature: 0.7, maxTokens: 400 },
       ),
       new Promise<string>((_, rej) => setTimeout(() => rej(new Error('reply timeout')), REPLY_TIMEOUT_MS)),
     ]);

@@ -5,7 +5,7 @@ const truthy = (v: unknown) => /^(1|true|yes|on)$/i.test(String(v ?? '').trim())
 /**
  * Proveedor de LLM: Mesh Router propio (Cerebras + GPUs propias + V-brain),
  * expuesto en api.mindcontextia.one/mesh. Endpoint OpenAI-compatible real
- * (/v1/chat/completions), ruteo automatico por modelo/policy. Cero OpenRouter.
+ * (/v1/chat/completions), ruteo automatico por modelo/policy.
  *
  * gpt-oss-120b es un modelo "razonador": gasta tokens pensando antes de
  * contestar. Con max_tokens bajo se queda a medias (content vacio,
@@ -15,7 +15,7 @@ const truthy = (v: unknown) => /^(1|true|yes|on)$/i.test(String(v ?? '').trim())
 const MESH_DEFAULT_MAX_TOKENS = 800;
 
 export const config = {
-  openrouter: {
+  llm: {
     apiKey: process.env.MESH_API_KEY ?? '',
     baseUrl: process.env.MESH_BASE_URL || 'https://api.mindcontextia.one/mesh/v1',
 
@@ -29,7 +29,7 @@ export const config = {
     // Tier C — fast replies (WhatsApp auto-reply, ad-hoc lightweight tasks).
     modelReply: process.env.MESH_MODEL_REPLY || process.env.MESH_MODEL || 'gpt-oss-120b',
 
-    // Legacy single-model knob kept for backwards compat with `openrouter.ts`.
+    // Modelo por defecto de src/llm.ts.
     model: process.env.MESH_MODEL || 'gpt-oss-120b',
 
     // Piso de max_tokens para que el modelo razonador alcance a responder.

@@ -30,15 +30,15 @@ export type { Autonomia };
 export { garantizarVerdad, SIN_ENLACE };
 
 function buildModel() {
-  if (!config.openrouter.apiKey) throw new Error('MESH_API_KEY no está puesta.');
+  if (!config.llm.apiKey) throw new Error('MESH_API_KEY no está puesta.');
   const provider = createOpenAI({
-    apiKey: config.openrouter.apiKey,
-    baseURL: config.openrouter.baseUrl,
+    apiKey: config.llm.apiKey,
+    baseURL: config.llm.baseUrl,
   });
-  return provider.chat(config.openrouter.modelAgent);
+  return provider.chat(config.llm.modelAgent);
 }
 
-const MODEL_SETTINGS = { maxOutputTokens: config.openrouter.minMaxTokens || 800 };
+const MODEL_SETTINGS = { maxOutputTokens: config.llm.minMaxTokens || 800 };
 const memory = getMastraMemory();
 
 export type Turno = { role: 'user' | 'assistant'; content: string };

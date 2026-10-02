@@ -2,7 +2,7 @@ import 'server-only';
 import { and, eq, inArray, desc } from 'drizzle-orm';
 import { db } from '@/src/db/client';
 import { leads, type Lead, type NewLead } from '@/src/db/schema';
-import { chat } from '@/src/openrouter';
+import { chat } from '@/src/llm';
 import { isMapsConfigured, searchPlaces, type MapsPlace } from './maps';
 import { searchLinkedInPeople, type LinkedInPerson } from './linkedin-search';
 

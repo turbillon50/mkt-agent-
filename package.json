@@ -1,7 +1,7 @@
 {
   "name": "social-media-agent",
   "version": "0.2.0",
-  "description": "Autonomous social media agent. OpenRouter LLM + Neon/pgvector semantic memory.",
+  "description": "Autonomous social media agent. Mesh LLM (Cerebras) + Neon/pgvector semantic memory.",
   "private": true,
   "main": "dist/index.js",
   "scripts": {
@@ -46,7 +46,6 @@
     "@mastra/memory": "^1.18.2",
     "@mastra/pg": "^1.11.0",
     "@neondatabase/serverless": "^0.10.4",
-    "@openrouter/ai-sdk-provider": "^2.9.0",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-toast": "^1.2.15",

@@ -1,6 +1,6 @@
 import type { Project } from '../db/schema';
 import { config, type Platform } from '../config';
-import { chatJSON } from '../openrouter';
+import { chatJSON } from '../llm';
 import { generatePost } from '../generator';
 import { playbookDe, type RedPublicable } from './social-playbooks';
 import type { FormatoSpec } from './specs';
@@ -73,8 +73,8 @@ export async function generateSocialVariant(input: {
     { role: 'user', content: prompt },
   ], {
     temperature: 0.82,
-    maxTokens: Math.max(config.openrouter.minMaxTokens, 1000),
-    model: config.openrouter.modelDraft,
+    maxTokens: Math.max(config.llm.minMaxTokens, 1000),
+    model: config.llm.modelDraft,
   }).catch(() => null);
 
   const fallbackCopy = out?.copy?.trim()

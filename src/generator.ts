@@ -1,4 +1,4 @@
-import { chat, chatJSON } from './openrouter';
+import { chat, chatJSON } from './llm';
 import { config, type Platform } from './config';
 import { recall } from './memory/index';
 import { playbookDe, type RedPublicable } from './creative/social-playbooks';
@@ -85,7 +85,7 @@ export async function generatePost(input: GenerateInput): Promise<string> {
   ], {
     temperature: 0.85,
     maxTokens: 600,
-    model: config.openrouter.modelDraft,
+    model: config.llm.modelDraft,
   });
 
   return text.length > limits.maxChars ? text.slice(0, limits.maxChars).trim() : text;
@@ -118,7 +118,7 @@ export async function generateWeeklyPlan(opts: {
   ], {
     temperature: 0.7,
     maxTokens: 1500,
-    model: config.openrouter.modelPlan,
+    model: config.llm.modelPlan,
   });
 
   if (!json || !Array.isArray(json.items)) throw new Error('Planner returned invalid JSON.');

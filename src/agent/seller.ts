@@ -14,7 +14,7 @@
 import { and, desc, eq, isNull, or } from 'drizzle-orm';
 import { db } from '../db/client';
 import { knowledge, type Project, type SalesLead } from '../db/schema';
-import { chat } from '../openrouter';
+import { chat } from '../llm';
 import { config } from '../config';
 import { mcpCatalogContext, type McpSnippet } from '../sales/mcp';
 import { hardEscalation } from '../sales/escalation';
@@ -162,7 +162,7 @@ export async function draftReply(input: SellerInput): Promise<SellerDraft> {
           { role: 'system', content: buildSystem(project, know, snippets) },
           { role: 'user', content: buildUser(input) },
         ],
-        { model: config.openrouter.modelReply, temperature: 0.6, maxTokens: 600 },
+        { model: config.llm.modelReply, temperature: 0.6, maxTokens: 600 },
       ),
       new Promise<string>((_, rej) => setTimeout(() => rej(new Error('seller timeout')), REPLY_TIMEOUT_MS)),
     ]);
