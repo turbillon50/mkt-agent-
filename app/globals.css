@@ -632,3 +632,7 @@ html[data-asistente-drag='si'] .asistente-aside {
 @media (prefers-reduced-motion: reduce) {
   .velvet .mesh::before, .velvet .mesh::after { animation: none; }
 }
+/* touch target: CTA del header nunca menor a 40px, hero a 44px+ */
+@media (max-width: 640px) {
+  .velvet header .btn-brand { min-height: 40px; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+}
