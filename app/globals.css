@@ -532,3 +532,107 @@ html[data-asistente-drag='si'] .asistente-aside {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* ============================================================
+   VELVET · Prince — piel aprobada por Luis 2026-10-02.
+   Scope .velvet: re-tema SOLO el landing; el dashboard no cambia.
+   Cero azul: acento magenta→violeta, mesh viva, grain de terciopelo.
+   ============================================================ */
+.velvet {
+  --color-background: #150826;
+  --color-background-elevated: #241040;
+  --color-foreground: #f7f2fb;
+  --color-foreground-muted: rgba(243, 236, 250, 0.72);
+  --color-card: rgba(255, 255, 255, 0.05);
+  --color-card-elevated: rgba(255, 255, 255, 0.09);
+  --color-card-foreground: #f7f2fb;
+  --color-muted: rgba(255, 255, 255, 0.07);
+  --color-muted-foreground: rgba(243, 236, 250, 0.6);
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-input: rgba(255, 255, 255, 0.06);
+  --color-ring: #e93a7d;
+  --color-primary: #e93a7d;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #8b5cf6;
+  --color-secondary-foreground: #ffffff;
+  --color-accent: rgba(233, 58, 125, 0.14);
+  --color-accent-foreground: #f7f2fb;
+  --color-success: #4ade80;
+  --color-brand-1: #ff5f9e;
+  --color-brand-2: #e93a7d;
+  --color-brand-3: #8b5cf6;
+}
+/* grain de terciopelo sobre toda la landing */
+.velvet::after {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 70; opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+/* mesh viva: dos auroras fijas + dos blobs derivando */
+.velvet .mesh {
+  background:
+    radial-gradient(40% 35% at 15% 85%, rgba(255, 95, 158, 0.1), transparent 65%),
+    radial-gradient(45% 40% at 90% 80%, rgba(91, 33, 182, 0.18), transparent 65%);
+}
+.velvet .mesh::before {
+  width: 560px; height: 560px;
+  background: radial-gradient(circle, #e93a7d, transparent 70%);
+  top: -140px; left: 5%;
+  opacity: 0.26;
+  animation: mesh-drift 22s ease-in-out infinite alternate;
+}
+.velvet .mesh::after {
+  width: 520px; height: 520px;
+  background: radial-gradient(circle, #8b5cf6, transparent 70%);
+  top: 10%; right: -160px; left: auto;
+  opacity: 0.3;
+  animation: mesh-drift 27s ease-in-out infinite alternate-reverse;
+}
+/* profundidad velvet en las secciones (alterna magenta/violeta) */
+.velvet main section:nth-of-type(even) {
+  background: radial-gradient(60% 55% at 100% 0%, rgba(139, 92, 246, 0.08), transparent 60%);
+}
+.velvet main section:nth-of-type(odd) {
+  background: radial-gradient(55% 50% at 0% 100%, rgba(233, 58, 125, 0.07), transparent 60%);
+}
+.velvet main section { border-color: rgba(255, 255, 255, 0.08); }
+.velvet main section h2 { letter-spacing: -0.02em; }
+/* header glass sobre velvet */
+.velvet .glass { background: rgba(21, 8, 38, 0.6); }
+/* píldora velvet */
+.velvet .btn-brand {
+  background: linear-gradient(135deg, #ff5f9e 0%, #e93a7d 45%, #8b5cf6 100%);
+  border-radius: 980px;
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.22) inset, 0 6px 22px -6px rgba(233, 58, 125, 0.45);
+}
+.velvet .btn-brand:hover {
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.28) inset, 0 8px 28px -6px rgba(233, 58, 125, 0.55);
+}
+/* chat del hero — el producto como protagonista */
+.velvet .chat-demo {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 24px 70px rgba(0, 0, 0, 0.45);
+  padding: 18px;
+  text-align: left;
+}
+.velvet .chat-demo .hd { display: flex; gap: 12px; align-items: center; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 12px; }
+.velvet .chat-demo .ava { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #ff5f9e, #8b5cf6); display: grid; place-items: center; font-weight: 600; font-size: 13px; color: #fff; flex: 0 0 auto; }
+.velvet .chat-demo .thread { display: flex; flex-direction: column; align-items: flex-start; }
+.velvet .bub { max-width: 88%; padding: 9px 13px; border-radius: 17px; font-size: 13.5px; line-height: 1.4; margin-bottom: 7px; }
+.velvet .bub-in { background: rgba(255, 255, 255, 0.09); border: 1px solid rgba(255, 255, 255, 0.1); border-bottom-left-radius: 6px; }
+.velvet .bub-out { background: linear-gradient(135deg, #ff5f9e, #e93a7d 45%, #8b5cf6); color: #fff; border-bottom-right-radius: 6px; align-self: flex-end; box-shadow: 0 4px 14px -4px rgba(233, 58, 125, 0.4); }
+.velvet .chat-sys { align-self: center; font-size: 11px; color: rgba(243, 236, 250, 0.7); background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 980px; padding: 4px 11px; margin-top: 6px; }
+.velvet .chat-note { font-size: 11px; color: rgba(243, 236, 250, 0.5); text-align: center; margin-top: 12px; }
+@media (prefers-reduced-motion: reduce) {
+  .velvet .mesh::before, .velvet .mesh::after { animation: none; }
+}
+/* touch target: CTA del header nunca menor a 40px, hero a 44px+ */
+@media (max-width: 640px) {
+  .velvet header .btn-brand { min-height: 40px; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+}

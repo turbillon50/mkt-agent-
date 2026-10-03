@@ -23,7 +23,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)]">
+    <div className="min-h-screen velvet relative bg-[var(--color-background)] text-[var(--color-foreground)]">
       <LandingHeader />
       <main>
         <Hero />
